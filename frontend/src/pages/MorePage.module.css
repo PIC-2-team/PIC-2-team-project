@@ -1,0 +1,137 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1.25rem 2rem;
+  gap: 1.5rem;
+  min-height: 100%;
+}
+
+/* Profile */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f0f7f3;
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #dde3ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profileInfo {
+  flex: 1;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0 0 0.25rem;
+}
+
+.role {
+  font-size: 0.8125rem;
+  color: #8a9ab0;
+  margin: 0;
+}
+
+.editButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.editButton:active {
+  background: #dff0e8;
+}
+
+/* Sections */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8a9ab0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+  padding: 0 0.25rem;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1rem 1.125rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menuItemBorder {
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.menuLabel {
+  font-size: 0.9375rem;
+  color: #1a2533;
+}
+
+.menuValue {
+  font-size: 0.875rem;
+  color: #8a9ab0;
+}
+
+.chevron {
+  font-size: 1.125rem;
+  color: #c0c8d4;
+  line-height: 1;
+}
+
+/* Logout */
+.logoutButton {
+  width: 100%;
+  padding: 0.875rem;
+  background: none;
+  border: 1.5px solid #dde3ea;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  color: #e05555;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: auto;
+}
