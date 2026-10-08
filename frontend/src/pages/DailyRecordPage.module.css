@@ -1,0 +1,223 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1.25rem 1.5rem;
+  gap: 1.25rem;
+  min-height: 100%;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #edf0f3;
+  border: none;
+  border-radius: 20px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  color: #4a5568;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Calendar */
+.calendarSection {
+  background: #f0f7f3;
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.monthNav button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #4a5568;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.monthNav button:hover {
+  background: #dff0e8;
+}
+
+.monthLabel {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2533;
+}
+
+.dayHeaders {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.5rem;
+}
+
+.dayHeader {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #8a9ab0;
+  font-weight: 500;
+  padding: 0.25rem 0;
+}
+
+.dayHeader.sun { color: #e05555; }
+.dayHeader.sat { color: #5b8dee; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dayCell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  color: #1a2533;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.dayCell.sun { color: #e05555; }
+.dayCell.sat { color: #5b8dee; }
+
+.dayCell.selected {
+  background: #3CAB7E;
+  color: white !important;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #3CAB7E;
+  position: absolute;
+  bottom: 4px;
+}
+
+.dayCell.selected .dot {
+  background: white;
+}
+
+/* Record section */
+.recordSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recordHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recordDate {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.viewAll {
+  background: none;
+  border: none;
+  font-size: 0.8125rem;
+  color: #3CAB7E;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.empty {
+  font-size: 0.875rem;
+  color: #8a9ab0;
+  text-align: center;
+  padding: 1.5rem 0;
+  margin: 0;
+}
+
+.records {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.recordCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  border-radius: 12px;
+  padding: 0.875rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recordIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recordContent {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1a2533;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Record button */
+.recordButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.05rem;
+  background: #3CAB7E;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: auto;
+}
