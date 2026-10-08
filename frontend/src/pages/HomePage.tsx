@@ -91,7 +91,7 @@ export default function HomePage() {
       <button
         className={styles.recordButton}
         type="button"
-        onClick={() => navigate('/records')}
+        onClick={() => navigate('/records/new')}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M10 4v12M4 10h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />

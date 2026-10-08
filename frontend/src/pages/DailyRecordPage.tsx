@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './DailyRecordPage.module.css';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
@@ -59,6 +60,7 @@ function getWeekdayLabel(year: number, month: number, day: number) {
 }
 
 export default function DailyRecordPage() {
+  const navigate = useNavigate();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -166,7 +168,11 @@ export default function DailyRecordPage() {
         )}
       </section>
 
-      <button className={styles.recordButton} type="button">
+      <button
+        className={styles.recordButton}
+        type="button"
+        onClick={() => navigate('/records/new')}
+      >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M10 4v12M4 10h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
         </svg>

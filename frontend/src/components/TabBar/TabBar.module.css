@@ -1,15 +1,10 @@
 .tabBar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  flex-shrink: 0;
   width: 100%;
-  max-width: 430px;
   display: flex;
   background: white;
   border-top: 1px solid #edf0f3;
   padding-bottom: env(safe-area-inset-bottom);
-  z-index: 100;
 }
 
 .tab {
