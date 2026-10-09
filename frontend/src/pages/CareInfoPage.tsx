@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import styles from './CareInfoPage.module.css';
 
 const CATEGORIES = [
@@ -90,6 +91,8 @@ const CATEGORIES = [
 ];
 
 export default function CareInfoPage() {
+  const navigate = useNavigate();
+
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>돌봄정보</h1>
@@ -102,6 +105,7 @@ export default function CareInfoPage() {
             type="button"
             role="listitem"
             aria-label={cat.label}
+            onClick={() => navigate(`/care-info/${cat.id}`)}
           >
             <div className={styles.iconWrap} style={{ background: cat.bg }}>
               {cat.icon}
