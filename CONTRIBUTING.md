@@ -131,7 +131,8 @@ Refs #번호
 - 셀프 merge 금지 — 상대방 approve 1개 필수
 - PR 제목은 커밋 컨벤션과 동일한 형식으로 작성한다
 - 리뷰어는 24시간 내 리뷰한다
-- `develop` → `main` PR은 릴리즈 메모를 본문에 포함한다
+- `develop` 대상 PR은 `/pr-review` 스킬로 self-review한 뒤 리뷰 요청한다
+- `develop` → `main` PR은 FE·BE 담당자 모두 리뷰하며 릴리즈 메모를 본문에 포함한다
 
 ## Issue·PR 상태 관리
 
