@@ -61,9 +61,11 @@ git log --oneline origin/develop..HEAD
 
 **코드 품질 검사**
 
-코드 변경 포함 시 `/code-review low` 실행.
-인증·권한·결제·외부 API·데이터 처리 등 핵심 로직은 `medium`으로 올린다.
-문서·템플릿 전용 PR은 생략한다.
+| 변경 유형 | 사용 스킬 | 이유 |
+|-----------|-----------|------|
+| 일반 코드 변경 | `adversarial-reviewer` | 에이전트 없음 — 3-persona 분석, 블라인드스팟 검출 |
+| 인증·권한·결제·외부 API 등 핵심 로직 | `/code-review medium` | 심층 다각도 분석 필요 |
+| 문서·템플릿 전용 | `logic-review` | 논리 일관성·가정 감사 |
 
 ---
 
