@@ -7,6 +7,7 @@ main      ← 릴리즈 (직접 push 금지)
 develop   ← 통합 브랜치 (직접 push 금지)
 feat/*    ← 기능 개발
 fix/*     ← 버그 수정
+docs/*    ← 문서 작업
 chore/*   ← 설정, 패키지 등 기타
 ```
 
@@ -19,6 +20,7 @@ chore/*   ← 설정, 패키지 등 기타
 ```
 feat/기능명
 fix/버그명
+docs/문서명
 chore/작업명
 ```
 
@@ -92,8 +94,7 @@ PR 제목은 `타입: 한 줄 요약`으로 작성한다. 예시: `feat: 생활�
 ```markdown
 ## 연관 이슈
 
-<!-- Refs #번호로 참조합니다. 연관 이슈가 없으면 '없음'으로 작성합니다. -->
-Refs #번호
+<!-- 있으면 `Refs #번호`, develop→main 릴리즈 PR은 `Closes #번호`, 없으면 `없음` -->
 
 ## 변경 목적
 
@@ -105,13 +106,11 @@ Refs #번호
 
 ## 검증
 
-<!-- 실행한 명령·확인 방법과 실제 결과를 작성합니다. 미실행 항목은 이유와 남은 위험을 적습니다. -->
+<!-- 각 항목을 체크하고 결과를 기재합니다. 미실행 항목은 이유와 남은 위험을 적습니다. -->
 
-| 확인 항목 | 명령 또는 확인 방법 | 결과 |
-|-----------|--------------------|------|
-| 관련 테스트 | | |
-| 정적 검사 | | |
-| 동작·회귀 확인 | | |
+- [ ] 관련 테스트 —
+- [ ] 정적 검사 —
+- [ ] 동작·회귀 확인 —
 
 ## 리뷰어에게
 
@@ -131,7 +130,7 @@ Refs #번호
 - 셀프 merge 금지 — 상대방 approve 1개 필수
 - PR 제목은 커밋 컨벤션과 동일한 형식으로 작성한다
 - 리뷰어는 24시간 내 리뷰한다
-- `develop` 대상 PR은 `/pr-review` 스킬로 self-review한 뒤 리뷰 요청한다
+- `develop` 대상 PR은 `/self-review` 스킬로 self-review한 뒤 리뷰 요청한다
 - `develop` → `main` PR은 FE·BE 담당자 모두 리뷰하며 릴리즈 메모를 본문에 포함한다
 
 ## Issue·PR 상태 관리
@@ -180,6 +179,18 @@ PR 작성자가 Draft·리뷰 요청을 관리하고, 리뷰어가 리뷰 결과
 - 에이전트의 Issue·PR 생성·수정·종료·리뷰·병합은 사용자가 명시적으로 승인한 범위에서만 수행한다.
 
 참고: [GitHub 이슈와 PR 연결 규칙](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
+
+## 에이전트 스킬 설정
+
+팀 공용 스킬은 `.claude/skills/` 에 있다.
+
+- **Claude Code** 사용자: 프로젝트 디렉터리에서 실행하면 자동 로드됨
+- **Codex** 사용자: 아래 명령으로 개인 스킬 디렉터리에 링크
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s "$(pwd)/.claude/skills/self-review" ~/.agents/skills/self-review
+```
 
 ## API 컨벤션
 

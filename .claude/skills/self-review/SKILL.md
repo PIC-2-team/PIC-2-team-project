@@ -1,6 +1,6 @@
 ---
-name: pr-review
-description: Use when preparing a pull request before requesting team review in the PIC-2-team project. Checks PR template completeness, code quality, and convention compliance.
+name: self-review
+description: Use when preparing a develop-target pull request before requesting team review in the PIC-2-team project. Checks PR template completeness, code quality, and convention compliance.
 ---
 
 # PR 셀프 리뷰 (삶결 팀)
