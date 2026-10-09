@@ -24,14 +24,7 @@ export default function RecordFormPage() {
   const [category, setCategory] = useState<CategoryId>('EMOTION');
   const [content, setContent] = useState('');
 
-  const [saving, setSaving] = useState(false);
-  const canSave = content.trim().length > 0 && !saving;
-
-  const handleSave = () => {
-    if (!canSave) return;
-    setSaving(true);
-    setTimeout(() => navigate(-1), 800);
-  };
+  const canSave = content.trim().length > 0;
 
   return (
     <div className={styles.page}>
@@ -88,9 +81,8 @@ export default function RecordFormPage() {
           type="button"
           className={styles.saveButton}
           disabled={!canSave}
-          onClick={handleSave}
         >
-          {saving ? '저장 중...' : '저장하기'}
+          저장하기
         </button>
       </div>
     </div>
