@@ -25,7 +25,7 @@ description: Use when preparing a develop-target pull request before requesting 
 | 3 | 변경 목적 | 한 줄 이상 채워져 있음 |
 | 4 | 변경 사항 | 실제 변경 내용 기재 |
 | 5 | 검증 테이블 | 결과 열이 채워져 있음. 미실행 항목은 이유와 남은 위험 명시 |
-| 6 | 릴리즈 메모 | **develop 대상**: 섹션 전체 삭제 · **main 대상**: 포함 PR·배포 확인 항목 기재 |
+| 6 | 템플릿 선택 | **develop 대상**: `default` 템플릿 사용 확인 · **main 대상**: `release` 템플릿 사용 확인 |
 | 7 | 시크릿 없음 | `.env`, API 키, 비밀번호가 diff에 없음 |
 | 8 | 브랜치 기반 | `develop`에서 분기 (`git log --oneline origin/develop..HEAD`) |
 

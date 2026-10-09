@@ -239,7 +239,7 @@ Refs #34
 
 PR 제목은 `타입: 한 줄 요약`으로 작성한다. 예시: `feat: 생활정보 기록 기능 추가`
 
-템플릿은 [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md)가 자동 적용된다. 작성 방법은 [CONTRIBUTING.md — PR 작성](CONTRIBUTING.md#pr-작성)을 참조한다.
+PR 생성 시 템플릿을 선택한다: 일반 PR은 `default`, `develop → main` 릴리즈는 `release`. 작성 방법은 [CONTRIBUTING.md — PR 작성](CONTRIBUTING.md#pr-작성)을 참조한다.
 
 ### PR 규칙
 
