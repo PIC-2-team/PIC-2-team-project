@@ -114,7 +114,7 @@ export default function CareInfoDetailPage() {
             <p className={styles.sectionLabel}>📌 중요 정보</p>
             <div className={styles.list}>
               {pinned.map(item => (
-                <ItemCard key={item.id} item={item} accentColor={meta.color} onTogglePin={togglePin} />
+                <ItemCard key={item.id} item={item} onTogglePin={togglePin} />
               ))}
             </div>
           </section>
@@ -124,7 +124,7 @@ export default function CareInfoDetailPage() {
           <p className={styles.sectionLabel}>전체 기록 ({items.length})</p>
           <div className={styles.list}>
             {unpinned.map(item => (
-              <ItemCard key={item.id} item={item} accentColor={meta.color} onTogglePin={togglePin} />
+              <ItemCard key={item.id} item={item} onTogglePin={togglePin} />
             ))}
           </div>
         </section>
@@ -152,7 +152,6 @@ function ItemCard({
   onTogglePin,
 }: {
   item: CareInfoItem;
-  accentColor?: string;
   onTogglePin: (id: number) => void;
 }) {
   return (

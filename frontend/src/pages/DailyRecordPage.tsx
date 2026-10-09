@@ -47,6 +47,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   EMOTION: '#e8f5ee',
   SCHEDULE: '#e8f0fb',
   HEALTH: '#fff3e0',
+  MEAL: '#fff8e8',
 };
 
 const CATEGORY_ICON: Record<string, React.ReactNode> = {
@@ -65,6 +66,12 @@ const CATEGORY_ICON: Record<string, React.ReactNode> = {
   HEALTH: (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       <rect x="8" y="3" width="6" height="16" rx="3" fill="#ff9800" transform="rotate(45 11 11)" />
+    </svg>
+  ),
+  MEAL: (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path d="M7 3v6a4 4 0 004 4 4 4 0 004-4V3" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="11" y1="13" x2="11" y2="19" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   ),
 };
