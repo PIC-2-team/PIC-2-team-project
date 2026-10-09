@@ -61,7 +61,7 @@ function getWeekdayLabel(year: number, month: number, day: number) {
 
 export default function DailyRecordPage() {
   const navigate = useNavigate();
-  const today = new Date();
+  const [today] = useState(() => new Date());
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
