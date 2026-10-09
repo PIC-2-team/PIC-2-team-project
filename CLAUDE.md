@@ -110,25 +110,6 @@
 | `/more` | MorePage | 공통 (AppLayout) |
 | `/records/new` | RecordFormPage | 공통 |
 
-## 개발 현황 (2026-10-09 기준)
-
-| 항목 | 상태 |
-|------|------|
-| FE 배포 | 완료 — 5개 페이지, Vercel |
-| BE 초기 세팅 | 완료 — 공통 응답 포맷, Swagger |
-| API 설계 | 미완 |
-| 인증 (JWT + 구글 OAuth) | 미구현 |
-| DB | H2 개발용 — 프로덕션 DB 미결정 |
-| 미디어 업로드 | 미구현 |
-
-## 주요 미결 사항
-
-- 프로덕션 DB: MySQL / PostgreSQL 선택
-- BE 배포: Railway / Fly.io / AWS 선택
-- 파일 저장소: S3 / Cloudflare R2 선택
-- 돌봄 제공자 기록 작성 권한 범위
-- 당사자 동의 처리 방식 (당사자 동의 능력이 제한될 때)
-
 ---
 
 ## 개발 원칙
