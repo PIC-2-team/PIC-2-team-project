@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
-        name: '돌봄 서비스',
-        short_name: '돌봄',
-        description: '돌봄 정보 및 생활기록 서비스',
+        name: '삶결',
+        short_name: '삶결',
+        description: '발달장애인 맞춤 돌봄 정보공유 솔루션',
         theme_color: '#3CAB7E',
         background_color: '#f7f8fa',
         display: 'standalone',
