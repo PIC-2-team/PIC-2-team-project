@@ -48,7 +48,7 @@ export type Demo = {
   name: string;
   agency: string;
   people: Person[];
-  providers: { id: string; name: string; active: boolean }[];
+  providers: { id: string; name: string; contact: string; active: boolean }[];
   assignments: {
     id: string;
     recipientId: string;
@@ -114,8 +114,8 @@ export function createDemo(): Demo {
       },
     ],
     providers: [
-      { id: 's1', name: '박돌봄', active: true },
-      { id: 's2', name: '이동행', active: true },
+      { id: 's1', name: '박돌봄', contact: '010-1234-5678', active: true },
+      { id: 's2', name: '이동행', contact: '010-9876-5432', active: true },
     ],
     assignments: [
       {
@@ -231,6 +231,8 @@ export type Action =
       end: string;
     }
   | { type: 'end'; id: string }
+  | { type: 'editAssignment'; id: string; start: string; end: string }
+  | { type: 'deleteAssignment'; id: string }
   | {
       type: 'profile';
       id?: string;
@@ -239,7 +241,7 @@ export type Action =
       disability: string;
       note: string;
     }
-  | { type: 'provider'; id?: string; name: string; active: boolean }
+  | { type: 'provider'; id?: string; name: string; contact: string; active: boolean }
   | { type: 'link'; id: string; linked: boolean }
   | { type: 'transfer'; code: string }
   | { type: 'secondary'; value: Demo['secondary'] }
@@ -249,6 +251,8 @@ export type Action =
   | { type: 'settings'; name: string; largeText: boolean; notify: boolean }
   | { type: 'read'; id: string }
   | { type: 'readAll' }
+  | { type: 'deleteNotif'; id: string }
+  | { type: 'toggleLarge' }
   | { type: 'visit'; text: string };
 const requireThat = (condition: unknown, message: string) => {
   if (!condition) throw new Error(message);
@@ -432,6 +436,26 @@ export function transition(previous: Demo, action: Action): Demo {
       log('돌봄 종료');
       break;
     }
+    case 'editAssignment': {
+      agency();
+      const a = s.assignments.find((a) => a.id === action.id);
+      requireThat(a, '배정을 찾을 수 없어요.');
+      requireThat(
+        /^\d{4}-\d{2}-\d{2}$/.test(action.start) &&
+          (!action.end || action.end >= action.start),
+        '배정 기간을 확인해주세요.',
+      );
+      a!.start = action.start;
+      a!.end = action.end;
+      log('배정 기간 수정');
+      break;
+    }
+    case 'deleteAssignment': {
+      agency();
+      s.assignments = s.assignments.filter((a) => a.id !== action.id);
+      log('배정 기록 삭제');
+      break;
+    }
     case 'profile': {
       guardian();
       requireThat(
@@ -471,6 +495,7 @@ export function transition(previous: Demo, action: Action): Demo {
       const p = s.providers.find((p) => p.id === action.id);
       if (p) {
         p.name = action.name.trim();
+        p.contact = action.contact;
         p.active = action.active;
         if (!p.active)
           s.assignments
@@ -480,6 +505,7 @@ export function transition(previous: Demo, action: Action): Demo {
         s.providers.push({
           id: uid(),
           name: action.name.trim(),
+          contact: action.contact,
           active: action.active,
         });
       log('활동지원사 정보 변경');
@@ -612,6 +638,12 @@ export function transition(previous: Demo, action: Action): Demo {
     }
     case 'readAll':
       s.notifications.filter((n) => n.role === s.role).forEach((n) => (n.read = true));
+      break;
+    case 'deleteNotif':
+      s.notifications = s.notifications.filter((n) => n.id !== action.id);
+      break;
+    case 'toggleLarge':
+      s.largeText = !s.largeText;
       break;
     case 'visit':
       access();

@@ -154,8 +154,8 @@ export function Onboarding() {
 
       {/* 역할 선택 */}
       <div style={{ padding: '0 1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-        <p style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1a2533', margin: '0 0 0.25rem', textAlign: 'center' }}>역할을 선택해주세요</p>
-        <p style={{ fontSize: '0.8125rem', color: '#8a9ab0', margin: '0 0 0.5rem', textAlign: 'center' }}>역할을 바꿔도 같은 기록이 이어집니다</p>
+        <p style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1a2533', margin: '0 0 0.25rem', textAlign: 'center' }}>어떤 역할로 체험하시겠어요?</p>
+        <p style={{ fontSize: '0.8125rem', color: '#8a9ab0', margin: '0 0 0.5rem', textAlign: 'center' }}>역할마다 볼 수 있는 정보와 기능이 달라요</p>
 
         {(Object.keys(roles) as Role[]).map((role) => {
           const meta = ROLE_META[role];

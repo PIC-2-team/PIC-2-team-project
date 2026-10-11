@@ -5,7 +5,7 @@ import { useDemo } from './context';
 import { canAccess, roles, type Role } from './model';
 import './demo.css';
 export function DemoLayout() {
-  const { state, error, clearError } = useDemo();
+  const { state, error, clearError, send } = useDemo();
   const location = useLocation();
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -22,7 +22,27 @@ export function DemoLayout() {
         <Link to="/home" className="brand">
           삶결<span>돌봄을 잇는 기록</span>
         </Link>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => send({ type: 'toggleLarge' })}
+            aria-pressed={state.largeText}
+            aria-label="큰 글씨 모드 전환"
+            style={{
+              background: state.largeText ? '#3CAB7E' : 'transparent',
+              color: state.largeText ? 'white' : '#8a9ab0',
+              border: '1.5px solid',
+              borderColor: state.largeText ? '#3CAB7E' : '#e8ecf0',
+              borderRadius: 8,
+              padding: '3px 8px',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              lineHeight: 1.4,
+            }}
+          >
+            Aa
+          </button>
           <Link className="icon-link" to="/notifications" aria-label="알림함">
             알림{' '}
             {state.notify
@@ -47,7 +67,7 @@ export function DemoLayout() {
       <main ref={main} tabIndex={-1} className="demo-main">
         <Outlet />
       </main>
-      <TabBar />
+      {location.pathname !== '/onboarding' && <TabBar />}
     </div>
   );
 }

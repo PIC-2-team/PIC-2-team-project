@@ -124,20 +124,6 @@ export function RecordList({ care = false }: { care?: boolean }) {
         }
         back={categoryId ? '/care-info' : '/home'}
       >
-        <Card className="accent">
-          <h2>
-            {state.people.find((p) => p.id === state.recipientId)?.name}님의{' '}
-            {care ? '돌봄 안내' : '일상'}
-          </h2>
-          <p className="muted">
-            기록은 같은 브라우저의 다른 역할에서도 이어집니다.
-          </p>
-          {care && (
-            <Nav to="/profile" secondary>
-              당사자 프로필 보기
-            </Nav>
-          )}
-        </Card>
         {care && !categoryId ? (
           <>
             {/* Figma 스타일 아이콘 그리드 */}

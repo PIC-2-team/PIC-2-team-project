@@ -172,6 +172,12 @@ export function Home() {
                   >
                     기록보기
                   </Link>
+                  <Link
+                    to="/profile"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f7f3', color: '#3CAB7E', borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    프로필
+                  </Link>
                 </div>
               </div>
             )}
@@ -199,8 +205,11 @@ export function Home() {
             {/* 보호자 추가 링크 */}
             {state.role === 'guardian' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <Link to="/profile" style={{ fontSize: '0.875rem', color: '#3CAB7E', textDecoration: 'none', textAlign: 'center' }}>
-                  {p.name}님 프로필 보기 →
+                <Link
+                  to="/profile"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f7f3', color: '#3CAB7E', borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                >
+                  {p.name}님 프로필 보기
                 </Link>
                 {pendingSuggestions > 0 && (
                   <Link to="/suggestions" style={{ fontSize: '0.875rem', color: '#3CAB7E', textDecoration: 'none', textAlign: 'center' }}>
@@ -282,12 +291,6 @@ export function More() {
             </div>
             <span style={{ color: '#c0c8d4', fontSize: 20 }}>›</span>
           </Link>
-
-          {/* 역할 전환 배너 */}
-          <div style={{ background: '#f0f7f3', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: '#3CAB7E', flex: 1 }}>체험 역할 전환</span>
-            <Link to="/onboarding" style={{ fontSize: 13, color: '#3CAB7E', fontWeight: 600, textDecoration: 'none' }}>바꾸기 →</Link>
-          </div>
 
           {/* 메뉴 목록 */}
           <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>

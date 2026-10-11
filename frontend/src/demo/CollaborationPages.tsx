@@ -166,14 +166,23 @@ export function Notifications() {
           <Card key={n.id}>
             <span className="tag">{n.read ? '읽음' : '새 알림'}</span>
             <p>{n.text}</p>
-            <button
-              className="btn secondary"
-              onClick={() => {
-                if (send({ type: 'read', id: n.id })) nav(n.to);
-              }}
-            >
-              내용 확인
-            </button>
+            <div className="actions">
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  if (send({ type: 'read', id: n.id })) nav(n.to);
+                }}
+              >
+                내용 확인
+              </button>
+              <button
+                className="btn secondary"
+                style={{ color: '#a23d38', borderColor: '#e4c0bc' }}
+                onClick={() => send({ type: 'deleteNotif', id: n.id })}
+              >
+                삭제
+              </button>
+            </div>
           </Card>
         ))}
         {!items.length && (

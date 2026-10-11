@@ -100,12 +100,16 @@
   border-radius: 12px;
   background: white;
 }
+.back:hover {
+  background: var(--soft);
+  border-color: var(--green);
+}
 .demo-shell h1 {
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1.3;
   margin: 0;
-  font-weight: 750;
-  letter-spacing: -0.8px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 .demo-shell h2 {
   font-size: 18px;
@@ -185,6 +189,9 @@
   color: #748278;
   cursor: not-allowed;
   border-color: #e1e6e2;
+}
+.btn:not(:disabled):hover {
+  filter: brightness(0.93);
 }
 .actions {
   display: flex;
@@ -270,6 +277,7 @@
 }
 .record-link:hover {
   border-color: var(--green);
+  background: var(--soft);
 }
 .record-meta {
   display: flex;
@@ -293,6 +301,10 @@
 .menu-link:last-child {
   border: 0;
 }
+.menu-link:hover {
+  background: var(--soft);
+  padding-left: 4px;
+}
 .menu-link span:last-child {
   color: var(--green);
 }
@@ -309,6 +321,10 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+.choice:hover {
+  border-color: var(--green);
+  background: var(--soft);
 }
 .choice[aria-pressed='true'] {
   border: 2px solid var(--green);
@@ -364,13 +380,37 @@
   border-top: 1px solid var(--line);
 }
 .large-text {
-  font-size: 19px;
+  font-size: 20px !important;
 }
-.large-text p,
-.large-text label,
+.large-text h1 { font-size: 24px !important; }
+.large-text h2 { font-size: 22px !important; }
+.large-text h3 { font-size: 19px !important; }
+.large-text p { font-size: 18px !important; line-height: 1.75 !important; }
+.large-text label { font-size: 17px !important; }
+.large-text .muted,
+.large-text .hint { font-size: 16px !important; }
 .large-text .btn {
-  font-size: 18px;
+  font-size: 18px !important;
+  min-height: 60px !important;
 }
+.large-text input,
+.large-text select,
+.large-text textarea {
+  font-size: 18px !important;
+  padding: 14px !important;
+  min-height: 54px !important;
+}
+.large-text .tag { font-size: 14px !important; padding: 5px 12px !important; }
+.large-text .record-meta span { font-size: 14px !important; }
+.large-text .menu-link { font-size: 18px !important; min-height: 56px !important; }
+.large-text .choice { font-size: 17px !important; padding: 20px !important; }
+.large-text .choice small { font-size: 15px !important; }
+.large-text .demo-card { padding: 22px !important; gap: 14px !important; }
+.large-text .demo-page { gap: 22px !important; padding: 28px 20px 36px !important; }
+.large-text .eyebrow { font-size: 13px !important; }
+.large-text .back { font-size: 26px !important; width: 50px !important; min-height: 50px !important; }
+.large-text nav a { padding: 12px 0 10px !important; gap: 6px !important; }
+.large-text nav span { font-size: 0.875rem !important; }
 .step-label {
   font-size: 12px;
   color: var(--green);
