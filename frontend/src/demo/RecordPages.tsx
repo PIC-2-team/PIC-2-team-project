@@ -266,6 +266,7 @@ export function RecordForm() {
   const record = state.records.find((r) => r.id === id);
   const [step, setStep] = useState(1);
   const [content, setContent] = useState(record?.content ?? '');
+  const [initialContent] = useState(record?.content ?? '');
   const [category, setCategory] = useState(
     record?.category ?? params.get('category') ?? 'COMMUNICATION',
   );
@@ -333,7 +334,7 @@ export function RecordForm() {
         <div style={{ padding: '14px 20px', background: 'white', borderBottom: '1px solid #e8ecf0', display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             type="button"
-            onClick={() => content.trim() ? setBackConfirm(true) : nav('/records')}
+            onClick={() => content !== initialContent ? setBackConfirm(true) : nav('/records')}
             style={{ background: 'none', border: 'none', color: '#1a2533', fontSize: 22, lineHeight: 1, width: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
           >‹</button>
           <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, margin: 0, color: '#1a2533' }}>

@@ -89,7 +89,7 @@ export function Home() {
         {/* 인사 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#3CAB7E', fontWeight: 700 }}>
-            {displayName[0] ?? '?'}
+            {Array.from(displayName)[0] ?? '?'}
           </div>
           <div>
             <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1a2533', margin: '0 0 0.15rem' }}>안녕하세요, {displayName}님!</p>
@@ -283,7 +283,7 @@ export function More() {
             style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px 20px', textDecoration: 'none', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}
           >
             <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#3CAB7E', fontWeight: 700 }}>
-              {state.name[0] ?? '?'}
+              {Array.from(state.name)[0] ?? '?'}
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: '#1a2533', margin: '0 0 2px' }}>{state.name}님</p>
