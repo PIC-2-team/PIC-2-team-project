@@ -210,9 +210,13 @@
 .demo-shell select:hover,
 .demo-shell input:not([type='checkbox']):not([type='radio']):focus,
 .demo-shell select:focus,
-.demo-shell textarea:hover,
-.demo-shell textarea:focus {
+.demo-shell textarea:hover {
   outline: none;
+  border-color: #3CAB7E;
+  border-width: 1.5px;
+}
+.demo-shell textarea:focus {
+  outline: 2px solid #3CAB7E;
   border-color: #3CAB7E;
   border-width: 1.5px;
 }
