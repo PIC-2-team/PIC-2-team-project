@@ -3,6 +3,165 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDemo } from './context';
 import { today } from './model';
 import { Card, Confirm, Empty, Guard, Nav, Page } from './UI';
+
+// --- 파일 상단 독립 컴포넌트 ---
+
+type AssignmentData = {
+  id: string; recipientId: string; providerId: string; start: string; end: string; active: boolean;
+};
+
+function assignmentStatusLabel(a: AssignmentData) {
+  return a.start > today() ? '배정 예정' : a.end && a.end < today() ? '기간 만료' : '배정 중';
+}
+
+type AssignmentCardProps = {
+  a: AssignmentData;
+  editing: string;
+  editStart: string;
+  editEnd: string;
+  editHasEnd: boolean;
+  setEditing: (id: string) => void;
+  setEditStart: (v: string) => void;
+  setEditEnd: (v: string) => void;
+  setEditHasEnd: (v: boolean) => void;
+  setEnding: (id: string) => void;
+  setDeleting: (id: string) => void;
+};
+
+function AssignmentCard({ a, editing, editStart, editEnd, editHasEnd, setEditing, setEditStart, setEditEnd, setEditHasEnd, setEnding, setDeleting }: AssignmentCardProps) {
+  const { state, send } = useDemo();
+  return (
+    <Card key={a.id}>
+      <span className="tag">{a.active ? assignmentStatusLabel(a) : '종료됨'}</span>
+      <h2>{state.providers.find((p) => p.id === a.providerId)?.name}</h2>
+      <p>당사자 · {state.people.find((p) => p.id === a.recipientId)?.name}</p>
+      <p>{a.start}부터 · {a.end ? a.end + '까지' : '종료일 없음'}</p>
+      {editing === a.id ? (
+        <form
+          className="demo-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (send({ type: 'editAssignment', id: a.id, start: editStart, end: editHasEnd ? editEnd : '' }))
+              setEditing('');
+          }}
+        >
+          <label>
+            시작일
+            <input type="date" required value={editStart} onChange={(e) => setEditStart(e.target.value)} />
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={editHasEnd} onChange={(e) => setEditHasEnd(e.target.checked)} />
+            종료일 지정
+          </label>
+          {editHasEnd && (
+            <label>
+              종료일
+              <input type="date" required min={editStart} value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
+            </label>
+          )}
+          <div className="actions">
+            <button type="button" className="btn secondary" onClick={() => setEditing('')}>취소</button>
+            <button className="btn" disabled={editHasEnd && !editEnd}>저장</button>
+          </div>
+        </form>
+      ) : (
+        <div className="actions">
+          {state.role === 'agency' && (
+            <>
+              <button className="btn secondary" onClick={() => { setEditing(a.id); setEditStart(a.start); setEditEnd(a.end); setEditHasEnd(!!a.end); }}>수정</button>
+              <button
+                className="btn secondary"
+                style={{ color: '#a23d38', borderColor: '#e4c0bc' }}
+                onClick={() => setDeleting(a.id)}
+              >
+                삭제
+              </button>
+            </>
+          )}
+          {a.active && (
+            <button className="btn secondary" onClick={() => setEnding(a.id)}>돌봄 종료</button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+type ProviderData = {
+  id: string; name: string; contact: string; active: boolean;
+};
+
+type ProviderCardProps = {
+  p: ProviderData;
+  editing: string;
+  editName: string;
+  editContact: string;
+  setEditing: (id: string) => void;
+  setEditName: (v: string) => void;
+  setEditContact: (v: string) => void;
+  setConfirm: (id: string) => void;
+};
+
+function ProviderCard({ p, editing, editName, editContact, setEditing, setEditName, setEditContact, setConfirm }: ProviderCardProps) {
+  const { state, send } = useDemo();
+  const assigned = (() => {
+    const a = state.assignments.find(
+      (a) => a.providerId === p.id && a.active && a.start <= today() && (!a.end || a.end >= today()),
+    );
+    return a ? state.people.find((x) => x.id === a.recipientId)?.name : null;
+  })();
+  return (
+    <div style={{ background: 'white', borderRadius: 16, padding: '16px 18px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: p.active ? '#e8f5ee' : '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, fontWeight: 700, color: p.active ? '#3CAB7E' : '#8a9ab0' }}>
+          {p.name[0]}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing === p.id ? null : (
+            <>
+              <p style={{ fontSize: 15, fontWeight: 700, color: '#1a2533', margin: 0 }}>{p.name}</p>
+              <p style={{ fontSize: 12, color: '#8a9ab0', margin: 0 }}>{p.contact || p.id}{assigned ? ` · ${assigned}님 담당` : ''}</p>
+            </>
+          )}
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: p.active ? '#e8f5ee' : '#f0f0f0', color: p.active ? '#3CAB7E' : '#8a9ab0', flexShrink: 0 }}>
+          {p.active ? '활동 중' : '종료'}
+        </span>
+      </div>
+      {editing === p.id ? (
+        <form className="demo-form" onSubmit={(e) => {
+          e.preventDefault();
+          if (send({ type: 'provider', id: p.id, name: editName, contact: editContact, active: p.active })) setEditing('');
+        }}>
+          <label>
+            이름
+            <input required maxLength={30} value={editName} onChange={(e) => setEditName(e.target.value)} />
+          </label>
+          <label>
+            연락처
+            <input maxLength={30} placeholder="010-0000-0000" value={editContact} onChange={(e) => setEditContact(e.target.value)} />
+          </label>
+          <div className="actions">
+            <button type="button" className="btn secondary" onClick={() => setEditing('')}>취소</button>
+            <button className="btn">저장</button>
+          </div>
+        </form>
+      ) : (
+        <div className="actions">
+          <button className="btn secondary" onClick={() => { setEditing(p.id); setEditName(p.name); setEditContact(p.contact); }}>수정</button>
+          {p.active ? (
+            <button className="btn secondary" style={{ color: '#a23d38', borderColor: '#e4c0bc' }} onClick={() => setConfirm(p.id)}>활동 종료</button>
+          ) : (
+            <button className="btn secondary" onClick={() => send({ type: 'provider', id: p.id, name: p.name, contact: p.contact, active: true })}>활동 재개</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- 페이지 컴포넌트 ---
+
 export function AgencyHome() {
   const { state, send } = useDemo();
   const nav = useNavigate();
@@ -362,82 +521,46 @@ export function Relations() {
   const active = all.filter((a) => a.active);
   const ended = all.filter((a) => !a.active);
 
-  const statusLabel = (a: (typeof all)[0]) =>
-    a.start > today() ? '배정 예정' : a.end && a.end < today() ? '기간 만료' : '배정 중';
-
-  const startEdit = (a: (typeof all)[0]) => {
-    setEditing(a.id);
-    setEditStart(a.start);
-    setEditEnd(a.end);
-    setEditHasEnd(!!a.end);
-  };
-
-  const AssignmentCard = ({ a }: { a: (typeof all)[0] }) => (
-    <Card key={a.id}>
-      <span className="tag">{a.active ? statusLabel(a) : '종료됨'}</span>
-      <h2>{state.providers.find((p) => p.id === a.providerId)?.name}</h2>
-      <p>당사자 · {state.people.find((p) => p.id === a.recipientId)?.name}</p>
-      <p>{a.start}부터 · {a.end ? a.end + '까지' : '종료일 없음'}</p>
-      {editing === a.id ? (
-        <form
-          className="demo-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (send({ type: 'editAssignment', id: a.id, start: editStart, end: editHasEnd ? editEnd : '' }))
-              setEditing('');
-          }}
-        >
-          <label>
-            시작일
-            <input type="date" required value={editStart} onChange={(e) => setEditStart(e.target.value)} />
-          </label>
-          <label className="check">
-            <input type="checkbox" checked={editHasEnd} onChange={(e) => setEditHasEnd(e.target.checked)} />
-            종료일 지정
-          </label>
-          {editHasEnd && (
-            <label>
-              종료일
-              <input type="date" required min={editStart} value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
-            </label>
-          )}
-          <div className="actions">
-            <button type="button" className="btn secondary" onClick={() => setEditing('')}>취소</button>
-            <button className="btn">저장</button>
-          </div>
-        </form>
-      ) : (
-        <div className="actions">
-          {state.role === 'agency' && (
-            <>
-              <button className="btn secondary" onClick={() => startEdit(a)}>수정</button>
-              <button
-                className="btn secondary"
-                style={{ color: '#a23d38', borderColor: '#e4c0bc' }}
-                onClick={() => setDeleting(a.id)}
-              >
-                삭제
-              </button>
-            </>
-          )}
-          {a.active && (
-            <button className="btn secondary" onClick={() => setEnding(a.id)}>돌봄 종료</button>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-
   return (
     <Guard allowed={['guardian', 'agency']}>
       <Page title="돌봄 관계 관리" back="/more">
         {state.role === 'agency' && <Nav to="/agency/assign">새 배정 추가</Nav>}
         {!active.length && <Empty>현재 배정 중인 활동지원사가 없어요.</Empty>}
-        {active.map((a) => <AssignmentCard key={a.id} a={a} />)}
+        {active.map((a) => (
+          <AssignmentCard
+            key={a.id}
+            a={a}
+            editing={editing}
+            editStart={editStart}
+            editEnd={editEnd}
+            editHasEnd={editHasEnd}
+            setEditing={setEditing}
+            setEditStart={setEditStart}
+            setEditEnd={setEditEnd}
+            setEditHasEnd={setEditHasEnd}
+            setEnding={setEnding}
+            setDeleting={setDeleting}
+          />
+        ))}
         {ended.length > 0 && (
           <details>
             <summary>종료된 배정 ({ended.length}건)</summary>
-            {ended.map((a) => <AssignmentCard key={a.id} a={a} />)}
+            {ended.map((a) => (
+              <AssignmentCard
+                key={a.id}
+                a={a}
+                editing={editing}
+                editStart={editStart}
+                editEnd={editEnd}
+                editHasEnd={editHasEnd}
+                setEditing={setEditing}
+                setEditStart={setEditStart}
+                setEditEnd={setEditEnd}
+                setEditHasEnd={setEditHasEnd}
+                setEnding={setEnding}
+                setDeleting={setDeleting}
+              />
+            ))}
           </details>
         )}
         {ending && (
@@ -474,66 +597,6 @@ export function Providers() {
 
   const active = state.providers.filter((p) => p.active);
   const inactive = state.providers.filter((p) => !p.active);
-
-  const currentAssignment = (providerId: string) => {
-    const a = state.assignments.find(
-      (a) => a.providerId === providerId && a.active &&
-        a.start <= today() && (!a.end || a.end >= today()),
-    );
-    return a ? state.people.find((p) => p.id === a.recipientId)?.name : null;
-  };
-
-  const ProviderCard = ({ p }: { p: (typeof state.providers)[0] }) => {
-    const assigned = currentAssignment(p.id);
-    return (
-      <div style={{ background: 'white', borderRadius: 16, padding: '16px 18px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: p.active ? '#e8f5ee' : '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, fontWeight: 700, color: p.active ? '#3CAB7E' : '#8a9ab0' }}>
-            {p.name[0]}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {editing === p.id ? null : (
-              <>
-                <p style={{ fontSize: 15, fontWeight: 700, color: '#1a2533', margin: 0 }}>{p.name}</p>
-                <p style={{ fontSize: 12, color: '#8a9ab0', margin: 0 }}>{p.contact || p.id}{assigned ? ` · ${assigned}님 담당` : ''}</p>
-              </>
-            )}
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: p.active ? '#e8f5ee' : '#f0f0f0', color: p.active ? '#3CAB7E' : '#8a9ab0', flexShrink: 0 }}>
-            {p.active ? '활동 중' : '종료'}
-          </span>
-        </div>
-        {editing === p.id ? (
-          <form className="demo-form" onSubmit={(e) => {
-            e.preventDefault();
-            if (send({ type: 'provider', id: p.id, name: editName, contact: editContact, active: p.active })) setEditing('');
-          }}>
-            <label>
-              이름
-              <input required maxLength={30} value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </label>
-            <label>
-              연락처
-              <input maxLength={30} placeholder="010-0000-0000" value={editContact} onChange={(e) => setEditContact(e.target.value)} />
-            </label>
-            <div className="actions">
-              <button type="button" className="btn secondary" onClick={() => setEditing('')}>취소</button>
-              <button className="btn">저장</button>
-            </div>
-          </form>
-        ) : (
-          <div className="actions">
-            <button className="btn secondary" onClick={() => { setEditing(p.id); setEditName(p.name); setEditContact(p.contact); }}>수정</button>
-            {p.active ? (
-              <button className="btn secondary" style={{ color: '#a23d38', borderColor: '#e4c0bc' }} onClick={() => setConfirm(p.id)}>활동 종료</button>
-            ) : (
-              <button className="btn secondary" onClick={() => send({ type: 'provider', id: p.id, name: p.name, contact: p.contact, active: true })}>활동 재개</button>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <Guard allowed={['agency']}>
@@ -582,7 +645,19 @@ export function Providers() {
         {active.length > 0 && (
           <>
             <p style={{ fontSize: 13, fontWeight: 700, color: '#3CAB7E', margin: '4px 0 0', letterSpacing: '0.5px' }}>활동 중 · {active.length}명</p>
-            {active.map((p) => <ProviderCard key={p.id} p={p} />)}
+            {active.map((p) => (
+              <ProviderCard
+                key={p.id}
+                p={p}
+                editing={editing}
+                editName={editName}
+                editContact={editContact}
+                setEditing={setEditing}
+                setEditName={setEditName}
+                setEditContact={setEditContact}
+                setConfirm={setConfirm}
+              />
+            ))}
           </>
         )}
         {active.length === 0 && !adding && <Empty>활동 중인 지원사가 없어요.</Empty>}
@@ -591,7 +666,19 @@ export function Providers() {
         {inactive.length > 0 && (
           <details>
             <summary>활동 종료 · {inactive.length}명</summary>
-            {inactive.map((p) => <ProviderCard key={p.id} p={p} />)}
+            {inactive.map((p) => (
+              <ProviderCard
+                key={p.id}
+                p={p}
+                editing={editing}
+                editName={editName}
+                editContact={editContact}
+                setEditing={setEditing}
+                setEditName={setEditName}
+                setEditContact={setEditContact}
+                setConfirm={setConfirm}
+              />
+            ))}
           </details>
         )}
 
@@ -601,7 +688,7 @@ export function Providers() {
             onCancel={() => setConfirm('')}
             onConfirm={() => {
               const p = state.providers.find((x) => x.id === confirm)!;
-              if (send({ type: 'provider', id: p.id, name: p.name, active: false })) setConfirm('');
+              if (send({ type: 'provider', id: p.id, name: p.name, contact: p.contact, active: false })) setConfirm('');
             }}
           >
             기존 배정도 모두 종료됩니다. 재개 후에는 다시 배정해야 합니다.

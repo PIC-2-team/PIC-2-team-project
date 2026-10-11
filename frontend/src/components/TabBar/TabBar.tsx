@@ -38,18 +38,6 @@ const CARE_TAB: Tab = {
   ),
 };
 
-const PROVIDERS_TAB: Tab = {
-  to: '/agency/providers',
-  label: '지원사 관리',
-  icon: (active) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="9" cy="8" r="3.5" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
-      <path d="M2 20c0-4 3-6 7-6s7 2 7 6" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
-      <line x1="17" y1="8" x2="21" y2="8" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
-      <line x1="19" y1="6" x2="19" y2="10" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  ),
-};
 
 const MORE_TAB: Tab = {
   to: '/more',
