@@ -202,12 +202,19 @@
   flex: 1;
 }
 .demo-shell button:focus-visible,
-.demo-shell a:focus-visible,
-.demo-shell input:focus-visible,
-.demo-shell select:focus-visible,
-.demo-shell textarea:focus-visible {
-  outline: 3px solid #a86d15;
+.demo-shell a:focus-visible {
+  outline: 2px solid #3CAB7E;
   outline-offset: 3px;
+}
+.demo-shell input:not([type='checkbox']):not([type='radio']):hover,
+.demo-shell select:hover,
+.demo-shell input:not([type='checkbox']):not([type='radio']):focus,
+.demo-shell select:focus,
+.demo-shell textarea:hover,
+.demo-shell textarea:focus {
+  outline: none;
+  border-color: #3CAB7E;
+  border-width: 1.5px;
 }
 .demo-shell label {
   display: flex;
@@ -228,6 +235,11 @@
   color: var(--ink);
   width: 100%;
   min-height: 46px;
+}
+.demo-shell input[type='date'] {
+  height: 46px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .demo-shell textarea {
   resize: vertical;

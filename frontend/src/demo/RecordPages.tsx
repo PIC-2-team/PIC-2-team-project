@@ -346,7 +346,7 @@ export function RecordForm() {
               {/* 날짜 */}
               <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f2f5', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 14, color: '#8a9ab0', fontWeight: 500 }}>날짜</span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#1a2533' }}>{formatDateLabel(today())}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1a2533' }}>{formatDateLabel(today())}</span>
               </div>
 
               {/* 시간 */}
