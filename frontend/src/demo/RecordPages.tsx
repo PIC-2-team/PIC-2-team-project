@@ -148,7 +148,7 @@ export function RecordList({ care = false }: { care?: boolean }) {
                       <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a2533' }}>{label}</span>
                       <span style={{ fontSize: '1.125rem', color: '#c0c8d4', lineHeight: 1 }}>›</span>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: count > 0 ? '#8a9ab0' : '#b0bac6' }}>
+                    <span style={{ fontSize: '0.75rem', color: count > 0 ? '#8a9ab0' : 'var(--muted)' }}>
                       {count > 0 ? `${count}개` : '아직 기록 없음'}
                     </span>
                   </Link>
