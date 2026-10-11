@@ -1,6 +1,15 @@
-# [프로젝트명]
+# 삶결
 
-> [프로젝트 한 줄 소개]
+> 발달장애인의 개인별 생활·돌봄 정보를 기록하고 새로운 돌봄 제공자에게 전달하는 플랫폼
+
+---
+
+## 배포
+
+| 환경 | URL |
+|------|-----|
+| Production (main) | https://pic-2-team-frontend-prod.vercel.app |
+| Demo | https://frontend-ivory-three-3vap7tp4lz.vercel.app |
 
 ---
 
