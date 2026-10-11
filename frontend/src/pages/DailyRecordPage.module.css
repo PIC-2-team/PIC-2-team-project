@@ -16,7 +16,7 @@
 .title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a2533;
+  color: var(--ink);
   margin: 0;
 }
 
@@ -69,7 +69,7 @@
 .monthLabel {
   font-size: 1rem;
   font-weight: 700;
-  color: #1a2533;
+  color: var(--ink);
 }
 
 .dayHeaders {
@@ -81,7 +81,7 @@
 .dayHeader {
   text-align: center;
   font-size: 0.75rem;
-  color: #8a9ab0;
+  color: var(--muted);
   font-weight: 500;
   padding: 0.25rem 0;
 }
@@ -106,7 +106,7 @@
   border: none;
   border-radius: 50%;
   font-size: 0.875rem;
-  color: #1a2533;
+  color: var(--ink);
   cursor: pointer;
   gap: 2px;
 }
@@ -115,7 +115,7 @@
 .dayCell.sat { color: #5b8dee; }
 
 .dayCell.selected {
-  background: #3CAB7E;
+  background: var(--green);
   color: white !important;
 }
 
@@ -123,7 +123,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #3CAB7E;
+  background: var(--green);
   position: absolute;
   bottom: 4px;
 }
@@ -148,7 +148,7 @@
 .recordDate {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #1a2533;
+  color: var(--ink);
   margin: 0;
 }
 
@@ -156,7 +156,7 @@
   background: none;
   border: none;
   font-size: 0.8125rem;
-  color: #3CAB7E;
+  color: var(--green);
   font-weight: 500;
   cursor: pointer;
   padding: 0;
@@ -164,7 +164,7 @@
 
 .empty {
   font-size: 0.875rem;
-  color: #8a9ab0;
+  color: var(--muted);
   text-align: center;
   padding: 1.5rem 0;
   margin: 0;
@@ -199,7 +199,7 @@
 .recordContent {
   flex: 1;
   font-size: 0.875rem;
-  color: #1a2533;
+  color: var(--ink);
   line-height: 1.45;
   margin: 0;
 }
@@ -212,7 +212,7 @@
   gap: 0.5rem;
   width: 100%;
   padding: 1.05rem;
-  background: #3CAB7E;
+  background: var(--green);
   color: white;
   border: none;
   border-radius: 50px;

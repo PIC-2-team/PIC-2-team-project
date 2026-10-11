@@ -88,8 +88,8 @@ export function Home() {
       <div style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem 1.25rem 1.25rem', gap: '1.25rem', minHeight: '100%' }}>
         {/* 인사 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e8ecf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#8a9ab0', fontWeight: 700 }}>
-            ?
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#3CAB7E', fontWeight: 700 }}>
+            {displayName[0] ?? '?'}
           </div>
           <div>
             <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1a2533', margin: '0 0 0.15rem' }}>안녕하세요, {displayName}님!</p>
@@ -125,7 +125,7 @@ export function Home() {
         {/* 활동지원사 & 배정 없음 */}
         {state.role === 'provider' && !p && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem 0' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#e8ecf0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
                 <circle cx="16" cy="13" r="6" fill="#c0c8d4" />
                 <path d="M4 30c0-7 5-11 12-11s12 4 12 11" stroke="#c0c8d4" strokeWidth="2" strokeLinecap="round" fill="none" />
@@ -186,7 +186,7 @@ export function Home() {
             <section style={{ background: '#f0f7f3', borderRadius: 16, padding: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1a2533', margin: 0 }}>오늘의 기록</h2>
-                <Link to="/records" style={{ fontSize: '0.8125rem', color: '#3CAB7E', fontWeight: 500, textDecoration: 'none' }}>전체보기 ›</Link>
+                <Link to="/records" style={{ fontSize: '0.8125rem', color: '#3CAB7E', fontWeight: 500, textDecoration: 'none', padding: '8px 4px', minHeight: 44, display: 'flex', alignItems: 'center' }}>전체보기 ›</Link>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {todayRecords.length > 0 ? todayRecords.map((r) => (
@@ -282,8 +282,8 @@ export function More() {
             to="/settings"
             style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'white', borderRadius: 16, padding: '16px 20px', textDecoration: 'none', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}
           >
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e8ecf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#8a9ab0', fontWeight: 700 }}>
-              ?
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22, color: '#3CAB7E', fontWeight: 700 }}>
+              {state.name[0] ?? '?'}
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: '#1a2533', margin: '0 0 2px' }}>{state.name}님</p>

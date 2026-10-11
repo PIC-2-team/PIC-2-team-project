@@ -17,6 +17,10 @@ import {
 import { Calendar } from './Calendar';
 import { Card, Confirm, Empty, Guard, Nav, Page } from './UI';
 
+const CATEGORY_HINTS: Record<string, string> = {
+  BEHAVIOR: '예: 갑작스러운 큰 소리에 소리를 지름 → 이름을 부드럽게 부르며 좋아하는 음악을 틀어드리면 진정됩니다',
+};
+
 const CARE_META: Record<string, { bg: string; icon: React.ReactNode }> = {
   COMMUNICATION: {
     bg: '#e8f5ee',
@@ -144,7 +148,9 @@ export function RecordList({ care = false }: { care?: boolean }) {
                       <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a2533' }}>{label}</span>
                       <span style={{ fontSize: '1.125rem', color: '#c0c8d4', lineHeight: 1 }}>›</span>
                     </div>
-                    {count > 0 && <span style={{ fontSize: '0.75rem', color: '#8a9ab0' }}>{count}개</span>}
+                    <span style={{ fontSize: '0.75rem', color: count > 0 ? '#8a9ab0' : '#b0bac6' }}>
+                      {count > 0 ? `${count}개` : '아직 기록 없음'}
+                    </span>
                   </Link>
                 );
               })}
@@ -160,6 +166,9 @@ export function RecordList({ care = false }: { care?: boolean }) {
           </>
         ) : (
           <>
+            {categoryId && CATEGORY_HINTS[categoryId] && (
+              <p className="hint">{CATEGORY_HINTS[categoryId]}</p>
+            )}
             <Calendar
               records={state.records.filter(
                 (r) => r.recipientId === state.recipientId && !r.deleted,
@@ -263,6 +272,7 @@ export function RecordForm() {
   const [media, setMedia] = useState(record?.media ?? '');
   const [activityChip, setActivityChip] = useState('야외활동');
   const [pinned, setPinned] = useState(false);
+  const [backConfirm, setBackConfirm] = useState(false);
 
   const now = new Date();
   const hours = now.getHours();
@@ -321,7 +331,11 @@ export function RecordForm() {
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         {/* 헤더 */}
         <div style={{ padding: '14px 20px', background: 'white', borderBottom: '1px solid #e8ecf0', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link to="/records" style={{ color: '#1a2533', textDecoration: 'none', fontSize: 22, lineHeight: 1, width: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</Link>
+          <button
+            type="button"
+            onClick={() => content.trim() ? setBackConfirm(true) : nav('/records')}
+            style={{ background: 'none', border: 'none', color: '#1a2533', fontSize: 22, lineHeight: 1, width: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+          >‹</button>
           <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, margin: 0, color: '#1a2533' }}>
             {step === 1 ? '기록 작성' : 'AI 정리 확인'}
           </h1>
@@ -393,7 +407,7 @@ export function RecordForm() {
                   maxLength={500}
                   rows={5}
                   placeholder="오늘의 활동을 기록해 주세요."
-                  style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 15, color: '#1a2533', lineHeight: 1.6, background: 'transparent', padding: 0, boxSizing: 'border-box' }}
+                  style={{ width: '100%', border: 'none', resize: 'none', fontSize: 15, color: '#1a2533', lineHeight: 1.6, background: 'transparent', padding: 0, boxSizing: 'border-box' }}
                 />
                 <p style={{ fontSize: 12, color: '#c0c8d4', margin: '4px 0 0', textAlign: 'right' }}>{content.length}/500</p>
               </div>
@@ -457,7 +471,7 @@ export function RecordForm() {
                   value={content}
                   maxLength={2000}
                   onChange={(e) => setContent(e.target.value)}
-                  style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 15, color: '#1a2533', lineHeight: 1.6, background: 'transparent', padding: 0, boxSizing: 'border-box' }}
+                  style={{ width: '100%', border: 'none', resize: 'none', fontSize: 15, color: '#1a2533', lineHeight: 1.6, background: 'transparent', padding: 0, boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -498,6 +512,15 @@ export function RecordForm() {
           )}
         </div>
       </div>
+      {backConfirm && (
+        <Confirm
+          title="작성 중인 내용이 있어요"
+          onCancel={() => setBackConfirm(false)}
+          onConfirm={() => nav('/records')}
+        >
+          저장하지 않으면 내용이 사라져요. 나가시겠어요?
+        </Confirm>
+      )}
     </Guard>
   );
 }
