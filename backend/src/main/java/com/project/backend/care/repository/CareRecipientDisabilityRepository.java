@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface CareRecipientDisabilityRepository extends JpaRepository<CareRecipientDisability, Long> {
     List<CareRecipientDisability> findByCareRecipientId(Long careRecipientId);
+    List<CareRecipientDisability> findByCareRecipientIdIn(List<Long> careRecipientIds);
     void deleteByCareRecipientId(Long careRecipientId);
 }
