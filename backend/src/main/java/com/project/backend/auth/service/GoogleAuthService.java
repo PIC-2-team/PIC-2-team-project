@@ -61,6 +61,6 @@ public class GoogleAuthService {
                 .tokenHash(hash)
                 .expiryDays(refreshTokenExpiryDays)
                 .build());
-        return GoogleAuthResult.success(accessToken, UserInfo.from(user));
+        return GoogleAuthResult.success(accessToken, raw, UserInfo.from(user));
     }
 }
