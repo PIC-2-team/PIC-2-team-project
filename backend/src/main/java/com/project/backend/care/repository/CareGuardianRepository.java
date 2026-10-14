@@ -18,4 +18,7 @@ public interface CareGuardianRepository extends JpaRepository<CareGuardian, Long
     boolean existsByCareRecipientIdAndGuardianIdAndStatus(
             Long careRecipientId, Long guardianId, GuardianStatus status);
     Optional<CareGuardian> findByInvitationToken(String token);
+    Optional<CareGuardian> findByCareRecipientIdAndTypeAndStatus(
+            Long careRecipientId, GuardianType type, GuardianStatus status);
+    List<CareGuardian> findByCareRecipientIdAndType(Long careRecipientId, GuardianType type);
 }
