@@ -67,6 +67,22 @@ public class NotificationService {
                 "생활기록 수정 제안이 " + result + "됐습니다.", clock.instant()));
     }
 
+    public void notifyInformationRequest(Long userId, String message) {
+        User user = users.findById(userId).orElse(null);
+        if (user != null && user.isInformationRequestReceived()) {
+            notifications.save(new Notification(userId, NotificationType.INFORMATION_REQUEST_RECEIVED,
+                    message, clock.instant()));
+        }
+    }
+
+    public void notifyInformationRequestGuardians(Long careRecipientId) {
+        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
+                .map(guardian -> guardian.getGuardianId()).distinct().toList();
+        for (Long guardianId : guardianIds) {
+            notifyInformationRequest(guardianId, "새 정보 요청이 도착했습니다.");
+        }
+    }
+
     private Pageable pageable(int page, int pageSize) {
         if (page < 1 || pageSize < 1 || pageSize > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "페이지 조건이 올바르지 않습니다.");
