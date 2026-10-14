@@ -4,12 +4,14 @@ import com.openai.client.OpenAIClient;
 import com.openai.core.JsonValue;
 import com.openai.models.ChatModel;
 import com.openai.models.ResponseFormatJsonSchema;
+import com.openai.models.audio.AudioResponseFormat;
 import com.openai.models.audio.AudioModel;
 import com.openai.models.audio.transcriptions.TranscriptionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.entity.RecordCategory;
 import com.project.backend.record.media.RecordMediaService;
+import com.project.backend.record.service.RecordAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import java.util.Map;
 public class RecordDraftService {
     private static final int MAX_TEXT_LENGTH = 3000;
     private static final int MAX_DRAFT_LENGTH = 500;
+    private static final double MAX_AUDIO_DURATION_SECONDS = 10 * 60;
     private static final ResponseFormatJsonSchema DRAFT_RESPONSE_FORMAT = ResponseFormatJsonSchema.builder()
             .type(JsonValue.from("json_schema"))
             .jsonSchema(ResponseFormatJsonSchema.JsonSchema.builder().name("record_draft").strict(true)
@@ -50,10 +53,12 @@ public class RecordDraftService {
 
     private final ObjectProvider<OpenAIClient> clients;
     private final RecordMediaService media;
+    private final RecordAccessService access;
     private final ObjectMapper objectMapper;
 
     public RecordDraftResponse create(Long userId, RecordDraftRequest request) {
-        if (request == null || request.inputType() == null) invalidInput();
+        if (request == null || request.careRecipientId() == null || request.inputType() == null) invalidInput();
+        access.verifyRead(userId, request.careRecipientId());
         String transcript;
         RecordMediaService.AudioAsset audio = null;
         if (request.inputType() == RecordDraftRequest.InputType.TEXT) {
@@ -62,7 +67,7 @@ public class RecordDraftService {
             if (transcript.isEmpty() || transcript.length() > MAX_TEXT_LENGTH) invalidInput();
         } else {
             if (request.text() != null || request.mediaId() == null) invalidInput();
-            audio = media.getForTranscription(userId, request.mediaId());
+            audio = media.getForTranscription(userId, request.careRecipientId(), request.mediaId());
             transcript = null;
         }
 
@@ -75,8 +80,14 @@ public class RecordDraftService {
                 var file = com.openai.core.MultipartField.<java.io.InputStream>builder()
                         .value(new ByteArrayInputStream(audio.bytes())).filename(audio.fileName())
                         .contentType(audio.mediaType()).build();
-                var params = TranscriptionCreateParams.builder().file(file).model(AudioModel.WHISPER_1).build();
-                transcript = client.audio().transcriptions().create(params).asTranscription().text();
+                var params = TranscriptionCreateParams.builder().file(file).model(AudioModel.WHISPER_1)
+                        .responseFormat(AudioResponseFormat.VERBOSE_JSON).build();
+                var transcription = client.audio().transcriptions().create(params).asVerbose();
+                double duration = transcription.duration();
+                if (!Double.isFinite(duration) || duration <= 0 || duration > MAX_AUDIO_DURATION_SECONDS) {
+                    throw invalidAudio();
+                }
+                transcript = transcription.text();
                 if (transcript == null || transcript.isBlank()) throw invalidAiResponse();
             }
         } catch (ApiException e) {
@@ -118,6 +129,10 @@ public class RecordDraftService {
 
     private ApiException invalidAiResponse() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "AI_INVALID_RESPONSE", "AI가 유효한 기록 초안을 반환하지 않았습니다.");
+    }
+
+    private ApiException invalidAudio() {
+        return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_AUDIO_MEDIA", "전사할 수 없는 오디오 파일입니다.");
     }
 
     private ApiException aiFailure() {
