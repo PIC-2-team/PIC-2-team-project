@@ -1,7 +1,6 @@
 .page {
   display: flex;
   flex-direction: column;
-  align-items: center;
   padding: 2rem 1.25rem 1.5rem;
   min-height: 100%;
 }
@@ -67,4 +66,55 @@
   font-size: 1.125rem;
   color: #c0c8d4;
   line-height: 1;
+}
+
+.tabRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.tab {
+  flex: none;
+  padding: 0.5rem 0.875rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: white;
+  font-size: 0.875rem;
+  color: #4a5568;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.tabActive {
+  border-color: transparent;
+  font-weight: 600;
+  color: #1a2533;
+}
+
+.infoSection {
+  flex: 1;
+  width: 100%;
+}
+
+.infoContent {
+  background: white;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+}
+
+.updatedAt {
+  font-size: 0.75rem;
+  color: #8a9ab0;
+  margin: 1rem 0 0;
+}
+
+.empty {
+  color: #8a9ab0;
+  font-size: 0.9375rem;
+  margin: 2rem auto;
+  text-align: center;
 }
