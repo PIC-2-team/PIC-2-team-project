@@ -35,6 +35,7 @@ export function LoginPage() {
   return (
     <main style={{ maxWidth: 390, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1>로그인</h1>
+      <p>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
       <form onSubmit={(e) => { void handleSubmit(e); }}>
         <label style={{ display: 'block', marginBottom: '1rem' }}>
           이메일

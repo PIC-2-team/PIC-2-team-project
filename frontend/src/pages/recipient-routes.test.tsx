@@ -1,14 +1,13 @@
 import '@testing-library/jest-dom/vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from '../contexts/AuthContext';
+import * as authApi from '../api/auth';
 import { router } from '../router';
 import { setTokenProvider } from '../api/client';
 
 beforeEach(() => {
-  localStorage.setItem('sam_token', 'test-token');
-  localStorage.setItem('sam_user', JSON.stringify({ id: 1, name: '테스트', role: 'GUARDIAN' }));
   setTokenProvider(() => null);
 });
 afterEach(() => {
@@ -21,17 +20,30 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
   '%s 직접 진입 시 인증 헤더와 함께 당사자를 조회한다', async path => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
       const url = String(input);
-      const data = url === '/api/care-recipients'
+      const data = url === '/api/auth/login'
+        ? { accessToken: 'test-token', user: { id: 1, name: '테스트', email: 'test@example.com', role: 'GUARDIAN' } }
+        : url === '/api/care-recipients'
         ? { items: [{ id: 42, name: '테스트 당사자' }] }
         : url.includes('/care-info/')
           ? { category: 'COMMUNICATION', content: '테스트 돌봄정보', updatedAt: '2026-10-14' }
+          : url.endsWith('/records/today')
+          ? []
           : url.endsWith('/records/7')
             ? { id: 7, category: 'OTHER', content: '테스트 기록', recordedAt: '2026-10-14' }
-            : { items: [] };
+            : { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } };
       return new Response(JSON.stringify({ success: true, data }));
     });
-    const memoryRouter = createMemoryRouter(router.routes, { initialEntries: [path] });
+    const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/login'] });
+    vi.spyOn(authApi, 'login').mockImplementation(async credentials => {
+      const response = await fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
+      return (await response.json()).data;
+    });
     render(<AuthProvider><RouterProvider router={memoryRouter} /></AuthProvider>);
+    fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
+    fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
+    await screen.findByText('테스트 당사자님');
+    await memoryRouter.navigate(path);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients',
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) })));
     if (path === '/records/new') await screen.findByRole('heading', { name: '기록 작성' });
@@ -41,9 +53,23 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
 );
 
 it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다', async () => {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ success: true, data: { items: [] } })));
-  const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/records'] });
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+    const data = String(input) === '/api/auth/login'
+      ? { accessToken: 'test-token', user: { id: 1, name: '테스트', email: 'test@example.com', role: 'GUARDIAN' } }
+      : { items: [] };
+    return new Response(JSON.stringify({ success: true, data }));
+  });
+  vi.spyOn(authApi, 'login').mockImplementation(async credentials => {
+    const response = await fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
+    return (await response.json()).data;
+  });
+  const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/login'] });
   render(<AuthProvider><RouterProvider router={memoryRouter} /></AuthProvider>);
-  expect(await screen.findByText('등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
+  fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
+  fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
+  await screen.findByText('테스트님, 당사자 정보를 먼저 등록해 주세요.');
+  await memoryRouter.navigate('/records');
+  await screen.findByText('등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.');
   memoryRouter.dispose();
 });
