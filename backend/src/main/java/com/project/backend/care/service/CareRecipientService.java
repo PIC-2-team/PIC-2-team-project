@@ -4,6 +4,7 @@ import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.entity.*;
+import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientDisabilityRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,9 +29,37 @@ public class CareRecipientService {
     private final CareRecipientRepository careRecipientRepository;
     private final CareRecipientDisabilityRepository disabilityRepository;
     private final CareGuardianRepository careGuardianRepository;
+    private final CareAssignmentRepository careAssignmentRepository;
     private final CareRecipientNumberGenerator numberGenerator;
     private final CareAccessService careAccessService;
     private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public List<CareRecipientResponse> getAll(Long userId) {
+        User user = findUser(userId);
+        List<Long> recipientIds;
+
+        if (user.getRole() == UserRole.GUARDIAN) {
+            recipientIds = careGuardianRepository.findByGuardianIdAndStatus(userId, GuardianStatus.ACTIVE)
+                    .stream().map(CareGuardian::getCareRecipientId).toList();
+        } else if (user.getRole() == UserRole.SUPPORT_WORKER) {
+            recipientIds = careAssignmentRepository.findBySupportWorkerIdAndEndedAtIsNull(userId)
+                    .stream().map(CareAssignment::getCareRecipientId).toList();
+        } else {
+            return List.of();
+        }
+
+        List<CareRecipient> recipients = careRecipientRepository.findAllById(recipientIds);
+        Map<Long, List<DisabilityType>> disabilityMap = disabilityRepository
+                .findByCareRecipientIdIn(recipientIds).stream()
+                .collect(Collectors.groupingBy(
+                        CareRecipientDisability::getCareRecipientId,
+                        Collectors.mapping(CareRecipientDisability::getDisabilityType, Collectors.toList())));
+
+        return recipients.stream()
+                .map(r -> CareRecipientResponse.of(r, disabilityMap.getOrDefault(r.getId(), List.of())))
+                .toList();
+    }
 
     public CareRecipientResponse register(Long guardianUserId, CreateCareRecipientRequest request) {
         User user = findUser(guardianUserId);

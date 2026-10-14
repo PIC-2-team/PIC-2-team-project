@@ -7,6 +7,8 @@ import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.service.CareRecipientService;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.organization.service.OrganizationService;
+
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +27,12 @@ public class CareRecipientController {
 
     private final CareRecipientService careRecipientService;
     private final OrganizationService organizationService;
+
+    @Operation(summary = "내 당사자 목록 조회")
+    @GetMapping
+    public ApiResponse<List<CareRecipientResponse>> getAll(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(careRecipientService.getAll(userId));
+    }
 
     @Operation(summary = "당사자 등록")
     @PostMapping

@@ -1,13 +1,14 @@
 package com.project.backend.organization.service;
 
+import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.CareGuardian;
 import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.entity.GuardianType;
+import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
 import com.project.backend.common.exception.ApiException;
-import com.project.backend.organization.dto.CreateOrganizationRequest;
-import com.project.backend.organization.dto.OrganizationResponse;
+import com.project.backend.organization.dto.*;
 import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
@@ -21,6 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,7 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    private final CareAssignmentRepository careAssignmentRepository;
     private final CareGuardianRepository careGuardianRepository;
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
@@ -57,9 +63,7 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public OrganizationResponse getMyOrganization(Long ownerId) {
-        return organizationRepository.findByOwnerId(ownerId)
-                .map(OrganizationResponse::from)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
+        return OrganizationResponse.from(findOrgByOwner(ownerId));
     }
 
     public void requestRecipientLink(Long guardianId, Long careRecipientId, String organizationCode) {
@@ -80,8 +84,7 @@ public class OrganizationService {
     }
 
     public void decideLinkRequest(Long organizationOwnerId, Long linkId, boolean accepted) {
-        Organization org = organizationRepository.findByOwnerId(organizationOwnerId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
+        Organization org = findOrgByOwner(organizationOwnerId);
 
         OrganizationRecipientLink link = organizationRecipientLinkRepository.findById(linkId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "LINK_NOT_FOUND", "연결 요청을 찾을 수 없습니다."));
@@ -97,15 +100,71 @@ public class OrganizationService {
         else link.reject();
     }
 
+    @Transactional(readOnly = true)
+    public List<MemberResponse> getMembers(Long ownerId) {
+        Organization org = findOrgByOwner(ownerId);
+        List<OrganizationMember> members = organizationMemberRepository.findByOrganizationId(org.getId());
+        List<Long> userIds = members.stream().map(OrganizationMember::getUserId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return members.stream()
+                .map(m -> MemberResponse.of(m, userMap.get(m.getUserId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MemberResponse getMember(Long ownerId, Long memberId) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        return MemberResponse.of(member, findUser(member.getUserId()));
+    }
+
+    public MemberResponse updateMemberStatus(Long ownerId, Long memberId, boolean active) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        if (active) member.activate();
+        else member.deactivate();
+        return MemberResponse.of(member, findUser(member.getUserId()));
+    }
+
+    @Transactional(readOnly = true)
+    public List<CareAssignmentResponse> getAssignments(Long ownerId, Long careRecipientId) {
+        Organization org = findOrgByOwner(ownerId);
+        List<CareAssignment> assignments = (careRecipientId != null)
+                ? careAssignmentRepository.findByOrganizationIdAndCareRecipientId(org.getId(), careRecipientId)
+                : careAssignmentRepository.findByOrganizationId(org.getId());
+        return assignments.stream().map(CareAssignmentResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LinkRequestResponse> getLinkRequests(Long ownerId) {
+        Organization org = findOrgByOwner(ownerId);
+        return organizationRecipientLinkRepository.findByOrganizationId(org.getId()).stream()
+                .map(LinkRequestResponse::from).toList();
+    }
+
     public OrganizationMember addMember(Long ownerId, Long supportWorkerId) {
-        Organization org = organizationRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
+        Organization org = findOrgByOwner(ownerId);
         User worker = findUser(supportWorkerId);
         if (worker.getRole() != UserRole.SUPPORT_WORKER) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "활동지원사 계정만 멤버로 추가할 수 있습니다.");
         }
         return organizationMemberRepository.save(
                 OrganizationMember.builder().organizationId(org.getId()).userId(supportWorkerId).build());
+    }
+
+    private Organization findOrgByOwner(Long ownerId) {
+        return organizationRepository.findByOwnerId(ownerId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
+    }
+
+    private OrganizationMember findMemberInOrg(Long organizationId, Long memberId) {
+        OrganizationMember member = organizationMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "멤버를 찾을 수 없습니다."));
+        if (!member.getOrganizationId().equals(organizationId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다.");
+        }
+        return member;
     }
 
     private void verifyGuardianAccess(Long guardianId, Long careRecipientId) {

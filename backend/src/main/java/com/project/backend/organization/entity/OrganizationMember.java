@@ -37,6 +37,10 @@ public class OrganizationMember {
         this.joinedAt = LocalDateTime.now();
     }
 
+    public void activate() {
+        this.status = OrganizationMemberStatus.ACTIVE;
+    }
+
     public void deactivate() {
         this.status = OrganizationMemberStatus.INACTIVE;
     }
