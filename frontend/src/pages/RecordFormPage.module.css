@@ -155,3 +155,9 @@
   background: #b8c4ce;
   cursor: not-allowed;
 }
+
+.error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}

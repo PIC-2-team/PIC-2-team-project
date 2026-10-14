@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { createRecord } from '../api/records';
+import type { RecordCategory } from '../types/record';
 import styles from './RecordFormPage.module.css';
 
-const CATEGORIES = [
-  { id: 'EMOTION', label: '감정' },
-  { id: 'SCHEDULE', label: '일정' },
-  { id: 'HEALTH', label: '건강·복약' },
+const CATEGORIES: { id: RecordCategory; label: string }[] = [
+  { id: 'COMMUNICATION', label: '의사소통' },
+  { id: 'LIFESTYLE', label: '생활습관' },
   { id: 'MEAL', label: '식사' },
-  { id: 'SLEEP', label: '수면' },
-  { id: 'ETC', label: '기타' },
-] as const;
-
-type CategoryId = (typeof CATEGORIES)[number]['id'];
+  { id: 'PREFERENCE', label: '선호·비선호' },
+  { id: 'CHALLENGING_BEHAVIOR', label: '도전행동' },
+  { id: 'HEALTH', label: '건강·복약' },
+  { id: 'EMERGENCY', label: '위기대처' },
+  { id: 'OTHER', label: '기타' },
+];
 
 function formatToday() {
   const d = new Date();
@@ -20,17 +23,36 @@ function formatToday() {
 }
 
 export function RecordFormPage() {
+  const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
-  const [category, setCategory] = useState<CategoryId>('EMOTION');
+  const [category, setCategory] = useState<RecordCategory>('OTHER');
   const [content, setContent] = useState('');
-
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const canSave = content.trim().length > 0 && !saving;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) return;
+    if (!selectedRecipientId) {
+      setError('당사자 정보가 없어요. 홈으로 돌아가 다시 시도해주세요.');
+      return;
+    }
     setSaving(true);
-    setTimeout(() => navigate(-1), 800);
+    setError(null);
+    try {
+      await createRecord(selectedRecipientId, {
+        content: content.trim(),
+        category,
+        recordedAt: new Date().toISOString(),
+      });
+      navigate('/records');
+    } catch (e) {
+      // 실패해도 content/category 유지
+      setError(e instanceof Error ? e.message : '저장 중 오류가 발생했어요.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -81,6 +103,8 @@ export function RecordFormPage() {
           />
           <p className={styles.charCount}>{content.length} / 500</p>
         </section>
+
+        {error && <p role="alert" className={styles.error}>{error}</p>}
       </div>
 
       <div className={styles.footer}>
@@ -88,9 +112,9 @@ export function RecordFormPage() {
           type="button"
           className={styles.saveButton}
           disabled={!canSave}
-          onClick={handleSave}
+          onClick={() => { void handleSave(); }}
         >
-          {saving ? '저장 중...' : '저장하기'}
+          {saving ? '저장 중…' : '저장하기'}
         </button>
       </div>
     </div>
