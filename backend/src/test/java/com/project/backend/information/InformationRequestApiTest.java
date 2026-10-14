@@ -47,7 +47,7 @@ class InformationRequestApiTest {
     @Autowired NotificationRepository notifications;
     @MockitoBean Clock clock;
     MockMvc mvc;
-    User guardian, secondary, worker, otherWorker, institution, outsider;
+    User guardian, secondary, worker, otherWorker, institution, otherInstitution, outsider;
     CareRecipient recipient;
     String recipientPath;
     static final Instant NOW = Instant.parse("2026-10-14T03:00:00Z");
@@ -61,6 +61,7 @@ class InformationRequestApiTest {
         worker = user("worker", UserRole.SUPPORT_WORKER);
         otherWorker = user("other", UserRole.SUPPORT_WORKER);
         institution = user("institution", UserRole.INSTITUTION);
+        otherInstitution = user("otherInstitution", UserRole.INSTITUTION);
         outsider = user("outsider", UserRole.GUARDIAN);
         recipient = recipients.save(CareRecipient.builder().name("당사자").careRecipientNumber("R-00000001")
                 .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build());
@@ -112,7 +113,14 @@ class InformationRequestApiTest {
         long id = ((Number) JsonPath.read(created, "$.data.id")).longValue();
         perform(get("/api/information-requests"), otherWorker)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        perform(get("/api/information-requests?pageSize=101"), worker).andExpect(status().isBadRequest());
         perform(get("/api/organizations/me/information-requests"), outsider).andExpect(status().isForbidden());
+        organizations.save(Organization.builder().name("다른 기관").ownerId(otherInstitution.getId())
+                .organizationCode("BB-001").build());
+        perform(get("/api/organizations/me/information-requests"), otherInstitution)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        perform(post("/api/organizations/me/information-requests/" + id + "/forward").content("{}"), otherInstitution)
+                .andExpect(status().isNotFound());
         perform(post(recipientPath + "/" + id + "/reply").content("{\"message\":\"답변\"}"), guardian)
                 .andExpect(status().isConflict());
         perform(post("/api/organizations/me/information-requests/" + id + "/close").content("{}"), institution)
