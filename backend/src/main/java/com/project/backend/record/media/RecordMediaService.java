@@ -17,6 +17,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.core.ResponseBytes;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -28,6 +30,8 @@ import java.util.*;
 @Transactional
 public class RecordMediaService {
     private static final Duration DOWNLOAD_URL_TTL = Duration.ofMinutes(5);
+    private static final long MAX_TRANSCRIPTION_SIZE = 25_000_000L;
+    private static final Set<String> AUDIO_TYPES = Set.of("audio/mpeg", "audio/mp4", "audio/wav", "audio/webm");
     private final RecordMediaRepository mediaRepository;
     private final RecordMediaLinkRepository linkRepository;
     private final DailyRecordRepository recordRepository;
@@ -100,6 +104,22 @@ public class RecordMediaService {
         return new MediaDeleteResponse(true);
     }
 
+    @Transactional(readOnly = true)
+    public AudioAsset getForTranscription(Long userId, Long mediaId) {
+        RecordMedia media = mediaRepository.findById(mediaId).orElseThrow(this::notFound);
+        access.verifyRead(userId, media.getCareRecipientId());
+        if (!AUDIO_TYPES.contains(media.getMediaType()) || media.getSizeBytes() > MAX_TRANSCRIPTION_SIZE) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_AUDIO_MEDIA", "전사할 수 없는 오디오 파일입니다.");
+        }
+        try {
+            ResponseBytes<GetObjectResponse> bytes = s3.getObjectAsBytes(GetObjectRequest.builder()
+                    .bucket(bucket).key(media.getS3Key()).build());
+            return new AudioAsset(media.getFileName(), media.getMediaType(), bytes.asByteArray());
+        } catch (RuntimeException e) {
+            throw storageFailure(e);
+        }
+    }
+
     public List<RecordMedia> validateIds(Long recipientId, List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         if (ids.size() > 5 || new HashSet<>(ids).size() != ids.size()) invalidIds();
@@ -153,4 +173,6 @@ public class RecordMediaService {
     private ApiException storageFailure(Exception cause) {
         return new ApiException(HttpStatus.BAD_GATEWAY, "MEDIA_STORAGE_FAILED", "미디어 저장소 요청을 처리하지 못했습니다.");
     }
+
+    public record AudioAsset(String fileName, String mediaType, byte[] bytes) { }
 }
