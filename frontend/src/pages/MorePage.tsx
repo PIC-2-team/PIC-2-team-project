@@ -27,7 +27,7 @@ const MENU_SECTIONS = [
   },
 ];
 
-export default function MorePage() {
+export function MorePage() {
   return (
     <div className={styles.page}>
       <div className={styles.profile}>

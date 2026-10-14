@@ -19,7 +19,7 @@ function formatToday() {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
 }
 
-export default function RecordFormPage() {
+export function RecordFormPage() {
   const navigate = useNavigate();
   const [category, setCategory] = useState<CategoryId>('EMOTION');
   const [content, setContent] = useState('');

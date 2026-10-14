@@ -92,7 +92,7 @@ function getWeekdayLabel(year: number, month: number, day: number) {
   return DAYS[new Date(year, month, day).getDay()];
 }
 
-export default function DailyRecordPage() {
+export function DailyRecordPage() {
   const navigate = useNavigate();
   const [today] = useState(() => new Date());
   const [viewYear, setViewYear] = useState(today.getFullYear());

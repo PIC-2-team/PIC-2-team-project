@@ -90,7 +90,7 @@ const CATEGORIES = [
   },
 ];
 
-export default function CareInfoPage() {
+export function CareInfoPage() {
   const navigate = useNavigate();
 
   return (

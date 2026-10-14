@@ -42,7 +42,7 @@ const CATEGORY_BG: Record<string, string> = {
   SCHEDULE: '#e8f0fb',
 };
 
-export default function HomePage() {
+export function HomePage() {
   const navigate = useNavigate();
 
   return (

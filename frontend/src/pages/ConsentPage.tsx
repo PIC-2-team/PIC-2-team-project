@@ -31,7 +31,7 @@ const CONSENT_ITEMS = [
 
 type ConsentKey = (typeof CONSENT_ITEMS)[number]['id'];
 
-export default function ConsentPage() {
+export function ConsentPage() {
   const navigate = useNavigate();
   const [consents, setConsents] = useState<Record<ConsentKey, boolean>>({
     basicInfo: false,
