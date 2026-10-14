@@ -38,8 +38,8 @@ class SecondaryGuardianServiceTest {
     void invite_PRIMARY_보호자가_유효한_초대_생성() {
         User primary = guardianUser(1L);
         User invitee = guardianUser(2L);
-        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
-                100L, 1L, GuardianStatus.ACTIVE)).willReturn(true);
+        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndTypeAndStatus(
+                100L, 1L, GuardianType.PRIMARY, GuardianStatus.ACTIVE)).willReturn(true);
         given(userRepository.findByPublicCode("P-INVITE1")).willReturn(Optional.of(invitee));
         given(careGuardianRepository.findByCareRecipientIdAndType(100L, GuardianType.SECONDARY))
                 .willReturn(List.of());
@@ -60,11 +60,21 @@ class SecondaryGuardianServiceTest {
 
     @Test
     void invite_PRIMARY_보호자가_아닌_경우_FORBIDDEN() {
-        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
-                100L, 99L, GuardianStatus.ACTIVE)).willReturn(false);
+        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndTypeAndStatus(
+                100L, 99L, GuardianType.PRIMARY, GuardianStatus.ACTIVE)).willReturn(false);
 
         assertThatThrownBy(() -> secondaryGuardianService.invite(
                 99L, 100L, new InviteSecondaryGuardianRequest("P-INVITE1")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void getSecondaryGuardian_비PRIMARY_보호자는_FORBIDDEN() {
+        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndTypeAndStatus(
+                100L, 99L, GuardianType.PRIMARY, GuardianStatus.ACTIVE)).willReturn(false);
+
+        assertThatThrownBy(() -> secondaryGuardianService.getSecondaryGuardian(99L, 100L))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
     }
@@ -102,8 +112,8 @@ class SecondaryGuardianServiceTest {
 
     @Test
     void revoke_PRIMARY_보호자가_세컨드_보호자_해제() {
-        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
-                100L, 1L, GuardianStatus.ACTIVE)).willReturn(true);
+        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndTypeAndStatus(
+                100L, 1L, GuardianType.PRIMARY, GuardianStatus.ACTIVE)).willReturn(true);
 
         CareGuardian secondary = CareGuardian.builder()
                 .careRecipientId(100L).guardianId(2L)
