@@ -1,49 +1,60 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { listCareRecipients } from '../api/careRecipients';
+import { getTodayRecords } from '../api/records';
+import type { CareRecipient } from '../types/careRecipient';
+import type { DailyRecord } from '../types/record';
 import styles from './HomePage.module.css';
 
-const MOCK_USER = { name: '김OO' };
+type PageState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'empty' }
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[] };
 
-const MOCK_RECORDS = [
-  {
-    id: 1,
-    content: '조용한 공간에서 안정된 모습을 보였어요.',
-    time: '오전 10:30',
-    category: 'EMOTION' as const,
-  },
-  {
-    id: 2,
-    content: '외출 전에 미리 알려주니 잘 따라왔어요.',
-    time: '오후 02:15',
-    category: 'SCHEDULE' as const,
-  },
-];
-
-const CATEGORY_ICON: Record<string, React.ReactNode> = {
-  EMOTION: (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path d="M11 2C6.03 2 2 6.03 2 11s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z" fill="#e8f5ee" />
-      <path d="M11 4a4 4 0 00-2.8 6.8L11 14l2.8-3.2A4 4 0 0011 4z" fill="#3CAB7E" />
-    </svg>
-  ),
-  SCHEDULE: (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <rect x="1" y="3" width="20" height="18" rx="3" fill="#e8f0fb" />
-      <rect x="1" y="3" width="20" height="6" rx="3" fill="#5b8dee" />
-      <line x1="7" y1="1" x2="7" y2="5" stroke="#5b8dee" strokeWidth="2" strokeLinecap="round" />
-      <line x1="15" y1="1" x2="15" y2="5" stroke="#5b8dee" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="7" cy="14" r="1.5" fill="#5b8dee" />
-      <circle cx="11" cy="14" r="1.5" fill="#5b8dee" />
-    </svg>
-  ),
-};
-
-const CATEGORY_BG: Record<string, string> = {
-  EMOTION: '#e8f5ee',
-  SCHEDULE: '#e8f0fb',
-};
-
-export default function HomePage() {
+export function HomePage() {
+  const { user, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
+  const [page, setPage] = useState<PageState>({ status: 'loading' });
+
+  useEffect(() => {
+    if (user?.role === 'AGENCY') {
+      navigate('/agency', { replace: true });
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await listCareRecipients();
+        const first = res.items[0] ?? null;
+        if (!first) {
+          setPage({ status: 'empty' });
+          return;
+        }
+        setSelectedRecipient(first.id);
+        const records = await getTodayRecords(first.id);
+        setPage({ status: 'ok', recipient: first, todayRecords: records });
+      } catch (e) {
+        setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
+      }
+    };
+    void load();
+  }, [user?.role]);
+
+  if (page.status === 'loading') return <p>불러오는 중…</p>;
+  if (page.status === 'error') return <p role="alert">{page.message}</p>;
+  if (page.status === 'empty') {
+    return (
+      <main className={styles.page}>
+        <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
+        {/* TODO: 당사자 등록 API 확정 후 연결 */}
+        <button disabled type="button">당사자 등록 (준비 중)</button>
+      </main>
+    );
+  }
+
+  const { recipient, todayRecords } = page;
+  const canWrite = user?.role === 'GUARDIAN';
 
   return (
     <div className={styles.page}>
@@ -55,7 +66,7 @@ export default function HomePage() {
           </svg>
         </div>
         <div>
-          <p className={styles.name}>{MOCK_USER.name}님</p>
+          <p className={styles.name}>{recipient.name}님</p>
           <p className={styles.greeting}>오늘도 좋은 하루 보내세요!</p>
         </div>
       </div>
@@ -73,31 +84,33 @@ export default function HomePage() {
         </div>
 
         <div className={styles.records}>
-          {MOCK_RECORDS.map(record => (
-            <div key={record.id} className={styles.recordCard}>
-              <div
-                className={styles.recordIcon}
-                style={{ background: CATEGORY_BG[record.category] }}
-              >
-                {CATEGORY_ICON[record.category]}
+          {todayRecords.length === 0 ? (
+            <p>오늘 기록이 없어요.</p>
+          ) : (
+            todayRecords.map(record => (
+              <div key={record.id} className={styles.recordCard}>
+                <p className={styles.recordContent}>{record.content}</p>
+                <span className={styles.recordTime}>
+                  {new Date(record.recordedAt).toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               </div>
-              <p className={styles.recordContent}>{record.content}</p>
-              <span className={styles.recordTime}>{record.time}</span>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
 
-      <button
-        className={styles.recordButton}
-        type="button"
-        onClick={() => navigate('/records/new')}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d="M14 2.5l3.5 3.5L6 17.5H2.5V14L14 2.5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        기록하기
-      </button>
+      {canWrite && (
+        <button
+          className={styles.recordButton}
+          type="button"
+          onClick={() => navigate('/records/new')}
+        >
+          기록하기
+        </button>
+      )}
     </div>
   );
 }

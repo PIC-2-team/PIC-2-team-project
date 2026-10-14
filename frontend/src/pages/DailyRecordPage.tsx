@@ -1,66 +1,48 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { getRecordsByMonth } from '../api/records';
+import type { DailyRecord, RecordCategory } from '../types/record';
 import styles from './DailyRecordPage.module.css';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
-const MOCK_RECORDS: Record<string, { id: number; content: string; category: string }[]> = {
-  '2026-10-01': [
-    { id: 10, content: '새로운 활동지원사와 첫 만남. 처음엔 경계했지만 이름을 반복해서 부르니 눈을 맞추기 시작했어요.', category: 'EMOTION' },
-  ],
-  '2026-10-03': [
-    { id: 11, content: '복약 시간에 맞춰 리스페리돈 복용했어요.', category: 'HEALTH' },
-    { id: 12, content: '점심 식사 전 손 씻기를 스스로 했어요.', category: 'MEAL' },
-  ],
-  '2026-10-06': [
-    { id: 13, content: '오전 산책 중 큰 소리에 놀라 잠깐 멈췄지만 이름을 부르자 다시 걸음을 재개했어요.', category: 'EMOTION' },
-    { id: 14, content: '좋아하는 동요를 틀어주니 기분이 많이 풀렸어요.', category: 'EMOTION' },
-  ],
-  '2026-10-08': [
-    { id: 1, content: '조용한 공간에서 안정된 모습을 보였어요.', category: 'EMOTION' },
-    { id: 2, content: '외출 전에 미리 알려주니 잘 따라왔어요.', category: 'SCHEDULE' },
-  ],
-  '2026-10-09': [
-    { id: 15, content: '배변 활동 정상. 식이섬유 음식 잘 먹었어요.', category: 'HEALTH' },
-  ],
-  '2026-10-10': [
-    { id: 16, content: '오늘 유독 말을 많이 하려 했어요. 좋아하는 색연필 꺼내주니 30분 넘게 그림 그렸어요.', category: 'EMOTION' },
-    { id: 17, content: '단추 채우기를 처음으로 혼자 해냈어요!', category: 'SCHEDULE' },
-  ],
-  '2026-10-13': [
-    { id: 18, content: '어제 새 장소에 미리 사진으로 설명해줬더니 오늘 외출 시 별 저항 없이 따라왔어요.', category: 'SCHEDULE' },
-  ],
-  '2026-10-14': [
-    { id: 3, content: '조용한 공간에서 안정된 모습을 보였어요.', category: 'EMOTION' },
-    { id: 19, content: '복약 정상. 저녁 식사도 잘 드셨어요.', category: 'HEALTH' },
-  ],
-  '2026-10-16': [
-    { id: 20, content: '잠깐 자해 행동(손 물기) 나타났으나, 부드럽게 이름 부르고 좋아하는 노래 틀어주니 5분 내 진정됐어요.', category: 'EMOTION' },
-  ],
-  '2026-10-21': [
-    { id: 4, content: '복약 시간에 맞춰 약을 드셨어요.', category: 'HEALTH' },
-    { id: 21, content: '오늘 산책로를 살짝 바꿨는데 불안해했어요. 앞으로는 미리 변경 예고를 드리는 게 좋을 것 같아요.', category: 'SCHEDULE' },
-  ],
-};
-
-const CATEGORY_COLOR: Record<string, string> = {
-  EMOTION: '#e8f5ee',
-  SCHEDULE: '#e8f0fb',
-  HEALTH: '#fff3e0',
+const CATEGORY_COLOR: Record<RecordCategory, string> = {
+  COMMUNICATION: '#e8f5ee',
+  LIFESTYLE: '#f3e8fb',
   MEAL: '#fff8e8',
+  PREFERENCE: '#fce8f0',
+  CHALLENGING_BEHAVIOR: '#ffe8e8',
+  HEALTH: '#fff3e0',
+  EMERGENCY: '#fde9e0',
+  OTHER: '#edf0f3',
 };
 
-const CATEGORY_ICON: Record<string, React.ReactNode> = {
-  EMOTION: (
+const CATEGORY_ICON: Record<RecordCategory, React.ReactNode> = {
+  COMMUNICATION: (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
       <path d="M11 4a4 4 0 00-2.8 6.8L11 14l2.8-3.2A4 4 0 0011 4z" fill="#3CAB7E" />
     </svg>
   ),
-  SCHEDULE: (
+  LIFESTYLE: (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <rect x="2" y="4" width="18" height="15" rx="2" fill="#5b8dee" />
-      <line x1="7" y1="2" x2="7" y2="6" stroke="white" strokeWidth="2" strokeLinecap="round" />
-      <line x1="15" y1="2" x2="15" y2="6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <rect x="2" y="4" width="18" height="15" rx="2" fill="#9c5ee0" />
+    </svg>
+  ),
+  MEAL: (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path d="M7 3v6a4 4 0 004 4 4 4 0 004-4V3" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="11" y1="13" x2="11" y2="19" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  ),
+  PREFERENCE: (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path d="M11 5c-3.5-3.5-8 0-5 5l5 7 5-7c3-5-1.5-8.5-5-5z" fill="#e05e9c" />
+    </svg>
+  ),
+  CHALLENGING_BEHAVIOR: (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <path d="M11 3l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z" fill="#e05e5e" />
     </svg>
   ),
   HEALTH: (
@@ -68,10 +50,16 @@ const CATEGORY_ICON: Record<string, React.ReactNode> = {
       <rect x="8" y="3" width="6" height="16" rx="3" fill="#ff9800" transform="rotate(45 11 11)" />
     </svg>
   ),
-  MEAL: (
+  EMERGENCY: (
     <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path d="M7 3v6a4 4 0 004 4 4 4 0 004-4V3" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
-      <line x1="11" y1="13" x2="11" y2="19" stroke="#f9a825" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M11 3l8.5 15H2.5z" fill="#ff5722" />
+      <line x1="11" y1="9" x2="11" y2="13" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="11" cy="16" r="0.8" fill="white" />
+    </svg>
+  ),
+  OTHER: (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" fill="#8a9ab0" />
     </svg>
   ),
 };
@@ -92,18 +80,38 @@ function getWeekdayLabel(year: number, month: number, day: number) {
   return DAYS[new Date(year, month, day).getDay()];
 }
 
-export default function DailyRecordPage() {
+export function DailyRecordPage() {
+  const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
   const [today] = useState(() => new Date());
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [monthRecords, setMonthRecords] = useState<DailyRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedRecipientId) return;
+    let isCurrent = true;
+    setIsLoading(true);
+    setError(null);
+    setMonthRecords([]);
+    getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1)
+      .then(res => { if (isCurrent) setMonthRecords(res.items); })
+      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록 불러오기 실패'); })
+      .finally(() => { if (isCurrent) setIsLoading(false); });
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, viewYear, viewMonth]);
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
 
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
-  const selectedRecords = MOCK_RECORDS[selectedKey] ?? [];
+  const selectedRecords = monthRecords.filter(r => r.recordedAt.slice(0, 10) === selectedKey);
+  const datesWithRecords = new Set(monthRecords.map(r => r.recordedAt.slice(0, 10)));
+
+  const canWrite = user?.role === 'GUARDIAN';
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
@@ -153,7 +161,7 @@ export default function DailyRecordPage() {
           ))}
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
             const key = toDateKey(viewYear, viewMonth, day);
-            const hasRecord = key in MOCK_RECORDS;
+            const hasRecord = datesWithRecords.has(key);
             const isSelected = day === selectedDay;
             const weekday = new Date(viewYear, viewMonth, day).getDay();
 
@@ -174,12 +182,21 @@ export default function DailyRecordPage() {
         </div>
       </section>
 
+      {isLoading && <p>불러오는 중…</p>}
+      {error && <p role="alert">{error}</p>}
+
       <section className={styles.recordSection}>
         <div className={styles.recordHeader}>
           <h2 className={styles.recordDate}>
             {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
           </h2>
-          <button className={styles.viewAll} type="button">더보기 ›</button>
+          <button
+            className={styles.viewAll}
+            type="button"
+            onClick={() => navigate('/records')}
+          >
+            더보기 ›
+          </button>
         </div>
 
         {selectedRecords.length === 0 ? (
@@ -187,7 +204,7 @@ export default function DailyRecordPage() {
         ) : (
           <div className={styles.records}>
             {selectedRecords.map(record => (
-              <div key={record.id} className={styles.recordCard}>
+              <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
                 <div
                   className={styles.recordIcon}
                   style={{ background: CATEGORY_COLOR[record.category] }}
@@ -195,22 +212,24 @@ export default function DailyRecordPage() {
                   {CATEGORY_ICON[record.category]}
                 </div>
                 <p className={styles.recordContent}>{record.content}</p>
-              </div>
+              </Link>
             ))}
           </div>
         )}
       </section>
 
-      <button
-        className={styles.recordButton}
-        type="button"
-        onClick={() => navigate('/records/new')}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d="M14 2.5l3.5 3.5L6 17.5H2.5V14L14 2.5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        기록하기
-      </button>
+      {canWrite && (
+        <button
+          className={styles.recordButton}
+          type="button"
+          onClick={() => navigate('/records/new')}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M14 2.5l3.5 3.5L6 17.5H2.5V14L14 2.5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          기록하기
+        </button>
+      )}
     </div>
   );
 }

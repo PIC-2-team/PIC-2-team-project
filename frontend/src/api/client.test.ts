@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiRequest } from './client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, apiRequest, setTokenProvider, setUnauthorizedHandler } from './client';
+
+beforeEach(() => {
+  setTokenProvider(() => null);
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setTokenProvider(() => null);
 });
 
 describe('apiRequest', () => {
@@ -77,5 +82,61 @@ describe('apiRequest', () => {
     await apiRequest('/api/path');
     const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toMatch(/\/api\/path$/);
+  });
+
+  it('토큰이 있으면 Authorization 헤더를 포함한다', async () => {
+    setTokenProvider(() => 'test-token-abc');
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: { ok: true } }), { status: 200 })
+    );
+    vi.stubGlobal('fetch', mockFetch);
+    await apiRequest<{ ok: boolean }>('/test');
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const headers = options.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer test-token-abc');
+  });
+
+  it('토큰이 없으면 Authorization 헤더를 포함하지 않는다', async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: null }), { status: 200 })
+    );
+    vi.stubGlobal('fetch', mockFetch);
+    await apiRequest('/test');
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const headers = options.headers as Record<string, string>;
+    expect(headers['Authorization']).toBeUndefined();
+  });
+
+  it('401 응답 시 onUnauthorized 콜백을 호출한다', async () => {
+    const onUnauth = vi.fn();
+    setUnauthorizedHandler(onUnauth);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: '' } }),
+          { status: 401 }
+        )
+      )
+    );
+    await expect(apiRequest('/protected')).rejects.toThrow(ApiError);
+    expect(onUnauth).toHaveBeenCalled();
+  });
+
+  it('401 ApiError는 status 401을 포함한다', async () => {
+    setUnauthorizedHandler(() => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(
+        new Response('', { status: 401 })
+      )
+    );
+    try {
+      await apiRequest('/protected');
+      expect.fail('throw 되어야 함');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(401);
+    }
   });
 });

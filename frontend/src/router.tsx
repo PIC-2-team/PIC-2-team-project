@@ -1,82 +1,71 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { DemoProvider } from './demo/Store';
-import { DemoLayout, NotFound } from './demo/UI';
-import {
-  Account,
-  AgencyCode,
-  Consent,
-  DemoGuide,
-  Onboarding,
-  Profile,
-  ProfileForm,
-} from './demo/EntryPages';
-import {
-  History,
-  RecordDetail,
-  RecordForm,
-  RecordList,
-  SuggestForm,
-  Suggestions,
-} from './demo/RecordPages';
-import {
-  AgencyHome,
-  Assign,
-  Providers,
-  Recipients,
-  Relations,
-  Transfer,
-} from './demo/AgencyPages';
-import {
-  AccessLog,
-  Notifications,
-  RequestForm,
-  Requests,
-  Secondary,
-} from './demo/CollaborationPages';
-import { Help, Home, Info, More, Settings } from './demo/HomePages';
+import { AppLayout } from './layouts/AppLayout';
+import { RequireAuth } from './components/RequireAuth';
+import { RequireRecipient } from './components/RequireRecipient';
+import { RequireRole } from './components/RequireRole';
+import { ConsentPage } from './pages/ConsentPage';
+import { LoginPage } from './pages/LoginPage';
+import { HomePage } from './pages/HomePage';
+import { DailyRecordPage } from './pages/DailyRecordPage';
+import { RecordFormPage } from './pages/RecordFormPage';
+import { RecordDetailPage } from './pages/RecordDetailPage';
+import { CareInfoPage } from './pages/CareInfoPage';
+import { MorePage } from './pages/MorePage';
+import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+
 export const router = createBrowserRouter([
+  { path: '/', element: <ConsentPage /> },
+  { path: '/login', element: <LoginPage /> },
+
   {
-    element: (
-      <DemoProvider>
-        <DemoLayout />
-      </DemoProvider>
-    ),
+    element: <RequireAuth />,
     children: [
-      { path: '/', element: <Consent /> },
-      { path: '/demo', element: <DemoGuide /> },
-      { path: '/onboarding', element: <Onboarding /> },
-      { path: '/onboarding/code', element: <AgencyCode /> },
-      { path: '/login', element: <Account /> },
-      { path: '/register', element: <Account register /> },
-      { path: '/home', element: <Home /> },
-      { path: '/profile', element: <Profile /> },
-      { path: '/profile/new', element: <ProfileForm /> },
-      { path: '/profile/:id/edit', element: <ProfileForm /> },
-      { path: '/records', element: <RecordList /> },
-      { path: '/records/new', element: <RecordForm /> },
-      { path: '/records/:id', element: <RecordDetail /> },
-      { path: '/records/:id/edit', element: <RecordForm /> },
-      { path: '/records/:id/suggest', element: <SuggestForm /> },
-      { path: '/history', element: <History /> },
-      { path: '/care-info', element: <RecordList care /> },
-      { path: '/care-info/:categoryId', element: <RecordList care /> },
-      { path: '/suggestions', element: <Suggestions /> },
-      { path: '/relations', element: <Relations /> },
-      { path: '/transfer', element: <Transfer /> },
-      { path: '/secondary', element: <Secondary /> },
-      { path: '/agency', element: <AgencyHome /> },
-      { path: '/agency/assign', element: <Assign /> },
-      { path: '/agency/providers', element: <Providers /> },
-      { path: '/agency/recipients', element: <Recipients /> },
-      { path: '/requests', element: <Requests /> },
-      { path: '/requests/new', element: <RequestForm /> },
-      { path: '/notifications', element: <Notifications /> },
-      { path: '/access-log', element: <AccessLog /> },
-      { path: '/more', element: <More /> },
-      { path: '/settings', element: <Settings /> },
-      { path: '/help', element: <Help /> },
-      { path: '/info/:topic', element: <Info /> },
-      { path: '*', element: <NotFound /> },
+      {
+        element: <AppLayout />,
+        children: [
+          { path: '/home', element: <HomePage /> },
+          {
+            element: <RequireRecipient />,
+            children: [
+              { path: '/records', element: <DailyRecordPage /> },
+              { path: '/care-info', element: <CareInfoPage /> },
+            ],
+          },
+          { path: '/more', element: <MorePage /> },
+        ],
+      },
+      {
+        element: <RequireRecipient />,
+        children: [{ path: '/records/:id', element: <RecordDetailPage /> }],
+      },
     ],
   },
+
+  // GUARDIAN 전용 — 활동지원사는 기록 작성 불가
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <RequireRole role="GUARDIAN" />,
+        children: [{
+          element: <RequireRecipient />,
+          children: [{ path: '/records/new', element: <RecordFormPage /> }],
+        }],
+      },
+    ],
+  },
+
+  // AGENCY 전용 — 백엔드 AGENCY enum 확정 후 완전 활성화
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <RequireRole role="AGENCY" />,
+        children: [{ path: '/agency', element: <AgencyDashboardPage /> }],
+      },
+    ],
+  },
+
+  { path: '*', element: <NotFoundPage /> },
 ]);
