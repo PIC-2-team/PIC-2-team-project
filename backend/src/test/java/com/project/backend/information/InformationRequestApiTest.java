@@ -87,6 +87,10 @@ class InformationRequestApiTest {
                 .andExpect(jsonPath("$.data.requestedBy.id").value(worker.getId()))
                 .andReturn().getResponse().getContentAsString();
         long id = ((Number) JsonPath.read(created, "$.data.id")).longValue();
+        perform(get(recipientPath), guardian).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty());
+        perform(get(recipientPath + "?status=SUBMITTED"), guardian).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty());
         perform(get("/api/information-requests"), worker).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].id").value(id));
         perform(get("/api/organizations/me/information-requests"), institution).andExpect(status().isOk())

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface InformationRequestRepository extends JpaRepository<InformationRequest, Long> {
@@ -18,6 +19,10 @@ public interface InformationRequestRepository extends JpaRepository<InformationR
     Page<InformationRequest> findByOrganizationId(Long organizationId, Pageable pageable);
     Page<InformationRequest> findByCareRecipientIdAndStatus(Long recipientId, InformationRequestStatus status, Pageable pageable);
     Page<InformationRequest> findByCareRecipientId(Long recipientId, Pageable pageable);
+    Page<InformationRequest> findByCareRecipientIdAndStatusIn(Long recipientId,
+            Collection<InformationRequestStatus> statuses, Pageable pageable);
+    Page<InformationRequest> findByCareRecipientIdAndStatusInAndStatus(Long recipientId,
+            Collection<InformationRequestStatus> statuses, InformationRequestStatus status, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from InformationRequest r where r.id = :id")

@@ -30,6 +30,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class InformationRequestService {
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+    private static final List<InformationRequestStatus> GUARDIAN_VISIBLE_STATUSES = List.of(
+            InformationRequestStatus.FORWARDED, InformationRequestStatus.ANSWERED, InformationRequestStatus.CLOSED);
     private final InformationRequestRepository requests;
     private final CareAssignmentRepository assignments;
     private final CareGuardianRepository guardians;
@@ -87,8 +90,9 @@ public class InformationRequestService {
                                                                    int page, int pageSize) {
         requireGuardian(userId, recipientId);
         Page<InformationRequest> result = status == null
-                ? requests.findByCareRecipientId(recipientId, pageable(page, pageSize))
-                : requests.findByCareRecipientIdAndStatus(recipientId, status, pageable(page, pageSize));
+                ? requests.findByCareRecipientIdAndStatusIn(recipientId, GUARDIAN_VISIBLE_STATUSES, pageable(page, pageSize))
+                : requests.findByCareRecipientIdAndStatusInAndStatus(recipientId, GUARDIAN_VISIBLE_STATUSES,
+                        status, pageable(page, pageSize));
         return page(result);
     }
 
