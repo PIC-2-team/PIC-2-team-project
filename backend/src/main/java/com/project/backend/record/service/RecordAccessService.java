@@ -55,6 +55,12 @@ public class RecordAccessService {
         require(user(userId).getRole() == UserRole.GUARDIAN && isGuardian(userId, recipientId));
     }
 
+    public void verifySuggestionCreate(Long userId, Long recipientId) {
+        User actor = user(userId);
+        require(actor.getRole() == UserRole.SUPPORT_WORKER || actor.getRole() == UserRole.INSTITUTION);
+        verifyRead(userId, recipientId);
+    }
+
     private boolean isAssigned(Long userId, Long recipientId) {
         return assignments.hasCurrentAssignment(userId, recipientId, clock.instant().atZone(ZoneId.of("Asia/Seoul")).toLocalDate());
     }

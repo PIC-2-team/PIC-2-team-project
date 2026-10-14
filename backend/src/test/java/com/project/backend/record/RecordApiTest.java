@@ -331,6 +331,91 @@ class RecordApiTest {
     }
 
     @Test
+    void supportWorkerCanSuggestAndGuardianApprovalUpdatesRecordWithRevision() throws Exception {
+        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
+        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
+                        .content("{\"content\":\"수정 제안\",\"category\":\"MEAL\",\"reason\":\"분류 보완\"}"), worker)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.original.content").value("기존 기록"))
+                .andExpect(jsonPath("$.data.proposed.content").value("수정 제안"))
+                .andReturn().getResponse().getContentAsString();
+        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
+
+        perform(get(base + "/record-suggestions"), secondary)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].id").value(suggestionId))
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(1));
+        entityManager.flush();
+        entityManager.clear();
+
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"APPROVE\"}"), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("APPROVED"));
+        entityManager.flush();
+        entityManager.clear();
+        perform(get(base + "/records/" + id), guardian)
+                .andExpect(jsonPath("$.data.content").value("수정 제안"))
+                .andExpect(jsonPath("$.data.category").value("MEAL"));
+        perform(get(base + "/records/" + id + "/revisions"), guardian)
+                .andExpect(jsonPath("$.data.items[0].content").value("기존 기록"))
+                .andExpect(jsonPath("$.data.items[0].changedBy.id").value(guardian.getId()));
+    }
+
+    @Test
+    void rejectingSuggestionDoesNotChangeRecordAndOnlyGuardianCanDecide() throws Exception {
+        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
+        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
+                        .content("{\"content\":\"수정 제안\"}"), institution)
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"REJECT\"}"), worker)
+                .andExpect(status().isForbidden());
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"REJECT\"}"), secondary)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REJECTED"));
+        perform(get(base + "/records/" + id), guardian)
+                .andExpect(jsonPath("$.data.content").value("기존 기록"));
+        perform(get(base + "/records/" + id + "/revisions"), guardian)
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void staleOrRepeatedSuggestionDecisionIsRejected() throws Exception {
+        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
+        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
+                        .content("{\"content\":\"수정 제안\"}"), worker)
+                .andReturn().getResponse().getContentAsString();
+        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
+        given(clock.instant()).willReturn(NOW.plusSeconds(1));
+        perform(patch(base + "/records/" + id).content("{\"recordedAt\":\"2026-10-15T03:00:00Z\"}"), guardian)
+                .andExpect(status().isOk());
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"APPROVE\"}"), guardian)
+                .andExpect(status().isConflict());
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"REJECT\"}"), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REJECTED"));
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"APPROVE\"}"), guardian)
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void invalidSuggestionAndUnauthorizedCreationAreRejected() throws Exception {
+        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
+        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"   \"}"), worker)
+                .andExpect(status().isUnprocessableEntity());
+        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"제안\"}"), guardian)
+                .andExpect(status().isForbidden());
+        perform(get(base + "/record-suggestions"), worker).andExpect(status().isForbidden());
+        perform(get(base + "/record-suggestions?pageSize=101"), guardian).andExpect(status().isBadRequest());
+        perform(delete(base + "/records/" + id), guardian).andExpect(status().isOk());
+        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"제안\"}"), worker)
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void careInfoUpsertPersistsSingleRowAndSupportsAllSixCategories() throws Exception {
         for (String category : List.of("COMMUNICATION", "PREFERENCE", "LIFESTYLE", "HEALTH_MEDICATION", "PRECAUTION", "EMERGENCY")) {
             perform(put(base + "/care-info/" + category).content("{\"content\":\"초기\"}"), guardian)
