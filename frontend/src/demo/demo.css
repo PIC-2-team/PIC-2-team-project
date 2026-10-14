@@ -240,7 +240,8 @@
   width: 100%;
   min-height: 46px;
 }
-.demo-shell input[type='date'] {
+.demo-shell input[type='date'],
+.demo-shell select {
   height: 46px;
   padding-top: 0;
   padding-bottom: 0;
