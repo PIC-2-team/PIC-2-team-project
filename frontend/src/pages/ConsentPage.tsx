@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { submitConsent } from '../api/auth';
 import styles from './ConsentPage.module.css';
 
 const CONSENT_ITEMS = [
@@ -44,11 +45,29 @@ export function ConsentPage() {
     .filter(item => item.required)
     .every(item => consents[item.id]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const toggle = (id: ConsentKey) =>
     setConsents(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const handleSubmit = () => {
-    if (allRequiredChecked) navigate('/home');
+  const handleSubmit = async () => {
+    if (!allRequiredChecked) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await submitConsent({
+        basicInfo: consents.basicInfo,
+        sensitiveInfo: consents.sensitiveInfo,
+        caregiverShare: consents.caregiverShare,
+        marketing: consents.marketing,
+      });
+      navigate('/login');
+    } catch {
+      setError('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -102,14 +121,16 @@ export function ConsentPage() {
         </button>
       </div>
 
+      {error && <p role="alert" className={styles.error}>{error}</p>}
+
       <button
         className={styles.submitButton}
         type="button"
-        onClick={handleSubmit}
-        disabled={!allRequiredChecked}
-        aria-disabled={!allRequiredChecked}
+        onClick={() => { void handleSubmit(); }}
+        disabled={!allRequiredChecked || isSubmitting}
+        aria-disabled={!allRequiredChecked || isSubmitting}
       >
-        동의하고 시작하기
+        {isSubmitting ? '처리 중…' : '동의하고 시작하기'}
       </button>
     </div>
   );
