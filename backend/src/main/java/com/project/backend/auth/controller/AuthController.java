@@ -2,8 +2,10 @@ package com.project.backend.auth.controller;
 
 import com.project.backend.auth.dto.*;
 import com.project.backend.auth.service.AuthService;
+import com.project.backend.care.service.SecondaryGuardianService;
 import com.project.backend.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -23,6 +26,7 @@ public class AuthController {
 
     private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
     private final AuthService authService;
+    private final SecondaryGuardianService secondaryGuardianService;
 
     @Operation(summary = "동의 티켓 발급")
     @PostMapping("/consent")
@@ -62,6 +66,15 @@ public class AuthController {
         String rawToken = extractRefreshTokenCookie(request);
         authService.logout(rawToken);
         expireRefreshTokenCookie(response);
+    }
+
+    @Operation(summary = "세컨드 보호자 초대 수락")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/invitations/accept")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void acceptInvitation(@AuthenticationPrincipal Long userId,
+                                 @Valid @RequestBody AcceptInvitationRequest request) {
+        secondaryGuardianService.acceptInvitation(userId, request.invitationToken());
     }
 
     private String extractRefreshTokenCookie(HttpServletRequest request) {

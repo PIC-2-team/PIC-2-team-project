@@ -1,10 +1,8 @@
 package com.project.backend.care.controller;
 
-import com.project.backend.care.dto.CareRecipientResponse;
-import com.project.backend.care.dto.CreateCareRecipientRequest;
-import com.project.backend.care.dto.LinkRecipientRequest;
-import com.project.backend.care.dto.UpdateCareRecipientRequest;
+import com.project.backend.care.dto.*;
 import com.project.backend.care.service.CareRecipientService;
+import com.project.backend.care.service.SecondaryGuardianService;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.organization.service.OrganizationService;
 
@@ -26,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class CareRecipientController {
 
     private final CareRecipientService careRecipientService;
+    private final SecondaryGuardianService secondaryGuardianService;
     private final OrganizationService organizationService;
 
     @Operation(summary = "내 당사자 목록 조회")
@@ -76,5 +75,30 @@ public class CareRecipientController {
         boolean accepted = "accept".equalsIgnoreCase(decision);
         organizationService.decideLinkRequest(userId, linkId, accepted);
         return ApiResponse.ok(null);
+    }
+
+    @Operation(summary = "세컨드 보호자 초대")
+    @PutMapping("/{id}/secondary-guardian")
+    public ApiResponse<SecondaryGuardianResponse> inviteSecondaryGuardian(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody InviteSecondaryGuardianRequest request) {
+        return ApiResponse.ok(secondaryGuardianService.invite(userId, id, request));
+    }
+
+    @Operation(summary = "세컨드 보호자 조회")
+    @GetMapping("/{id}/secondary-guardian")
+    public ApiResponse<SecondaryGuardianResponse> getSecondaryGuardian(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id) {
+        return ApiResponse.ok(secondaryGuardianService.getSecondaryGuardian(userId, id).orElse(null));
+    }
+
+    @Operation(summary = "세컨드 보호자 해제")
+    @DeleteMapping("/{id}/secondary-guardian")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeSecondaryGuardian(@AuthenticationPrincipal Long userId,
+                                        @PathVariable Long id) {
+        secondaryGuardianService.revokeSecondaryGuardian(userId, id);
     }
 }
