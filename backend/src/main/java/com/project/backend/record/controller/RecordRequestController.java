@@ -36,7 +36,7 @@ public class RecordRequestController {
     @GetMapping("/api/care-recipients/{id}/record-requests")
     public ApiResponse<List<RecordRequestResponse>> getForCareRecipient(@AuthenticationPrincipal Long userId,
                                                                          @PathVariable Long id) {
-        return ApiResponse.ok(recordRequestService.getForCareRecipient(id));
+        return ApiResponse.ok(recordRequestService.getForCareRecipient(userId, id));
     }
 
     @Operation(summary = "내 기록 요청 목록 (지원사)")

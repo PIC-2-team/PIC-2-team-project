@@ -1,7 +1,9 @@
 package com.project.backend.record.service;
 
 import com.project.backend.care.entity.CareAssignment;
+import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.repository.CareAssignmentRepository;
+import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.dto.CreateRecordRequestRequest;
 import com.project.backend.record.dto.RecordRequestResponse;
@@ -22,6 +24,7 @@ public class RecordRequestService {
 
     private final RecordRequestRepository recordRequestRepository;
     private final CareAssignmentRepository careAssignmentRepository;
+    private final CareGuardianRepository careGuardianRepository;
 
     public RecordRequestResponse create(Long supportWorkerId, Long careRecipientId,
                                         CreateRecordRequestRequest request) {
@@ -48,7 +51,11 @@ public class RecordRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<RecordRequestResponse> getForCareRecipient(Long careRecipientId) {
+    public List<RecordRequestResponse> getForCareRecipient(Long userId, Long careRecipientId) {
+        if (!careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
+                careRecipientId, userId, GuardianStatus.ACTIVE)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 기록 요청 목록을 조회할 수 있습니다.");
+        }
         return recordRequestRepository.findByCareRecipientId(careRecipientId).stream()
                 .map(RecordRequestResponse::from).toList();
     }
