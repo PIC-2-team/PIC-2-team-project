@@ -1,9 +1,12 @@
 package com.project.backend.common.security;
 
+import com.project.backend.common.exception.ApiException;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -13,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -61,6 +65,27 @@ public class JwtProvider {
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
+        }
+    }
+
+    public String generateConsentTicket(Map<String, Object> consentClaims) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject("consent")
+                .claims(consentClaims)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(30 * 60)))
+                .signWith(key)
+                .compact();
+    }
+
+    public Claims parseConsentTicket(String ticket) {
+        try {
+            return Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(ticket)
+                    .getPayload();
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CONSENT_TICKET", "동의 티켓이 유효하지 않습니다.");
         }
     }
 
