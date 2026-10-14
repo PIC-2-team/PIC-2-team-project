@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface CareGuardianRepository extends JpaRepository<CareGuardian, Long> {
     List<CareGuardian> findByCareRecipientIdAndStatus(Long careRecipientId, GuardianStatus status);
+    List<CareGuardian> findByGuardianIdAndStatus(Long guardianId, GuardianStatus status);
     Optional<CareGuardian> findByCareRecipientIdAndGuardianIdAndStatus(
             Long careRecipientId, Long guardianId, GuardianStatus status);
     Optional<CareGuardian> findByCareRecipientIdAndGuardianIdAndType(

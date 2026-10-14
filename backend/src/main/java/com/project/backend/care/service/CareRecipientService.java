@@ -4,6 +4,7 @@ import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.entity.*;
+import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientDisabilityRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
@@ -26,9 +27,34 @@ public class CareRecipientService {
     private final CareRecipientRepository careRecipientRepository;
     private final CareRecipientDisabilityRepository disabilityRepository;
     private final CareGuardianRepository careGuardianRepository;
+    private final CareAssignmentRepository careAssignmentRepository;
     private final CareRecipientNumberGenerator numberGenerator;
     private final CareAccessService careAccessService;
     private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public List<CareRecipientResponse> getAll(Long userId) {
+        User user = findUser(userId);
+        List<Long> recipientIds;
+
+        if (user.getRole() == UserRole.GUARDIAN) {
+            recipientIds = careGuardianRepository.findByGuardianIdAndStatus(userId, GuardianStatus.ACTIVE)
+                    .stream().map(CareGuardian::getCareRecipientId).toList();
+        } else if (user.getRole() == UserRole.SUPPORT_WORKER) {
+            recipientIds = careAssignmentRepository.findBySupportWorkerIdAndEndedAtIsNull(userId)
+                    .stream().map(CareAssignment::getCareRecipientId).toList();
+        } else {
+            return List.of();
+        }
+
+        return careRecipientRepository.findAllById(recipientIds).stream()
+                .map(r -> {
+                    List<DisabilityType> disabilities = disabilityRepository
+                            .findByCareRecipientId(r.getId()).stream()
+                            .map(CareRecipientDisability::getDisabilityType).toList();
+                    return CareRecipientResponse.of(r, disabilities);
+                }).toList();
+    }
 
     public CareRecipientResponse register(Long guardianUserId, CreateCareRecipientRequest request) {
         User user = findUser(guardianUserId);

@@ -3,6 +3,7 @@ package com.project.backend.care.service;
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.entity.*;
+import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientDisabilityRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
@@ -34,6 +35,7 @@ class CareRecipientServiceTest {
     @Mock CareRecipientRepository careRecipientRepository;
     @Mock CareRecipientDisabilityRepository disabilityRepository;
     @Mock CareGuardianRepository careGuardianRepository;
+    @Mock CareAssignmentRepository careAssignmentRepository;
     @Mock CareRecipientNumberGenerator numberGenerator;
     @Mock CareAccessService careAccessService;
     @Mock UserRepository userRepository;
@@ -79,6 +81,54 @@ class CareRecipientServiceTest {
         assertThatThrownBy(() -> careRecipientService.register(2L, req))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void getAll_GUARDIAN_역할이면_활성_보호자_관계의_당사자_목록_반환() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+
+        CareGuardian cg = CareGuardian.builder()
+                .careRecipientId(100L).guardianId(1L)
+                .type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
+        given(careGuardianRepository.findByGuardianIdAndStatus(1L, GuardianStatus.ACTIVE))
+                .willReturn(List.of(cg));
+
+        CareRecipient r = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0001").name("김삶결")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build();
+        ReflectionTestUtils.setField(r, "id", 100L);
+        given(careRecipientRepository.findAllById(List.of(100L))).willReturn(List.of(r));
+        given(disabilityRepository.findByCareRecipientId(100L)).willReturn(List.of());
+
+        List<CareRecipientResponse> result = careRecipientService.getAll(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("김삶결");
+    }
+
+    @Test
+    void getAll_SUPPORT_WORKER_역할이면_현재_배정된_당사자_목록_반환() {
+        User worker = supportWorkerUser(2L);
+        given(userRepository.findById(2L)).willReturn(Optional.of(worker));
+
+        CareAssignment assignment = CareAssignment.builder()
+                .organizationId(10L).careRecipientId(200L).supportWorkerId(2L)
+                .idempotencyKey("key1").startDate(LocalDate.now()).build();
+        given(careAssignmentRepository.findBySupportWorkerIdAndEndedAtIsNull(2L))
+                .willReturn(List.of(assignment));
+
+        CareRecipient r = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0002").name("박삶결")
+                .birthDate(LocalDate.of(1999, 5, 5)).gender(Gender.FEMALE).build();
+        ReflectionTestUtils.setField(r, "id", 200L);
+        given(careRecipientRepository.findAllById(List.of(200L))).willReturn(List.of(r));
+        given(disabilityRepository.findByCareRecipientId(200L)).willReturn(List.of());
+
+        List<CareRecipientResponse> result = careRecipientService.getAll(2L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("박삶결");
     }
 
     @Test

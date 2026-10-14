@@ -19,6 +19,9 @@ public interface CareAssignmentRepository extends JpaRepository<CareAssignment, 
     boolean hasCurrentAssignment(Long userId, Long recipientId, LocalDate today);
 
     List<CareAssignment> findByCareRecipientIdAndEndedAtIsNull(Long careRecipientId);
+    List<CareAssignment> findBySupportWorkerIdAndEndedAtIsNull(Long supportWorkerId);
+    List<CareAssignment> findByOrganizationId(Long organizationId);
+    List<CareAssignment> findByOrganizationIdAndCareRecipientId(Long organizationId, Long careRecipientId);
     boolean existsBySupportWorkerIdAndCareRecipientIdAndEndedAtIsNull(
             Long supportWorkerId, Long careRecipientId);
     boolean existsByIdempotencyKey(String idempotencyKey);
