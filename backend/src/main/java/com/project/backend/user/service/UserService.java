@@ -3,7 +3,9 @@ package com.project.backend.user.service;
 import com.project.backend.auth.dto.UserInfo;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.user.dto.ChangePasswordRequest;
+import com.project.backend.user.dto.NotificationSettingsResponse;
 import com.project.backend.user.dto.UpdateProfileRequest;
+import com.project.backend.user.dto.UpdateNotificationSettingsRequest;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,18 @@ public class UserService {
         User user = findUser(userId);
         user.updateProfile(request.name(), request.phone());
         return UserInfo.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationSettingsResponse getNotificationSettings(Long userId) {
+        return NotificationSettingsResponse.from(findUser(userId));
+    }
+
+    public NotificationSettingsResponse updateNotificationSettings(Long userId, UpdateNotificationSettingsRequest request) {
+        User user = findUser(userId);
+        user.updateNotificationSettings(request.recordCreated(), request.recordUpdated(), request.assignmentChanged(),
+                request.suggestionReceived(), request.informationRequestReceived(), request.recordRequestReceived());
+        return NotificationSettingsResponse.from(user);
     }
 
     public void changePassword(Long userId, ChangePasswordRequest request) {
