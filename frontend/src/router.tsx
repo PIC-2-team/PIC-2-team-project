@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { RequireAuth } from './components/RequireAuth';
+import { RequireRecipient } from './components/RequireRecipient';
 import { RequireRole } from './components/RequireRole';
 import { ConsentPage } from './pages/ConsentPage';
 import { LoginPage } from './pages/LoginPage';
@@ -24,12 +25,20 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: '/home', element: <HomePage /> },
-          { path: '/records', element: <DailyRecordPage /> },
-          { path: '/care-info', element: <CareInfoPage /> },
+          {
+            element: <RequireRecipient />,
+            children: [
+              { path: '/records', element: <DailyRecordPage /> },
+              { path: '/care-info', element: <CareInfoPage /> },
+            ],
+          },
           { path: '/more', element: <MorePage /> },
         ],
       },
-      { path: '/records/:id', element: <RecordDetailPage /> },
+      {
+        element: <RequireRecipient />,
+        children: [{ path: '/records/:id', element: <RecordDetailPage /> }],
+      },
     ],
   },
 
@@ -39,7 +48,10 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <RequireRole role="GUARDIAN" />,
-        children: [{ path: '/records/new', element: <RecordFormPage /> }],
+        children: [{
+          element: <RequireRecipient />,
+          children: [{ path: '/records/new', element: <RecordFormPage /> }],
+        }],
       },
     ],
   },

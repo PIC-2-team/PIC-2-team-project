@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import { createContext, useContext, useCallback, useLayoutEffect, useReducer } from 'react';
 import type { User } from '../types/user';
 import type { LoginResponse } from '../types/auth';
 import * as authApi from '../api/auth';
@@ -55,16 +55,18 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadFromStorage);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setTokenProvider(() => state.token);
+    return () => setTokenProvider(() => null);
   }, [state.token]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setUnauthorizedHandler(() => {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
       dispatch({ type: 'CLEAR' });
     });
+    return () => setUnauthorizedHandler(() => {});
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
@@ -83,8 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR' });
   };
 
-  const setSelectedRecipient = (id: number | null) =>
-    dispatch({ type: 'SELECT_RECIPIENT', id });
+  const setSelectedRecipient = useCallback((id: number | null) =>
+    dispatch({ type: 'SELECT_RECIPIENT', id }), []);
 
   return (
     <Ctx.Provider value={{ ...state, login, logout, setSelectedRecipient }}>
