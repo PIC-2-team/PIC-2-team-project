@@ -105,9 +105,9 @@ public class RecordMediaService {
     }
 
     @Transactional(readOnly = true)
-    public AudioAsset getForTranscription(Long userId, Long mediaId) {
-        RecordMedia media = mediaRepository.findById(mediaId).orElseThrow(this::notFound);
-        access.verifyRead(userId, media.getCareRecipientId());
+    public AudioAsset getForTranscription(Long userId, Long careRecipientId, Long mediaId) {
+        RecordMedia media = find(careRecipientId, mediaId);
+        access.verifyRead(userId, careRecipientId);
         if (!AUDIO_TYPES.contains(media.getMediaType()) || media.getSizeBytes() > MAX_TRANSCRIPTION_SIZE) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_AUDIO_MEDIA", "전사할 수 없는 오디오 파일입니다.");
         }

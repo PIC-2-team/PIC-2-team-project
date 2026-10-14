@@ -10,10 +10,11 @@ import com.project.backend.user.entity.User;
 import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
 import com.openai.client.OpenAIClient;
+import com.openai.models.audio.AudioResponseFormat;
 import com.openai.models.audio.AudioModel;
-import com.openai.models.audio.transcriptions.Transcription;
 import com.openai.models.audio.transcriptions.TranscriptionCreateParams;
 import com.openai.models.audio.transcriptions.TranscriptionCreateResponse;
+import com.openai.models.audio.transcriptions.TranscriptionVerbose;
 import com.openai.models.chat.completions.*;
 import com.openai.services.blocking.AudioService;
 import com.openai.services.blocking.ChatService;
@@ -62,6 +63,7 @@ class RecordDraftApiTest {
     MockMvc mvc;
     User guardian;
     CareRecipient recipient;
+    CareRecipient otherRecipient;
     ChatCompletionService completions;
     ChatCompletion completion;
     TranscriptionService transcriptions;
@@ -77,6 +79,10 @@ class RecordDraftApiTest {
         recipient = recipients.save(CareRecipient.builder().name("당사자").careRecipientNumber("R-00000001")
                 .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build());
         guardians.save(CareGuardian.builder().careRecipientId(recipient.getId()).guardianId(guardian.getId())
+                .type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build());
+        otherRecipient = recipients.save(CareRecipient.builder().name("다른 당사자").careRecipientNumber("R-00000002")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.FEMALE).build());
+        guardians.save(CareGuardian.builder().careRecipientId(otherRecipient.getId()).guardianId(guardian.getId())
                 .type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build());
         outsider = users.save(User.builder().name("outsider").email("outsider@test.invalid")
                 .publicCode("P-outsider").role(UserRole.GUARDIAN).build());
@@ -97,12 +103,18 @@ class RecordDraftApiTest {
         transcriptions = mock(TranscriptionService.class);
         given(openAI.audio()).willReturn(audio);
         given(audio.transcriptions()).willReturn(transcriptions);
+        var transcriptionResponse = mock(TranscriptionCreateResponse.class);
+        var transcription = mock(TranscriptionVerbose.class);
+        given(transcriptions.create(any(TranscriptionCreateParams.class))).willReturn(transcriptionResponse);
+        given(transcriptionResponse.asVerbose()).willReturn(transcription);
+        given(transcription.duration()).willReturn(2.0);
+        given(transcription.text()).willReturn("아침 식사 후 약을 복용했습니다.");
     }
 
     @Test
     void textInputReturnsAnUnpersistedRecordDraft() throws Exception {
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"TEXT\",\"text\":\"아침을 먹고 약을 복용했습니다.\"}")
+                        .content(textRequest("아침을 먹고 약을 복용했습니다."))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.transcript").value("아침을 먹고 약을 복용했습니다."))
@@ -119,10 +131,10 @@ class RecordDraftApiTest {
     @Test
     void invalidTextInputIsRejectedBeforeCallingOpenAi() throws Exception {
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"TEXT\",\"text\":\"   \"}").with(authentication(auth(guardian))))
+                        .content(textRequest("   ")).with(authentication(auth(guardian))))
                 .andExpect(status().isUnprocessableEntity());
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"TEXT\",\"text\":\"" + "가".repeat(3001) + "\"}")
+                        .content(textRequest("가".repeat(3001)))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isUnprocessableEntity());
         org.mockito.Mockito.verify(completions, org.mockito.Mockito.never()).create(any(ChatCompletionCreateParams.class));
@@ -130,18 +142,14 @@ class RecordDraftApiTest {
 
     @Test
     void audioInputIsAuthorizedTranscribedAndReturnedWithoutPersistence() throws Exception {
-        RecordMedia audio = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "voice.mp3", "audio/mpeg", 4,
-                "media/" + recipient.getId() + "/voice.mp3", NOW));
-        var transcriptionResponse = mock(TranscriptionCreateResponse.class);
-        var transcription = mock(Transcription.class);
-        given(transcriptions.create(any(TranscriptionCreateParams.class))).willReturn(transcriptionResponse);
-        given(transcriptionResponse.asTranscription()).willReturn(transcription);
-        given(transcription.text()).willReturn("아침 식사 후 약을 복용했습니다.");
+        byte[] wav = wav(2);
+        RecordMedia audio = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "voice.wav", "audio/wav", wav.length,
+                "media/" + recipient.getId() + "/voice.wav", NOW));
         given(s3.getObjectAsBytes(any(GetObjectRequest.class))).willReturn(ResponseBytes.fromByteArray(
-                GetObjectResponse.builder().build(), new byte[]{1, 2, 3, 4}));
+                GetObjectResponse.builder().build(), wav));
 
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"AUDIO\",\"mediaId\":" + audio.getId() + "}")
+                        .content(audioRequest(recipient.getId(), audio.getId()))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.transcript").value("아침 식사 후 약을 복용했습니다."))
@@ -149,7 +157,29 @@ class RecordDraftApiTest {
         org.mockito.ArgumentCaptor<TranscriptionCreateParams> params = org.mockito.ArgumentCaptor.forClass(TranscriptionCreateParams.class);
         verify(transcriptions).create(params.capture());
         org.assertj.core.api.Assertions.assertThat(params.getValue().model()).isEqualTo(AudioModel.WHISPER_1);
+        org.assertj.core.api.Assertions.assertThat(params.getValue().responseFormat()).contains(AudioResponseFormat.VERBOSE_JSON);
         org.assertj.core.api.Assertions.assertThat(records.count()).isZero();
+    }
+
+    @Test
+    void audioLongerThanTenMinutesIsRejectedBeforeDraftGeneration() throws Exception {
+        byte[] wav = wav(601);
+        RecordMedia audio = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "long.wav", "audio/wav", wav.length,
+                "media/" + recipient.getId() + "/long.wav", NOW));
+        given(s3.getObjectAsBytes(any(GetObjectRequest.class))).willReturn(ResponseBytes.fromByteArray(
+                GetObjectResponse.builder().build(), wav));
+        var transcriptionResponse = mock(TranscriptionCreateResponse.class);
+        var transcription = mock(TranscriptionVerbose.class);
+        given(transcriptions.create(any(TranscriptionCreateParams.class))).willReturn(transcriptionResponse);
+        given(transcriptionResponse.asVerbose()).willReturn(transcription);
+        given(transcription.duration()).willReturn(601.0);
+
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(audioRequest(recipient.getId(), audio.getId())).with(authentication(auth(guardian))))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(transcriptions).create(any(TranscriptionCreateParams.class));
+        org.mockito.Mockito.verify(completions, org.mockito.Mockito.never()).create(any(ChatCompletionCreateParams.class));
     }
 
     @Test
@@ -159,15 +189,15 @@ class RecordDraftApiTest {
         RecordMedia image = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "photo.jpg", "image/jpeg", 4,
                 "media/" + recipient.getId() + "/photo.jpg", NOW));
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"AUDIO\",\"mediaId\":" + audio.getId() + "}")
+                        .content(audioRequest(recipient.getId(), audio.getId()))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isUnprocessableEntity());
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"AUDIO\",\"mediaId\":" + audio.getId() + "}")
+                        .content(audioRequest(recipient.getId(), audio.getId()))
                         .with(authentication(auth(outsider))))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"AUDIO\",\"mediaId\":" + image.getId() + "}")
+                        .content(audioRequest(recipient.getId(), image.getId()))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isUnprocessableEntity());
         org.mockito.Mockito.verify(s3, org.mockito.Mockito.never()).getObjectAsBytes(any(GetObjectRequest.class));
@@ -178,10 +208,51 @@ class RecordDraftApiTest {
     void invalidAiCategoryIsNotReturnedToTheClient() throws Exception {
         given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"기록\",\"category\":\"UNKNOWN\"}"));
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
-                        .content("{\"inputType\":\"TEXT\",\"text\":\"관찰 내용\"}")
+                        .content(textRequest("관찰 내용"))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isBadGateway()).andExpect(jsonPath("$.error.code").value("AI_INVALID_RESPONSE"));
         org.assertj.core.api.Assertions.assertThat(records.count()).isZero();
+    }
+
+    @Test
+    void textDraftRequiresAnAccessibleCareRecipient() throws Exception {
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content("{\"inputType\":\"TEXT\",\"text\":\"관찰 내용\"}")
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용")).with(authentication(auth(outsider))))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verify(completions, org.mockito.Mockito.never()).create(any(ChatCompletionCreateParams.class));
+    }
+
+    @Test
+    void audioMediaMustBelongToTheRequestedCareRecipient() throws Exception {
+        RecordMedia audio = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "voice.mp3", "audio/mpeg", 4,
+                "media/" + recipient.getId() + "/voice.mp3", NOW));
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(audioRequest(otherRecipient.getId(), audio.getId()))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isNotFound());
+        org.mockito.Mockito.verify(s3, org.mockito.Mockito.never()).getObjectAsBytes(any(GetObjectRequest.class));
+    }
+
+    private String textRequest(String text) {
+        return "{\"careRecipientId\":" + recipient.getId() + ",\"inputType\":\"TEXT\",\"text\":\"" + text + "\"}";
+    }
+
+    private String audioRequest(Long careRecipientId, Long mediaId) {
+        return "{\"careRecipientId\":" + careRecipientId + ",\"inputType\":\"AUDIO\",\"mediaId\":" + mediaId + "}";
+    }
+
+    private byte[] wav(int seconds) {
+        int sampleRate = 8000;
+        int dataSize = sampleRate * 2 * seconds;
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(44 + dataSize).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        buffer.put("RIFF".getBytes()).putInt(36 + dataSize).put("WAVEfmt ".getBytes()).putInt(16)
+                .putShort((short) 1).putShort((short) 1).putInt(sampleRate).putInt(sampleRate * 2)
+                .putShort((short) 2).putShort((short) 16).put("data".getBytes()).putInt(dataSize);
+        return buffer.array();
     }
 
     private org.springframework.security.authentication.UsernamePasswordAuthenticationToken auth(User user) {
