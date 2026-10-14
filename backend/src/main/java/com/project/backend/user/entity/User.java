@@ -40,6 +40,19 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private boolean recordCreated = true;
+    @Column(nullable = false)
+    private boolean recordUpdated = true;
+    @Column(nullable = false)
+    private boolean assignmentChanged = true;
+    @Column(nullable = false)
+    private boolean suggestionReceived = true;
+    @Column(nullable = false)
+    private boolean informationRequestReceived = true;
+    @Column(nullable = false)
+    private boolean recordRequestReceived = true;
+
     @Builder
     public User(String name, String email, String password, String phone,
                 String publicCode, UserRole role, String googleId) {
@@ -60,5 +73,16 @@ public class User {
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+
+    public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged,
+                                           boolean suggestionReceived, boolean informationRequestReceived,
+                                           boolean recordRequestReceived) {
+        this.recordCreated = recordCreated;
+        this.recordUpdated = recordUpdated;
+        this.assignmentChanged = assignmentChanged;
+        this.suggestionReceived = suggestionReceived;
+        this.informationRequestReceived = informationRequestReceived;
+        this.recordRequestReceived = recordRequestReceived;
     }
 }

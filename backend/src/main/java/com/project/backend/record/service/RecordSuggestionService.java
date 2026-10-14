@@ -12,6 +12,7 @@ import com.project.backend.record.entity.RecordSuggestionStatus;
 import com.project.backend.record.repository.DailyRecordRepository;
 import com.project.backend.record.repository.RecordRevisionRepository;
 import com.project.backend.record.repository.RecordSuggestionRepository;
+import com.project.backend.notification.service.NotificationService;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class RecordSuggestionService {
     private final RecordSuggestionRepository suggestions;
+    private final NotificationService notifications;
     private final DailyRecordRepository records;
     private final RecordRevisionRepository revisions;
     private final UserRepository users;
@@ -46,6 +48,7 @@ public class RecordSuggestionService {
                 .orElseThrow(this::recordNotFound));
         RecordSuggestion suggestion = suggestions.save(new RecordSuggestion(record, userId, request.content(),
                 request.category(), request.reason(), clock.instant()));
+        notifications.notifySuggestionReceived(careRecipientId);
         return response(suggestion);
     }
 
@@ -82,6 +85,8 @@ public class RecordSuggestionService {
         } else {
             suggestion.decide(RecordSuggestionStatus.REJECTED);
         }
+        notifications.notifySuggestionDecided(suggestion.getSuggestedById(),
+                decision == RecordSuggestionDecisionRequest.Decision.APPROVE);
         return response(suggestion);
     }
 

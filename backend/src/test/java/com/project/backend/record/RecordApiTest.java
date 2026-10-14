@@ -416,6 +416,66 @@ class RecordApiTest {
     }
 
     @Test
+    void suggestionNotificationsReachGuardiansAndAuthorAndCanBeMarkedRead() throws Exception {
+        long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
+        String suggestionJson = perform(post(base + "/records/" + recordId + "/suggestions")
+                        .content("{\"content\":\"수정 제안\"}"), worker)
+                .andReturn().getResponse().getContentAsString();
+        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
+
+        String inbox = perform(get("/api/notifications?read=false"), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"))
+                .andExpect(jsonPath("$.data.items[0].read").value(false))
+                .andReturn().getResponse().getContentAsString();
+        perform(get("/api/notifications?read=false"), secondary)
+                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"));
+        perform(get("/api/notifications?read=false"), worker)
+                .andExpect(jsonPath("$.data.items").isEmpty());
+        long notificationId = ((Number) JsonPath.read(inbox, "$.data.items[0].id")).longValue();
+        perform(patch("/api/notifications/" + notificationId).content("{\"read\":true}"), worker)
+                .andExpect(status().isNotFound());
+        perform(patch("/api/notifications/" + notificationId).content("{\"read\":true}"), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.read").value(true));
+        perform(get("/api/notifications?read=true"), guardian)
+                .andExpect(jsonPath("$.data.items[0].id").value(notificationId));
+
+        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
+                        .content("{\"decision\":\"APPROVE\"}"), guardian)
+                .andExpect(status().isOk());
+        perform(get("/api/notifications?read=false"), worker)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_DECIDED"));
+    }
+
+    @Test
+    void notificationSettingsDefaultToEnabledAndControlSuggestionNotifications() throws Exception {
+        perform(get("/api/users/me/notification-settings"), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.recordCreated").value(true))
+                .andExpect(jsonPath("$.data.recordUpdated").value(true))
+                .andExpect(jsonPath("$.data.assignmentChanged").value(true))
+                .andExpect(jsonPath("$.data.suggestionReceived").value(true))
+                .andExpect(jsonPath("$.data.informationRequestReceived").value(true))
+                .andExpect(jsonPath("$.data.recordRequestReceived").value(true));
+        String settings = "{\"recordCreated\":false,\"recordUpdated\":true,\"assignmentChanged\":true,"
+                + "\"suggestionReceived\":false,\"informationRequestReceived\":true,\"recordRequestReceived\":true}";
+        perform(put("/api/users/me/notification-settings").content(settings), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.suggestionReceived").value(false));
+        perform(put("/api/users/me/notification-settings").content("{\"recordCreated\":true}"), guardian)
+                .andExpect(status().isUnprocessableEntity());
+
+        long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
+        perform(post(base + "/records/" + recordId + "/suggestions")
+                        .content("{\"content\":\"수정 제안\"}"), worker)
+                .andExpect(status().isCreated());
+        perform(get("/api/notifications?read=false"), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        perform(get("/api/notifications?read=false"), secondary)
+                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"));
+    }
+
+    @Test
     void careInfoUpsertPersistsSingleRowAndSupportsAllSixCategories() throws Exception {
         for (String category : List.of("COMMUNICATION", "PREFERENCE", "LIFESTYLE", "HEALTH_MEDICATION", "PRECAUTION", "EMERGENCY")) {
             perform(put(base + "/care-info/" + category).content("{\"content\":\"초기\"}"), guardian)

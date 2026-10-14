@@ -3,7 +3,9 @@ package com.project.backend.user.controller;
 import com.project.backend.auth.dto.UserInfo;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.user.dto.ChangePasswordRequest;
+import com.project.backend.user.dto.NotificationSettingsResponse;
 import com.project.backend.user.dto.UpdateProfileRequest;
+import com.project.backend.user.dto.UpdateNotificationSettingsRequest;
 import com.project.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,6 +36,19 @@ public class UserController {
     public ApiResponse<UserInfo> updateProfile(@AuthenticationPrincipal Long userId,
                                                 @Valid @RequestBody UpdateProfileRequest request) {
         return ApiResponse.ok(userService.updateProfile(userId, request));
+    }
+
+    @Operation(summary = "내 알림 설정 조회")
+    @GetMapping("/me/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> getNotificationSettings(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(userService.getNotificationSettings(userId));
+    }
+
+    @Operation(summary = "내 알림 설정 전체 교체")
+    @PutMapping("/me/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> updateNotificationSettings(@AuthenticationPrincipal Long userId,
+            @Valid @RequestBody UpdateNotificationSettingsRequest request) {
+        return ApiResponse.ok(userService.updateNotificationSettings(userId, request));
     }
 
     @Operation(summary = "비밀번호 변경")
