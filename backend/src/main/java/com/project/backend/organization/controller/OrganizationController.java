@@ -1,10 +1,7 @@
 package com.project.backend.organization.controller;
 
 import com.project.backend.common.response.ApiResponse;
-import com.project.backend.organization.dto.AssignSupportWorkerRequest;
-import com.project.backend.organization.dto.CareAssignmentResponse;
-import com.project.backend.organization.dto.CreateOrganizationRequest;
-import com.project.backend.organization.dto.OrganizationResponse;
+import com.project.backend.organization.dto.*;
 import com.project.backend.organization.service.CareAssignmentService;
 import com.project.backend.organization.service.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,8 +10,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Organizations")
 @RestController
@@ -38,6 +38,40 @@ public class OrganizationController {
     @GetMapping("/me")
     public ApiResponse<OrganizationResponse> getMyOrganization(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(organizationService.getMyOrganization(userId));
+    }
+
+    @Operation(summary = "소속 지원사 목록 조회")
+    @GetMapping("/me/members")
+    public ApiResponse<List<MemberResponse>> getMembers(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(organizationService.getMembers(userId));
+    }
+
+    @Operation(summary = "소속 지원사 상세 조회")
+    @GetMapping("/me/members/{memberId}")
+    public ApiResponse<MemberResponse> getMember(@AuthenticationPrincipal Long userId,
+                                                  @PathVariable Long memberId) {
+        return ApiResponse.ok(organizationService.getMember(userId, memberId));
+    }
+
+    @Operation(summary = "지원사 상태 변경")
+    @PatchMapping("/me/members/{memberId}")
+    public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
+                                                           @PathVariable Long memberId,
+                                                           @RequestBody UpdateMemberStatusRequest request) {
+        return ApiResponse.ok(organizationService.updateMemberStatus(userId, memberId, request.active()));
+    }
+
+    @Operation(summary = "배정 목록 조회")
+    @GetMapping("/me/assignments")
+    public ApiResponse<List<CareAssignmentResponse>> getAssignments(@AuthenticationPrincipal Long userId,
+                                                                     @RequestParam @Nullable Long careRecipientId) {
+        return ApiResponse.ok(organizationService.getAssignments(userId, careRecipientId));
+    }
+
+    @Operation(summary = "연결 요청 목록 조회")
+    @GetMapping("/me/link-requests")
+    public ApiResponse<List<LinkRequestResponse>> getLinkRequests(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(organizationService.getLinkRequests(userId));
     }
 
     @Operation(summary = "지원사 배정")

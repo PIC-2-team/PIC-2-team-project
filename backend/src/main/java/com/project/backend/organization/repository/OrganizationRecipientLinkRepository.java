@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface OrganizationRecipientLinkRepository extends JpaRepository<OrganizationRecipientLink, Long> {
     List<OrganizationRecipientLink> findByCareRecipientId(Long careRecipientId);
+    List<OrganizationRecipientLink> findByOrganizationId(Long organizationId);
     boolean existsByOrganizationIdAndCareRecipientIdAndStatus(
             Long organizationId, Long careRecipientId, LinkStatus status);
     Optional<OrganizationRecipientLink> findByOrganizationIdAndCareRecipientId(
