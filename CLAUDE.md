@@ -57,11 +57,16 @@
 
 ### Backend
 
-- Spring Boot 4.1.1
-- DB: H2 (개발) — 프로덕션 DB 미결정
-- 인증: JWT + 구글 OAuth (확정)
+- Spring Boot 4.1.1 + Java 21 + Lombok
+- DB: MySQL (프로덕션) + H2 (개발) / Spring Data JPA
+- 인증: Spring Security + jjwt 0.12.x (JWT) + Google OAuth
+- Refresh Token: DB 테이블 (`refresh_tokens`)
+- 파일 스토리지: AWS S3 (SDK v2)
+- AI: OpenAI — Whisper (STT) + GPT-4o (기록 초안 생성)
 - 공통 응답 포맷 (`ApiResponse`, `ApiErrorResponse`)
-- Swagger 설정 완료
+- Swagger: springdoc-openapi 3.1.0
+
+> 결정 근거와 검토한 대안은 [ADR-004](docs/decisions/004-backend-tech-stack.md) 참고
 
 ## 비기능 요구사항
 
@@ -135,7 +140,7 @@
 기능 추가·버그 수정은 다음 순서를 따른다.
 
 1. GitHub Issue로 작업을 정의한다
-2. 되돌리기 어려운 결정은 ADR을 작성한다 (`docs/decisions/NNN-title.md`)
+2. 기술 스택·DB·인증·외부 서비스·아키텍처처럼 되돌리기 어려운 결정은 구현 전에 ADR을 작성한다 (`docs/decisions/NNN-title.md`) — 검토한 대안과 선택 이유를 반드시 포함한다
 3. `develop`에서 분기한 브랜치에서 작업한다
 4. 핵심 로직과 버그 수정은 테스트를 먼저 작성한다
 5. 검증 후 PR을 통해 `develop`에 병합한다
