@@ -1,7 +1,15 @@
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
-export type RecordCategory = 'EMOTION' | 'SCHEDULE' | 'HEALTH' | 'MEAL' | 'SLEEP' | 'ETC';
+export type RecordCategory =
+  | 'COMMUNICATION'
+  | 'LIFESTYLE'
+  | 'MEAL'
+  | 'PREFERENCE'
+  | 'CHALLENGING_BEHAVIOR'
+  | 'HEALTH'
+  | 'EMERGENCY'
+  | 'OTHER';
 
 export interface DailyRecord {
   id: number;
