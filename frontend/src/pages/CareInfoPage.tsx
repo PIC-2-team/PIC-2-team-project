@@ -22,13 +22,15 @@ export function CareInfoPage() {
 
   useEffect(() => {
     if (!selectedRecipientId) return;
+    let isCurrent = true;
     setIsLoading(true);
     setError(null);
     setInfo(null);
     getCareInfoByCategory(selectedRecipientId, active)
-      .then(setInfo)
-      .catch(e => setError(e instanceof Error ? e.message : '불러오기 실패'))
-      .finally(() => setIsLoading(false));
+      .then(info => { if (isCurrent) setInfo(info); })
+      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패'); })
+      .finally(() => { if (isCurrent) setIsLoading(false); });
+    return () => { isCurrent = false; };
   }, [selectedRecipientId, active]);
 
   const activeMeta = CATEGORIES.find(c => c.id === active);

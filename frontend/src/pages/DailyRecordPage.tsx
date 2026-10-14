@@ -93,12 +93,15 @@ export function DailyRecordPage() {
 
   useEffect(() => {
     if (!selectedRecipientId) return;
+    let isCurrent = true;
     setIsLoading(true);
     setError(null);
+    setMonthRecords([]);
     getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1)
-      .then(res => setMonthRecords(res.items))
-      .catch(e => setError(e instanceof Error ? e.message : '기록 불러오기 실패'))
-      .finally(() => setIsLoading(false));
+      .then(res => { if (isCurrent) setMonthRecords(res.items); })
+      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록 불러오기 실패'); })
+      .finally(() => { if (isCurrent) setIsLoading(false); });
+    return () => { isCurrent = false; };
   }, [selectedRecipientId, viewYear, viewMonth]);
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
