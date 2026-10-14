@@ -134,6 +134,22 @@ class RecordApiTest {
     }
 
     @Test
+    void corsAllowsOnlyConfiguredFrontendOrigins() throws Exception {
+        mvc.perform(options("/api/auth/login")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+
+        mvc.perform(options("/api/auth/login")
+                        .header("Origin", "https://untrusted.example")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
     void cannotEditOtherWorkersRecordOrAccessOtherRecipient() throws Exception {
         long id = create(worker, "기록", "2026-10-14T03:00:00Z");
         perform(patch(base + "/records/" + id).content("{\"content\":\"변경\"}"), otherWorker)
