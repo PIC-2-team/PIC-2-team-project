@@ -9,6 +9,12 @@ import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.*;
 import com.project.backend.user.entity.*;
 import com.project.backend.user.repository.UserRepository;
+import com.project.backend.record.media.*;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,12 +46,16 @@ class RecordApiTest {
     @Autowired EntityManager entityManager;
     @Autowired JwtProvider jwt;
     @Autowired UserRepository users;
+    @Autowired RecordMediaRepository media;
+    @Autowired RecordMediaLinkRepository mediaLinks;
     @Autowired CareRecipientRepository recipients;
     @Autowired CareGuardianRepository guardians;
     @Autowired CareAssignmentRepository assignments;
     @Autowired OrganizationRepository organizations;
     @Autowired OrganizationRecipientLinkRepository links;
     @MockitoBean Clock clock;
+    @MockitoBean S3Client s3;
+    @MockitoBean S3Presigner presigner;
     MockMvc mvc;
     User guardian, secondary, worker, otherWorker, institution, outsider;
     CareRecipient recipient, otherRecipient;
@@ -334,6 +344,88 @@ class RecordApiTest {
                 .andExpect(status().isUnprocessableEntity());
         perform(get(base + "/records/" + id + "/revisions"), guardian)
                 .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
+    void uploadValidatesRoleAndStoresOnlyServerGeneratedS3Key() throws Exception {
+        byte[] jpeg = {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0x01};
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "../private/photo.jpg", "image/jpeg", jpeg);
+        mvc.perform(multipart(base + "/media").file(file).with(authentication(auth(worker))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.data.fileName").value(".._private_photo.jpg"))
+                .andExpect(jsonPath("$.data.mediaType").value("image/jpeg"));
+        var saved = media.findAll().getFirst();
+        assertThat(saved.getS3Key()).startsWith("media/" + recipient.getId() + "/").doesNotContain("photo.jpg");
+        mvc.perform(multipart(base + "/media").file(file).with(authentication(auth(outsider))))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verify(s3).putObject(org.mockito.ArgumentMatchers.any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
+                org.mockito.ArgumentMatchers.any(software.amazon.awssdk.core.sync.RequestBody.class));
+    }
+
+    @Test
+    void recordCanAttachOnlyMediaFromSameRecipientAndReturnsMetadata() throws Exception {
+        RecordMedia photo = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "photo.jpg", "image/jpeg", 4,
+                "media/" + recipient.getId() + "/photo.jpg", NOW));
+        RecordMedia other = media.save(new RecordMedia(otherRecipient.getId(), guardian.getId(), "private.jpg", "image/jpeg", 4,
+                "media/" + otherRecipient.getId() + "/private.jpg", NOW));
+        String body = body("기록", "2026-10-14T03:00:00Z");
+        body = body.substring(0, body.length() - 1) + ",\"mediaIds\":[" + photo.getId() + "]}";
+        String result = perform(post(base + "/records").content(body), guardian)
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.data.media[0].mediaId").value(photo.getId()))
+                .andExpect(jsonPath("$.data.media[0].fileName").value("photo.jpg"))
+                .andReturn().getResponse().getContentAsString();
+        long recordId = ((Number) JsonPath.read(result, "$.data.id")).longValue();
+        assertThat(mediaLinks.findAllByRecordIdOrderById(recordId)).hasSize(1);
+        perform(patch(base + "/records/" + recordId).content("{\"mediaIds\":[]}"), guardian)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.media").isEmpty());
+        String invalid = body("기록", "2026-10-14T03:00:00Z");
+        invalid = invalid.substring(0, invalid.length() - 1) + ",\"mediaIds\":[" + other.getId() + "]}";
+        perform(post(base + "/records").content(invalid), guardian).andExpect(status().isUnprocessableEntity());
+        String duplicate = body("기록", "2026-10-14T03:00:00Z");
+        duplicate = duplicate.substring(0, duplicate.length() - 1) + ",\"mediaIds\":[" + photo.getId() + "," + photo.getId() + "]}";
+        perform(post(base + "/records").content(duplicate), guardian).andExpect(status().isUnprocessableEntity());
+        perform(post(base + "/records").content(body("기록", "2026-10-14T03:00:00Z")
+                .replace("}", ",\"mediaIds\":[1,2,3,4,5,6]}")), guardian).andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void downloadUrlsAreShortLivedAndMediaCannotCrossRecipientBoundary() throws Exception {
+        RecordMedia photo = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "photo.jpg", "image/jpeg", 4,
+                "media/" + recipient.getId() + "/photo.jpg", NOW));
+        var signed = org.mockito.Mockito.mock(PresignedGetObjectRequest.class);
+        given(presigner.presignGetObject(org.mockito.ArgumentMatchers.any(GetObjectPresignRequest.class))).willReturn(signed);
+        given(signed.url()).willReturn(java.net.URI.create("https://example.invalid/signed").toURL());
+        perform(get(base + "/media/" + photo.getId() + "/download-url"), worker)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.url").value("https://example.invalid/signed"))
+                .andExpect(jsonPath("$.data.expiresAt").value("2026-10-14T03:05:00Z"));
+        var request = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
+        org.mockito.Mockito.verify(presigner).presignGetObject(request.capture());
+        assertThat(request.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(5));
+        perform(get("/api/care-recipients/" + otherRecipient.getId() + "/media/" + photo.getId() + "/download-url"), guardian)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unlinkedMediaCanOnlyBeDeletedByUploader() throws Exception {
+        RecordMedia photo = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "photo.jpg", "image/jpeg", 4,
+                "media/" + recipient.getId() + "/photo.jpg", NOW));
+        perform(delete(base + "/media/" + photo.getId()), worker).andExpect(status().isForbidden());
+        perform(delete(base + "/media/" + photo.getId()), guardian).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deleted").value(true));
+        assertThat(media.findById(photo.getId())).isEmpty();
+    }
+
+    @Test
+    void linkedMediaCanOnlyBeDeletedBySomeoneWhoCanEditItsRecord() throws Exception {
+        RecordMedia photo = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "photo.jpg", "image/jpeg", 4,
+                "media/" + recipient.getId() + "/photo.jpg", NOW));
+        long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
+        mediaLinks.save(new RecordMediaLink(recordId, photo.getId()));
+        perform(delete(base + "/media/" + photo.getId()), otherWorker).andExpect(status().isForbidden());
+        perform(delete(base + "/media/" + photo.getId()), guardian).andExpect(status().isOk());
+    }
+
+    private UsernamePasswordAuthenticationToken auth(User user) {
+        return new UsernamePasswordAuthenticationToken(user.getId(), null, List.of());
     }
 
     private long create(User user, String content, String time) throws Exception {

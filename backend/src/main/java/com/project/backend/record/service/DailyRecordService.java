@@ -6,6 +6,8 @@ import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.response.PaginatedData;
 import com.project.backend.record.dto.*;
 import com.project.backend.record.entity.*;
+import com.project.backend.record.media.RecordMedia;
+import com.project.backend.record.media.RecordMediaService;
 import com.project.backend.record.repository.*;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.repository.UserRepository;
@@ -32,17 +34,20 @@ public class DailyRecordService {
     private final CareRecipientRepository recipients;
     private final UserRepository users;
     private final RecordAccessService access;
+    private final RecordMediaService media;
     private final Clock clock;
 
     public RecordResponse create(Long userId, Long recipientId, CreateRecordRequest request) {
         access.verifyCreate(userId, recipientId);
         boolean pinned = Boolean.TRUE.equals(request.pinned());
         if (pinned) access.verifyGuardian(userId, recipientId);
-        rejectPendingFeatures(request.mediaIds(), request.recordRequestId());
+        rejectPendingRecordRequest(request.recordRequestId());
+        List<RecordMedia> attached = media.validateIds(recipientId, request.mediaIds());
         CareRecipient recipient = lockRecipient(recipientId);
         DailyRecord record = records.save(DailyRecord.builder().careRecipientId(recipientId).authorId(userId)
                 .content(request.content()).category(request.category()).recordedAt(request.recordedAt().toInstant())
                 .pinned(pinned).now(clock.instant()).build());
+        media.replaceLinks(record.getId(), attached);
         recipient.updateLatestRecordAt(LocalDateTime.ofInstant(record.getRecordedAt(), ZoneOffset.UTC));
         return response(record);
     }
@@ -60,11 +65,12 @@ public class DailyRecordService {
         if (request.content() == null && request.category() == null && request.recordedAt() == null && request.mediaIds() == null) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "수정할 필드가 필요합니다.");
         }
-        rejectPendingFeatures(request.mediaIds(), null);
+        List<RecordMedia> attached = request.mediaIds() == null ? null : media.validateIds(recipientId, request.mediaIds());
         Instant now = clock.instant();
         revisions.save(new RecordRevision(record, userId, revisions.latestRevision(recordId) + 1, now));
         record.update(request.content(), request.category(),
                 request.recordedAt() == null ? null : request.recordedAt().toInstant(), now);
+        if (attached != null) media.replaceLinks(record.getId(), attached);
         lockRecipient(recipientId).updateLatestRecordAt(LocalDateTime.ofInstant(record.getRecordedAt(), ZoneOffset.UTC));
         return response(record);
     }
@@ -150,21 +156,23 @@ public class DailyRecordService {
     }
 
     private RecordResponse response(DailyRecord record) {
-        return RecordResponse.of(record, users.findById(record.getAuthorId()).orElseThrow());
+        return RecordResponse.of(record, users.findById(record.getAuthorId()).orElseThrow(), media.forRecord(record.getId()));
     }
 
     private List<RecordResponse> responses(List<DailyRecord> records) {
         Map<Long, User> authors = authors(records.stream().map(DailyRecord::getAuthorId).toList());
-        return records.stream().map(r -> RecordResponse.of(r, authors.get(r.getAuthorId()))).toList();
+        Map<Long, List<RecordMedia>> attachments = media.forRecords(records.stream().map(DailyRecord::getId).toList());
+        return records.stream().map(r -> RecordResponse.of(r, authors.get(r.getAuthorId()),
+                attachments.getOrDefault(r.getId(), List.of()))).toList();
     }
 
     private Map<Long, User> authors(List<Long> ids) {
         return users.findAllById(new HashSet<>(ids)).stream().collect(Collectors.toMap(User::getId, Function.identity()));
     }
 
-    private void rejectPendingFeatures(List<Long> mediaIds, Long recordRequestId) {
-        if ((mediaIds != null && !mediaIds.isEmpty()) || recordRequestId != null) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "UNSUPPORTED_RECORD_LINK", "미디어 및 기록 요청 연결은 아직 지원하지 않습니다.");
+    private void rejectPendingRecordRequest(Long recordRequestId) {
+        if (recordRequestId != null) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "UNSUPPORTED_RECORD_LINK", "기록 요청 연결은 아직 지원하지 않습니다.");
         }
     }
 
