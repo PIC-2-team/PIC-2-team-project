@@ -6,10 +6,21 @@
 
 ## 배포
 
+### Frontend
+
 | 환경 | URL |
 |------|-----|
 | Production (main) | https://pic-2-team-frontend-prod.vercel.app |
+| Preview (develop) | https://pic-2-team-frontend-prod-git-develop-eunhyes-projects-0b70d4c2.vercel.app (첫 develop 배포 후 활성화) |
 | Demo | https://frontend-ivory-three-3vap7tp4lz.vercel.app |
+
+### Backend
+
+| 환경 | URL |
+|------|-----|
+| Production (main) | https://backend-production-51de.up.railway.app |
+| Swagger | https://backend-production-51de.up.railway.app/swagger-ui/index.html |
+| Preview (PR) | PR 생성 시 Railway가 자동 발급 (Railway GitHub App 조직 권한 설정 후 활성화) |
 
 ---
 

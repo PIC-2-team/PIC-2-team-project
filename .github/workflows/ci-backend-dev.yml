@@ -1,0 +1,49 @@
+name: CI Backend (dev)
+
+on:
+  push:
+    branches: [develop]
+    paths: ['backend/**']
+  pull_request:
+    branches: [develop]
+    paths: ['backend/**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build (compile check)
+        run: ./gradlew build -x test
+        working-directory: backend
+
+      - name: Run tests
+        run: ./gradlew test
+        working-directory: backend
+        env:
+          SPRING_PROFILES_ACTIVE: dev
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: backend/build/reports/tests/test/

@@ -1,11 +1,11 @@
-name: CI Backend
+name: CI Backend (prod)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths: ['backend/**']
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths: ['backend/**']
 
 jobs:
