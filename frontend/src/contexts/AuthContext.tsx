@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useLayoutEffect, useReducer } from 'react';
 import type { User } from '../types/user';
-import type { LoginResponse } from '../types/auth';
+import type { GoogleAuthResult, LoginResponse } from '../types/auth';
 import * as authApi from '../api/auth';
 import { setTokenProvider, setUnauthorizedHandler } from '../api/client';
 
@@ -38,6 +38,8 @@ function createInitialState(): State {
 
 type AuthCtx = State & {
   login: (email: string, password: string) => Promise<User>;
+  loginWithGoogle: (idToken: string) => Promise<GoogleAuthResult>;
+  setAuth: (data: LoginResponse) => void;
   logout: () => void;
   setSelectedRecipient: (id: number | null) => void;
 };
@@ -66,6 +68,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.user;
   };
 
+  const loginWithGoogle = async (idToken: string): Promise<GoogleAuthResult> => {
+    const result = await authApi.googleLogin(idToken);
+    if (!result.requiresConsent) {
+      dispatch({ type: 'SET', payload: { accessToken: result.accessToken, user: result.user } });
+    }
+    return result;
+  };
+
+  const setAuth = (data: LoginResponse) => {
+    dispatch({ type: 'SET', payload: data });
+  };
+
   const logout = () => {
     authApi.logout().catch(() => {});
     dispatch({ type: 'CLEAR' });
@@ -75,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SELECT_RECIPIENT', id }), []);
 
   return (
-    <Ctx.Provider value={{ ...state, login, logout, setSelectedRecipient }}>
+    <Ctx.Provider value={{ ...state, login, loginWithGoogle, setAuth, logout, setSelectedRecipient }}>
       {children}
     </Ctx.Provider>
   );

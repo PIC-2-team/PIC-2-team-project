@@ -89,6 +89,29 @@ public class JwtProvider {
         }
     }
 
+    public String generatePendingGoogleToken(String googleId, String email, String name) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject("pending-google")
+                .claim("googleId", googleId)
+                .claim("email", email)
+                .claim("name", name)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(10 * 60)))
+                .signWith(key)
+                .compact();
+    }
+
+    public Claims parsePendingGoogleToken(String token) {
+        try {
+            return Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_PENDING_GOOGLE_TOKEN", "Google 인증 세션이 만료됐습니다.");
+        }
+    }
+
     /** 랜덤 refresh token 원문 생성 */
     public String generateRefreshTokenValue() {
         return UUID.randomUUID().toString();

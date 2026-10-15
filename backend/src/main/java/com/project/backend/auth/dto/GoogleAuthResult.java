@@ -9,13 +9,14 @@ public record GoogleAuthResult(
         String refreshToken,
         UserInfo user,
         String googleEmail,
-        String googleName
+        String googleName,
+        String pendingToken
 ) {
     public static GoogleAuthResult success(String accessToken, String refreshToken, UserInfo user) {
-        return new GoogleAuthResult(false, accessToken, refreshToken, user, null, null);
+        return new GoogleAuthResult(false, accessToken, refreshToken, user, null, null, null);
     }
 
-    public static GoogleAuthResult requiresConsent(String googleEmail, String googleName) {
-        return new GoogleAuthResult(true, null, null, null, googleEmail, googleName);
+    public static GoogleAuthResult requiresConsent(String googleEmail, String googleName, String pendingToken) {
+        return new GoogleAuthResult(true, null, null, null, googleEmail, googleName, pendingToken);
     }
 }
