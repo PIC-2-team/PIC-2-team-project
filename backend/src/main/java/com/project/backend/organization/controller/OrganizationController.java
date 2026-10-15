@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,14 +56,14 @@ public class OrganizationController {
     @PatchMapping("/me/members/{memberId}")
     public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
                                                            @PathVariable Long memberId,
-                                                           @RequestBody UpdateMemberStatusRequest request) {
+                                                           @Valid @RequestBody UpdateMemberStatusRequest request) {
         return ApiResponse.ok(organizationService.updateMemberStatus(userId, memberId, request.active()));
     }
 
     @Operation(summary = "배정 목록 조회")
     @GetMapping("/me/assignments")
     public ApiResponse<List<CareAssignmentResponse>> getAssignments(@AuthenticationPrincipal Long userId,
-                                                                     @RequestParam @Nullable Long careRecipientId) {
+                                                                     @RequestParam(required = false) Long careRecipientId) {
         return ApiResponse.ok(organizationService.getAssignments(userId, careRecipientId));
     }
 
