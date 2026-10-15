@@ -11,8 +11,10 @@
 | 환경 | URL |
 |------|-----|
 | Production (main) | https://pic-2-team-frontend-prod.vercel.app |
-| Preview (develop) | https://pic-2-team-frontend-prod-git-develop-eunhyes-projects-0b70d4c2.vercel.app (첫 develop 배포 후 활성화) |
+| Preview (develop) | [Deploy Frontend (dev) 실행 목록](https://github.com/PIC-2-team/PIC-2-team-project/actions/workflows/deploy-frontend-dev.yml?query=branch%3Adevelop)에서 최신 성공 실행의 배포 URL 확인 |
 | Demo | https://frontend-ivory-three-3vap7tp4lz.vercel.app |
+
+Preview URL은 실행의 `deploy` 작업 → `Deploy preview` 단계 로그에서 `Preview https://...` 항목을 확인합니다. 배포마다 URL이 달라지며, 접속 시 해당 Vercel 프로젝트에 접근 권한이 있는 계정의 로그인이 필요할 수 있습니다.
 
 ### Backend
 

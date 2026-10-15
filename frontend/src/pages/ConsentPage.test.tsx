@@ -57,7 +57,7 @@ it.each([false, true])('동의와 약관 버전을 전송하고 로그인으로 
   await screen.findByRole('heading', { name: '로그인 화면' });
   expect(fetchMock).toHaveBeenCalledTimes(1);
   const [url, options] = fetchMock.mock.calls[0];
-  expect(url).toBe(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/auth/consent`);
+  expect(url).toBe('/api/auth/consent');
   expect(options?.method).toBe('POST');
   expect(JSON.parse(options?.body as string)).toEqual({
     basicInfo: true,

@@ -7,6 +7,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   setTokenProvider(() => null);
 });
 
@@ -74,14 +75,48 @@ describe('apiRequest', () => {
     expect(options.body).toBe(JSON.stringify({ key: 'value' }));
   });
 
-  it('path 앞에 BASE_URL이 붙는다', async () => {
+  it('API 요청은 현재 도메인의 상대 경로를 사용한다', async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ success: true, data: null }), { status: 200 })
     );
     vi.stubGlobal('fetch', mockFetch);
     await apiRequest('/api/path');
     const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toMatch(/\/api\/path$/);
+    expect(url).toBe('/api/path');
+  });
+
+  it.each([
+    ['', '미설정'],
+    ['http://localhost:8080', 'localhost'],
+    ['https://backend-production-51de.up.railway.app', 'Production 백엔드'],
+  ])('Preview의 %s 주소는 요청 전에 차단한다 (%s)', async baseUrl => {
+    vi.stubEnv('VITE_VERCEL_ENV', 'preview');
+    vi.stubEnv('VITE_API_BASE_URL', baseUrl);
+    vi.resetModules();
+    const { apiRequest: previewApiRequest } = await import('./client');
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(previewApiRequest('/api/auth/consent')).rejects.toMatchObject({
+      code: 'PREVIEW_BACKEND_NOT_CONFIGURED',
+    });
+
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('Preview에서는 별도 HTTPS 백엔드 주소를 사용한다', async () => {
+    vi.stubEnv('VITE_VERCEL_ENV', 'preview');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://backend-preview.example.com');
+    vi.resetModules();
+    const { apiRequest: previewApiRequest } = await import('./client');
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: null }), { status: 200 })
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    await previewApiRequest('/api/auth/consent');
+
+    expect(mockFetch.mock.calls[0][0]).toBe('https://backend-preview.example.com/api/auth/consent');
   });
 
   it('토큰이 있으면 Authorization 헤더를 포함한다', async () => {
