@@ -1,9 +1,12 @@
 package com.project.backend.record.service;
 
+import com.project.backend.care.entity.AccessLogAction;
+import com.project.backend.care.entity.AccessLogResourceType;
 import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
+import com.project.backend.care.service.AccessLogService;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.dto.CreateRecordRequestRequest;
 import com.project.backend.record.dto.RecordRequestResponse;
@@ -26,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class RecordRequestServiceTest {
@@ -33,6 +37,7 @@ class RecordRequestServiceTest {
     @Mock RecordRequestRepository recordRequestRepository;
     @Mock CareAssignmentRepository careAssignmentRepository;
     @Mock CareGuardianRepository careGuardianRepository;
+    @Mock AccessLogService accessLogService;
 
     @InjectMocks RecordRequestService recordRequestService;
 
@@ -97,6 +102,22 @@ class RecordRequestServiceTest {
         recordRequestService.cancel(2L, 1L);
 
         assertThat(request.getStatus()).isEqualTo(RecordRequestStatus.CANCELLED);
+    }
+
+    @Test
+    void create_신규_요청_생성시_REQUEST_RECORD_로그_저장() {
+        given(recordRequestRepository.findByIdempotencyKey("key-log")).willReturn(Optional.empty());
+        given(careAssignmentRepository.findBySupportWorkerIdAndEndedAtIsNull(2L))
+                .willReturn(List.of(activeAssignment(10L, 100L, 2L)));
+        given(recordRequestRepository.save(any())).willAnswer(inv -> {
+            RecordRequest r = inv.getArgument(0);
+            ReflectionTestUtils.setField(r, "id", 5L);
+            return r;
+        });
+
+        recordRequestService.create(2L, 100L, new CreateRecordRequestRequest("key-log", "메시지"));
+
+        verify(accessLogService).log(2L, 100L, AccessLogAction.REQUEST, AccessLogResourceType.RECORD, null);
     }
 
     @Test

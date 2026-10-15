@@ -1,5 +1,8 @@
 package com.project.backend.record.service;
 
+import com.project.backend.care.entity.AccessLogAction;
+import com.project.backend.care.entity.AccessLogResourceType;
+import com.project.backend.care.service.AccessLogService;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.response.PaginatedData;
 import com.project.backend.record.dto.CreateRecordSuggestionRequest;
@@ -40,6 +43,7 @@ public class RecordSuggestionService {
     private final UserRepository users;
     private final RecordAccessService access;
     private final Clock clock;
+    private final AccessLogService accessLogService;
 
     public RecordSuggestionResponse create(Long userId, Long careRecipientId, Long recordId,
                                            CreateRecordSuggestionRequest request) {
@@ -49,6 +53,7 @@ public class RecordSuggestionService {
         RecordSuggestion suggestion = suggestions.save(new RecordSuggestion(record, userId, request.content(),
                 request.category(), request.reason(), clock.instant()));
         notifications.notifySuggestionReceived(careRecipientId);
+        accessLogService.log(userId, careRecipientId, AccessLogAction.SUGGESTION, AccessLogResourceType.RECORD, recordId);
         return response(suggestion);
     }
 

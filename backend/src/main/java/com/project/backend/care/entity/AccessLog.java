@@ -30,7 +30,7 @@ public class AccessLog {
     @Column(nullable = false, length = 20)
     private AccessLogResourceType resourceType;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long resourceId;
 
     @Column(name = "occurred_at", nullable = false)
