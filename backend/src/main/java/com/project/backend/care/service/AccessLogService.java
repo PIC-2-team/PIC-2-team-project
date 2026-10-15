@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -41,6 +42,7 @@ public class AccessLogService {
         return logs.stream().map(AccessLogResponse::from).toList();
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(Long actorId, Long careRecipientId, AccessLogAction action,
                     AccessLogResourceType resourceType, Long resourceId) {
         accessLogRepository.save(AccessLog.builder()
