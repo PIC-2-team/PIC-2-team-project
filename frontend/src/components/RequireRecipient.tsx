@@ -12,9 +12,9 @@ export function RequireRecipient() {
     if (selectedRecipientId !== null) return;
     let active = true;
     listCareRecipients()
-      .then(({ items }) => {
+      .then(recipients => {
         if (!active) return;
-        if (items[0]) setSelectedRecipient(items[0].id);
+        if (recipients[0]) setSelectedRecipient(recipients[0].id);
         else setEmpty(true);
       })
       .catch(e => {

@@ -12,6 +12,7 @@ import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import { MorePage } from './pages/MorePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
+import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      {
+        element: <RequireRole role="GUARDIAN" />,
+        children: [{ path: '/care-recipients/new', element: <CareRecipientRegistrationPage /> }],
+      },
       {
         element: <AppLayout />,
         children: [

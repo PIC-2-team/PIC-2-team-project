@@ -25,8 +25,8 @@ export function HomePage() {
     }
     const load = async () => {
       try {
-        const res = await listCareRecipients();
-        const first = res.items[0] ?? null;
+        const recipients = await listCareRecipients();
+        const first = recipients[0] ?? null;
         if (!first) {
           setPage({ status: 'empty' });
           return;
@@ -39,7 +39,7 @@ export function HomePage() {
       }
     };
     void load();
-  }, [user?.role]);
+  }, [user?.role, navigate, setSelectedRecipient]);
 
   if (page.status === 'loading') return <p>불러오는 중…</p>;
   if (page.status === 'error') return <p role="alert">{page.message}</p>;
@@ -47,8 +47,7 @@ export function HomePage() {
     return (
       <main className={styles.page}>
         <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
-        {/* TODO: 당사자 등록 API 확정 후 연결 */}
-        <button disabled type="button">당사자 등록 (준비 중)</button>
+        <button type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
       </main>
     );
   }

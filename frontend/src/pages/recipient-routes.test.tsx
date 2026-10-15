@@ -23,7 +23,7 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
       const data = url === '/api/auth/login'
         ? { accessToken: 'test-token', user: { id: 1, name: '테스트', email: 'test@example.com', role: 'GUARDIAN' } }
         : url === '/api/care-recipients'
-        ? { items: [{ id: 42, name: '테스트 당사자' }] }
+        ? [{ id: 42, name: '테스트 당사자' }]
         : url.includes('/care-info/')
           ? { category: 'COMMUNICATION', content: '테스트 돌봄정보', updatedAt: '2026-10-14' }
           : url.endsWith('/records/today')
@@ -56,7 +56,7 @@ it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다'
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const data = String(input) === '/api/auth/login'
       ? { accessToken: 'test-token', user: { id: 1, name: '테스트', email: 'test@example.com', role: 'GUARDIAN' } }
-      : { items: [] };
+      : [];
     return new Response(JSON.stringify({ success: true, data }));
   });
   vi.spyOn(authApi, 'login').mockImplementation(async credentials => {
@@ -69,6 +69,9 @@ it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다'
   fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
   fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
   await screen.findByText('테스트님, 당사자 정보를 먼저 등록해 주세요.');
+  fireEvent.click(screen.getByRole('button', { name: '당사자 등록' }));
+  await screen.findByRole('heading', { name: '당사자 기본 정보' });
+  await memoryRouter.navigate('/home');
   await memoryRouter.navigate('/records');
   await screen.findByText('등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.');
   memoryRouter.dispose();
