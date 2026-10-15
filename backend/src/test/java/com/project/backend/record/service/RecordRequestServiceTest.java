@@ -1,7 +1,9 @@
 package com.project.backend.record.service;
 
 import com.project.backend.care.entity.CareAssignment;
+import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.repository.CareAssignmentRepository;
+import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.dto.CreateRecordRequestRequest;
 import com.project.backend.record.dto.RecordRequestResponse;
@@ -30,6 +32,7 @@ class RecordRequestServiceTest {
 
     @Mock RecordRequestRepository recordRequestRepository;
     @Mock CareAssignmentRepository careAssignmentRepository;
+    @Mock CareGuardianRepository careGuardianRepository;
 
     @InjectMocks RecordRequestService recordRequestService;
 
@@ -74,6 +77,16 @@ class RecordRequestServiceTest {
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.idempotencyKey()).isEqualTo("key-dup");
+    }
+
+    @Test
+    void getForCareRecipient_비보호자는_FORBIDDEN() {
+        given(careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
+                100L, 99L, GuardianStatus.ACTIVE)).willReturn(false);
+
+        assertThatThrownBy(() -> recordRequestService.getForCareRecipient(99L, 100L))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
