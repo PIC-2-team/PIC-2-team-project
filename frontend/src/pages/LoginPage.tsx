@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
+import styles from './LoginPage.module.css';
 
 declare global {
   interface Window {
@@ -69,7 +70,7 @@ export function LoginPage() {
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: 'outline',
         size: 'large',
-        width: '358',
+        width: String(googleBtnRef.current.clientWidth || 280),
         text: 'signin_with',
         locale: 'ko',
       });
@@ -105,40 +106,47 @@ export function LoginPage() {
   };
 
   return (
-    <main style={{ maxWidth: 390, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1>로그인</h1>
-      <p>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
-      <form onSubmit={(e) => { void handleSubmit(e); }}>
-        <label style={{ display: 'block', marginBottom: '1rem' }}>
-          이메일
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-            style={{ display: 'block', width: '100%' }}
-          />
-        </label>
-        <label style={{ display: 'block', marginBottom: '1rem' }}>
-          비밀번호
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            style={{ display: 'block', width: '100%' }}
-          />
-        </label>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? '로그인 중…' : '로그인'}
-        </button>
-      </form>
-      <div style={{ margin: '1.5rem 0', textAlign: 'center', color: '#8a9ab0' }}>또는</div>
-      <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
-      <p>계정이 없으신가요? 회원가입 (준비 중)</p>
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <Link to="/" className={styles.back} aria-label="이용 동의로 돌아가기">←</Link>
+        <span className={styles.brand}>삶결</span>
+      </header>
+      <div className={styles.content}>
+        <div className={styles.heading}>
+          <p className={styles.eyebrow}>돌봄을 잇는 기록</p>
+          <h1>로그인</h1>
+        </div>
+        <p className={styles.notice}>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
+        <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>
+          <label>
+            이메일
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </label>
+          <label>
+            비밀번호
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          {error && <p role="alert" className={styles.error}>{error}</p>}
+          <button className={styles.submit} type="submit" disabled={isLoading}>
+            {isLoading ? '로그인 중…' : '로그인'}
+          </button>
+        </form>
+        <div className={styles.divider}>또는</div>
+        <div ref={googleBtnRef} className={styles.googleButton} />
+        <p className={styles.signup}>계정이 없으신가요? 회원가입 (준비 중)</p>
+      </div>
     </main>
   );
 }
