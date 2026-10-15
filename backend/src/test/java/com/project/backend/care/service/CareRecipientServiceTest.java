@@ -99,7 +99,7 @@ class CareRecipientServiceTest {
                 .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build();
         ReflectionTestUtils.setField(r, "id", 100L);
         given(careRecipientRepository.findAllById(List.of(100L))).willReturn(List.of(r));
-        given(disabilityRepository.findByCareRecipientId(100L)).willReturn(List.of());
+        given(disabilityRepository.findByCareRecipientIdIn(List.of(100L))).willReturn(List.of());
 
         List<CareRecipientResponse> result = careRecipientService.getAll(1L);
 
@@ -123,7 +123,7 @@ class CareRecipientServiceTest {
                 .birthDate(LocalDate.of(1999, 5, 5)).gender(Gender.FEMALE).build();
         ReflectionTestUtils.setField(r, "id", 200L);
         given(careRecipientRepository.findAllById(List.of(200L))).willReturn(List.of(r));
-        given(disabilityRepository.findByCareRecipientId(200L)).willReturn(List.of());
+        given(disabilityRepository.findByCareRecipientIdIn(List.of(200L))).willReturn(List.of());
 
         List<CareRecipientResponse> result = careRecipientService.getAll(2L);
 
