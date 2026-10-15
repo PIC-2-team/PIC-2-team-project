@@ -155,3 +155,175 @@
   background: #b8c4ce;
   cursor: not-allowed;
 }
+
+.error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+
+.modeSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.875rem;
+  background: #f0f7f3;
+}
+
+.modeSwitch button {
+  min-height: 2.875rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #6b7a8a;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modeSwitch .modeActive {
+  background: #fff;
+  color: #26865f;
+  box-shadow: 0 1px 4px #14271b12;
+}
+
+.voicePanel {
+  display: flex;
+  min-height: 22rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border: 1px solid #e8ecf0;
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #f7fbf8, #fff);
+  text-align: center;
+}
+
+.voicePanel h2 {
+  margin: 0;
+  color: #1a2533;
+  font-size: 1.2rem;
+}
+
+.voicePanel > p {
+  max-width: 17rem;
+  margin: 0;
+  color: #6b7a8a;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.micIcon {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7f4ed;
+  color: #3cab7e;
+  font-size: 2rem;
+}
+
+.recordButton,
+.stopButton,
+.draftButton {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 2rem;
+  background: #3cab7e;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.stopButton {
+  background: #c74343;
+}
+
+.recordButton:disabled,
+.draftButton:disabled {
+  background: #b8c4ce;
+  cursor: not-allowed;
+}
+
+.privacyNote {
+  font-size: 0.75rem !important;
+}
+
+.draftButton {
+  margin-top: 0.25rem;
+}
+
+.reviewCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #d9ebe0;
+  border-radius: 1rem;
+  background: #f7fbf8;
+}
+
+.reviewCard h2 {
+  margin: 0;
+  color: #1a2533;
+  font-size: 1rem;
+}
+
+.reviewCard > p {
+  margin: 0;
+  color: #6b7a8a;
+  font-size: 0.825rem;
+}
+
+.reviewCard > label {
+  margin-top: 0.25rem;
+  color: #1a2533;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.reviewCard details {
+  color: #6b7a8a;
+  font-size: 0.825rem;
+}
+
+.reviewCard details p {
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: #3cab7e;
+  color: #3cab7e;
+  background: #f0f7f3;
+}
+
+.cleanupWarning {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cleanupWarning button {
+  justify-self: start;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #c74343;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #a83232;
+  font: inherit;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cleanupWarning button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

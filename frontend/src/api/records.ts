@@ -1,34 +1,58 @@
+import type { DailyRecord, CreateRecordPayload, RecordCategory } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
-export type RecordCategory =
-  | 'COMMUNICATION'
-  | 'LIFESTYLE'
-  | 'MEAL'
-  | 'PREFERENCE'
-  | 'CHALLENGING_BEHAVIOR'
-  | 'HEALTH'
-  | 'EMERGENCY'
-  | 'OTHER';
-
-export interface DailyRecord {
-  id: number;
-  category: RecordCategory;
-  content: string;
-  createdAt: string;
+export function getTodayRecords(recipientId: number): Promise<DailyRecord[]> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/today`);
 }
 
-export interface CreateRecordPayload {
-  category: RecordCategory;
-  content: string;
-}
-
-export function getRecordsByDate(date: string): Promise<PaginatedData<DailyRecord>> {
-  return apiRequest<PaginatedData<DailyRecord>>(
-    `/api/records?date=${encodeURIComponent(date)}`
+export function getRecordsByMonth(
+  recipientId: number,
+  year: number,
+  month: number
+): Promise<PaginatedData<DailyRecord>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/records?year=${year}&month=${month}&pageSize=100`
   );
 }
 
-export function createRecord(payload: CreateRecordPayload): Promise<DailyRecord> {
-  return apiRequest<DailyRecord>('/api/records', { method: 'POST', body: payload });
+// TODO: GET /records/{recordId} — 경로 초안, 미구현 (API-Spec.md §상세·수정·삭제)
+export function getRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
+}
+
+export function createRecord(
+  recipientId: number,
+  payload: CreateRecordPayload
+): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export type RecordDraft = {
+  transcript: string;
+  content: string;
+  category: RecordCategory;
+};
+
+export function createRecordDraft(
+  recipientId: number,
+  input: { inputType: 'TEXT'; text: string } | { inputType: 'AUDIO'; mediaId: number },
+): Promise<RecordDraft> {
+  return apiRequest('/api/ai/record-drafts', {
+    method: 'POST',
+    body: { careRecipientId: recipientId, ...input },
+  });
+}
+
+export function uploadRecordAudio(recipientId: number, file: File): Promise<{ mediaId: number }> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiRequest(`/api/care-recipients/${recipientId}/media`, { method: 'POST', body: form });
+}
+
+export function deleteRecordMedia(recipientId: number, mediaId: number): Promise<{ deleted: boolean }> {
+  return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }

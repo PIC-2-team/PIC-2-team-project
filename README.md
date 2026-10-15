@@ -41,6 +41,16 @@ cd backend
 
 ---
 
+## 개발용 테스트 계정 (dev 프로파일 기동 시 자동 생성)
+
+| 역할 | 이메일 | 비밀번호 |
+|------|--------|----------|
+| 돌봄 보호자 (GUARDIAN) | guardian@test.com | Test1234! |
+| 활동지원사 (SUPPORT_WORKER) | worker@test.com | Test1234! |
+| 기관 담당자 (INSTITUTION) | institution@test.com | Test1234! |
+
+---
+
 ## API 타입 생성
 
 BE 서버가 실행 중일 때:

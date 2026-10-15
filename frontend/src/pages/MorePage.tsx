@@ -1,15 +1,14 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import styles from './MorePage.module.css';
 
-const MOCK_USER = { name: '김OO', role: '돌봄 제공자' };
+const ROLE_LABEL: Record<string, string> = {
+  GUARDIAN: '돌봄 보호자',
+  CAREGIVER: '활동지원사',
+  AGENCY: '기관 담당자',
+};
 
 const MENU_SECTIONS = [
-  {
-    title: '내 정보',
-    items: [
-      { label: '개인정보 설정' },
-      { label: '알림 설정' },
-    ],
-  },
   {
     title: '서비스',
     items: [
@@ -27,7 +26,16 @@ const MENU_SECTIONS = [
   },
 ];
 
-export default function MorePage() {
+export function MorePage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    if (!window.confirm('로그아웃할까요?')) return;
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.profile}>
@@ -38,12 +46,14 @@ export default function MorePage() {
           </svg>
         </div>
         <div className={styles.profileInfo}>
-          <p className={styles.name}>{MOCK_USER.name}님</p>
-          <p className={styles.role}>{MOCK_USER.role}</p>
+          <p className={styles.name}>{user?.name ?? '—'}님</p>
+          <p className={styles.role}>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</p>
+          {user?.email && <p className={styles.email}>{user.email}</p>}
         </div>
-        <button type="button" className={styles.editButton} aria-label="프로필 편집">
+        {/* TODO: PATCH /api/users/me 필드 미정 — 확정 후 활성화 */}
+        <button type="button" className={styles.editButton} aria-label="프로필 편집 (준비 중)" disabled>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z" stroke="#8a9ab0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z" stroke="#b8c4ce" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
@@ -71,7 +81,13 @@ export default function MorePage() {
         ))}
       </div>
 
-      <button type="button" className={styles.logoutButton}>로그아웃</button>
+      <button
+        type="button"
+        className={styles.logoutButton}
+        onClick={handleLogout}
+      >
+        로그아웃
+      </button>
     </div>
   );
 }
