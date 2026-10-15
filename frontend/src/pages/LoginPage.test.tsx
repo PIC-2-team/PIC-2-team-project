@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../contexts/AuthContext';
 import * as authApi from '../api/auth';
@@ -13,6 +13,16 @@ afterEach(() => {
   delete window.google;
 });
 
+function ConsentRoute() {
+  const location = useLocation();
+  return (
+    <>
+      <h1>이용 동의</h1>
+      <output data-testid="pending-google">{JSON.stringify(location.state?.pendingGoogle)}</output>
+    </>
+  );
+}
+
 function renderLogin(path = '/login') {
   return render(
     <AuthProvider>
@@ -22,7 +32,7 @@ function renderLogin(path = '/login') {
           <Route path="/home" element={<h1>홈 화면</h1>} />
           <Route path="/agency" element={<h1>기관 화면</h1>} />
           <Route path="/records" element={<h1>기록 화면</h1>} />
-          <Route path="/" element={<h1>이용 동의</h1>} />
+          <Route path="/" element={<ConsentRoute />} />
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
@@ -75,5 +85,8 @@ it('Google 가입이 필요한 사용자를 기존 동의 흐름으로 안내한
   renderLogin();
   initialize.mock.calls[0][0].callback({ credential: 'test-google-token' });
   await screen.findByRole('heading', { name: '이용 동의' });
+  expect(screen.getByTestId('pending-google')).toHaveTextContent(
+    JSON.stringify({ pendingToken: 'test-pending', email: 'test@example.com', name: '테스트' }),
+  );
   expect(googleLogin).toHaveBeenCalledWith('test-google-token');
 });

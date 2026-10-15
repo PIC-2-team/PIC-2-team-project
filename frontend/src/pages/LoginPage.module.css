@@ -1,8 +1,9 @@
 .page {
   --green: #3cab7e;
+  --green-text: #2d8f67;
   --soft: #f0f7f3;
   --ink: #1a2533;
-  --muted: #6b7a8a;
+  --muted: #596775;
   --line: #e8ecf0;
   width: 100%;
   max-width: 390px;
@@ -36,7 +37,7 @@
 }
 
 .brand {
-  color: var(--green);
+  color: var(--green-text);
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -1px;
