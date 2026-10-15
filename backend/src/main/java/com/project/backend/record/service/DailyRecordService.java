@@ -1,7 +1,10 @@
 package com.project.backend.record.service;
 
+import com.project.backend.care.entity.AccessLogAction;
+import com.project.backend.care.entity.AccessLogResourceType;
 import com.project.backend.care.entity.CareRecipient;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.care.service.AccessLogService;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.response.PaginatedData;
 import com.project.backend.record.dto.*;
@@ -36,6 +39,7 @@ public class DailyRecordService {
     private final RecordAccessService access;
     private final RecordMediaService media;
     private final Clock clock;
+    private final AccessLogService accessLogService;
 
     public RecordResponse create(Long userId, Long recipientId, CreateRecordRequest request) {
         access.verifyCreate(userId, recipientId);
@@ -49,13 +53,17 @@ public class DailyRecordService {
                 .pinned(pinned).now(clock.instant()).build());
         media.replaceLinks(record.getId(), attached);
         recipient.updateLatestRecordAt(LocalDateTime.ofInstant(record.getRecordedAt(), ZoneOffset.UTC));
-        return response(record);
+        RecordResponse result = response(record);
+        accessLogService.log(userId, recipientId, AccessLogAction.CREATE, AccessLogResourceType.RECORD, record.getId());
+        return result;
     }
 
     @Transactional(readOnly = true)
     public RecordResponse get(Long userId, Long recipientId, Long recordId) {
         access.verifyRead(userId, recipientId);
-        return response(active(find(recipientId, recordId, false)));
+        RecordResponse result = response(active(find(recipientId, recordId, false)));
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, recordId);
+        return result;
     }
 
     public RecordResponse update(Long userId, Long recipientId, Long recordId, UpdateRecordRequest request) {
@@ -72,7 +80,9 @@ public class DailyRecordService {
                 request.recordedAt() == null ? null : request.recordedAt().toInstant(), now);
         if (attached != null) media.replaceLinks(record.getId(), attached);
         lockRecipient(recipientId).updateLatestRecordAt(LocalDateTime.ofInstant(record.getRecordedAt(), ZoneOffset.UTC));
-        return response(record);
+        RecordResponse result = response(record);
+        accessLogService.log(userId, recipientId, AccessLogAction.UPDATE, AccessLogResourceType.RECORD, recordId);
+        return result;
     }
 
     public DeleteRecordResponse delete(Long userId, Long recipientId, Long recordId) {
@@ -80,6 +90,7 @@ public class DailyRecordService {
         DailyRecord record = active(find(recipientId, recordId, true));
         access.verifyEdit(userId, recipientId, record.getAuthorId());
         record.delete(clock.instant());
+        accessLogService.log(userId, recipientId, AccessLogAction.DELETE, AccessLogResourceType.RECORD, recordId);
         return new DeleteRecordResponse(record.getDeletedAt(), record.getDeletedAt().plus(RESTORE_WINDOW));
     }
 
@@ -109,6 +120,7 @@ public class DailyRecordService {
         Pageable pageable = pageable(page, pageSize, "recordedAt");
         Instant[] range = range(date, year, month);
         Page<DailyRecord> result = records.findAll(filter(recipientId, range), pageable);
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, null);
         return new PaginatedData<>(responses(result.getContent()), pagination(result));
     }
 
@@ -116,8 +128,10 @@ public class DailyRecordService {
     public List<RecordResponse> today(Long userId, Long recipientId) {
         access.verifyRead(userId, recipientId);
         LocalDate date = clock.instant().atZone(SEOUL).toLocalDate();
-        return responses(records.findAll(filter(recipientId, range(date, null, null)),
+        List<RecordResponse> result = responses(records.findAll(filter(recipientId, range(date, null, null)),
                 Sort.by(Sort.Direction.DESC, "recordedAt", "id")));
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, null);
+        return result;
     }
 
     @Transactional(readOnly = true)

@@ -1,9 +1,12 @@
 package com.project.backend.record.service;
 
+import com.project.backend.care.entity.AccessLogAction;
+import com.project.backend.care.entity.AccessLogResourceType;
 import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
+import com.project.backend.care.service.AccessLogService;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.dto.CreateRecordRequestRequest;
 import com.project.backend.record.dto.RecordRequestResponse;
@@ -25,6 +28,7 @@ public class RecordRequestService {
     private final RecordRequestRepository recordRequestRepository;
     private final CareAssignmentRepository careAssignmentRepository;
     private final CareGuardianRepository careGuardianRepository;
+    private final AccessLogService accessLogService;
 
     public RecordRequestResponse create(Long supportWorkerId, Long careRecipientId,
                                         CreateRecordRequestRequest request) {
@@ -47,6 +51,7 @@ public class RecordRequestService {
                 .idempotencyKey(request.idempotencyKey())
                 .message(request.message())
                 .build());
+        accessLogService.log(supportWorkerId, careRecipientId, AccessLogAction.REQUEST, AccessLogResourceType.RECORD, null);
         return RecordRequestResponse.from(saved);
     }
 

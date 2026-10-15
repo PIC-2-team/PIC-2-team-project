@@ -1,6 +1,9 @@
 package com.project.backend.record.service;
 
+import com.project.backend.care.entity.AccessLogAction;
+import com.project.backend.care.entity.AccessLogResourceType;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.care.service.AccessLogService;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.record.dto.*;
 import com.project.backend.record.entity.*;
@@ -21,6 +24,7 @@ public class CareInfoService {
     private final RecordAccessService access;
     private final DailyRecordService records;
     private final Clock clock;
+    private final AccessLogService accessLogService;
 
     @Transactional(readOnly = true)
     public CareInfoOverviewResponse list(Long userId, Long recipientId) {
@@ -29,14 +33,18 @@ public class CareInfoService {
         infos.findByCareRecipientId(recipientId).forEach(info -> saved.put(info.getCategory(), CareInfoResponse.of(info)));
         List<CareInfoResponse> categories = Arrays.stream(CareInfoCategory.values())
                 .map(category -> saved.getOrDefault(category, CareInfoResponse.empty(category))).toList();
-        return new CareInfoOverviewResponse(categories, records.pinned(userId, recipientId));
+        CareInfoOverviewResponse result = new CareInfoOverviewResponse(categories, records.pinned(userId, recipientId));
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.CARE_INFO, null);
+        return result;
     }
 
     @Transactional(readOnly = true)
     public CareInfoResponse get(Long userId, Long recipientId, CareInfoCategory category) {
         access.verifyRead(userId, recipientId);
-        return infos.findByCareRecipientIdAndCategory(recipientId, category)
+        CareInfoResponse result = infos.findByCareRecipientIdAndCategory(recipientId, category)
                 .map(CareInfoResponse::of).orElseGet(() -> CareInfoResponse.empty(category));
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.CARE_INFO, null);
+        return result;
     }
 
     public CareInfoResponse put(Long userId, Long recipientId, CareInfoCategory category, PutCareInfoRequest request) {
@@ -47,6 +55,8 @@ public class CareInfoService {
         CareInfo info = infos.findByCareRecipientIdAndCategory(recipientId, category)
                 .orElseGet(() -> new CareInfo(recipientId, category));
         info.update(request.content(), clock.instant());
-        return CareInfoResponse.of(infos.save(info));
+        CareInfoResponse result = CareInfoResponse.of(infos.save(info));
+        accessLogService.log(userId, recipientId, AccessLogAction.UPDATE, AccessLogResourceType.CARE_INFO, null);
+        return result;
     }
 }
