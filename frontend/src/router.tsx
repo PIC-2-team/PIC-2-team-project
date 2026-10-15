@@ -13,11 +13,13 @@ import { CareInfoPage } from './pages/CareInfoPage';
 import { MorePage } from './pages/MorePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
+import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <ConsentPage /> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/google-register', element: <GoogleRegisterPage /> },
 
   {
     element: <RequireAuth />,

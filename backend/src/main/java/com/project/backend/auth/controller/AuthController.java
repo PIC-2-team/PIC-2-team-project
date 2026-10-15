@@ -76,6 +76,13 @@ public class AuthController {
         return ApiResponse.ok(googleAuthService.authenticate(request.idToken()));
     }
 
+    @Operation(summary = "Google 신규 회원가입")
+    @PostMapping("/google/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<GoogleAuthResult> googleRegister(@Valid @RequestBody GoogleRegisterRequest request) {
+        return ApiResponse.ok(googleAuthService.register(request));
+    }
+
     @Operation(summary = "세컨드 보호자 초대 수락")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/invitations/accept")

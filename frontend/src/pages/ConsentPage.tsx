@@ -64,7 +64,8 @@ export function ConsentPage() {
         termsVersion: '1.0',
       });
       sessionStorage.setItem('consentTicket', consentTicket);
-      navigate('/login');
+      const isGoogleFlow = sessionStorage.getItem('pendingGoogle') !== null;
+      navigate(isGoogleFlow ? '/google-register' : '/login');
     } catch {
       setError('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');
     } finally {
