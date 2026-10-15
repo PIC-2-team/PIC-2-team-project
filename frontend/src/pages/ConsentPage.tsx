@@ -56,12 +56,14 @@ export function ConsentPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await submitConsent({
+      const { consentTicket } = await submitConsent({
         basicInfo: consents.basicInfo,
         sensitiveInfo: consents.sensitiveInfo,
         caregiverShare: consents.caregiverShare,
         marketing: consents.marketing,
+        termsVersion: '1.0',
       });
+      sessionStorage.setItem('consentTicket', consentTicket);
       navigate('/login');
     } catch {
       setError('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');

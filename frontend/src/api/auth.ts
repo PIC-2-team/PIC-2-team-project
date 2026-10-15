@@ -1,7 +1,7 @@
-import type { ConsentRequest, LoginResponse, LoginRequest } from '../types/auth';
+import type { ConsentRequest, ConsentResponse, LoginResponse, LoginRequest } from '../types/auth';
 import { apiRequest } from './client';
 
-export function submitConsent(body: ConsentRequest): Promise<null> {
+export function submitConsent(body: ConsentRequest): Promise<ConsentResponse> {
   return apiRequest('/api/auth/consent', { method: 'POST', body });
 }
 
