@@ -205,7 +205,7 @@ export function RecordFormPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button type="button" className={styles.backButton} disabled={recording || requestingMic || processing || saving} onClick={() => stage === 'review' ? setStage('input') : navigate(-1)} aria-label="뒤로가기">
+        <button type="button" className={styles.backButton} disabled={recording || requestingMic || processing || saving || orphanedMediaId !== null} onClick={() => stage === 'review' ? setStage('input') : navigate(-1)} aria-label="뒤로가기">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="#1a2533" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <h1 className={styles.title}>{stage === 'review' ? 'AI 정리 확인' : '기록 작성'}</h1>
@@ -270,7 +270,7 @@ export function RecordFormPage() {
       </div>
 
       {stage === 'review' && <div className={styles.footer}>
-        <button type="button" className={styles.saveButton} disabled={!content.trim() || processing || saving} onClick={() => { void saveRecord(); }}>{processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}</button>
+        <button type="button" className={styles.saveButton} disabled={!content.trim() || processing || saving || orphanedMediaId !== null} onClick={() => { void saveRecord(); }}>{processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}</button>
       </div>}
     </div>
   );

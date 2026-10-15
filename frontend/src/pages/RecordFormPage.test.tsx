@@ -172,10 +172,13 @@ it('임시 오디오 삭제에 실패하면 사용자에게 알린다', async ()
   fireEvent.click(await screen.findByRole('button', { name: '녹음 마치기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('임시 녹음 파일을 삭제하지 못했어요. 다시 시도해 주세요.');
   expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '뒤로가기' }));
-  expect(screen.getByRole('button', { name: '먼저 녹음 파일을 삭제해 주세요' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '뒤로가기' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '기록 저장하기' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: '녹음 파일 삭제 다시 시도' }));
   await waitFor(() => expect(records.deleteRecordMedia).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole('button', { name: '뒤로가기' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: '기록 저장하기' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: '뒤로가기' }));
   expect(screen.getByRole('button', { name: '녹음 시작하기' })).toBeEnabled();
   expect(screen.queryByText('임시 녹음 파일을 삭제하지 못했어요. 다시 시도해 주세요.')).not.toBeInTheDocument();
 });
