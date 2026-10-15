@@ -2,6 +2,7 @@ package com.project.backend.auth.controller;
 
 import com.project.backend.auth.dto.*;
 import com.project.backend.auth.service.AuthService;
+import com.project.backend.auth.service.GoogleAuthService;
 import com.project.backend.care.service.SecondaryGuardianService;
 import com.project.backend.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +27,7 @@ public class AuthController {
 
     private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
     private final AuthService authService;
+    private final GoogleAuthService googleAuthService;
     private final SecondaryGuardianService secondaryGuardianService;
 
     @Operation(summary = "동의 티켓 발급")
@@ -66,6 +68,12 @@ public class AuthController {
         String rawToken = extractRefreshTokenCookie(request);
         authService.logout(rawToken);
         expireRefreshTokenCookie(response);
+    }
+
+    @Operation(summary = "Google 소셜 로그인")
+    @PostMapping("/google")
+    public ApiResponse<GoogleAuthResult> googleLogin(@Valid @RequestBody GoogleAuthRequest request) {
+        return ApiResponse.ok(googleAuthService.authenticate(request.idToken()));
     }
 
     @Operation(summary = "세컨드 보호자 초대 수락")
