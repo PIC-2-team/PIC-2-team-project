@@ -91,12 +91,15 @@ class GoogleAuthServiceTest {
                 .willReturn(new GoogleUserInfo("gid-new", "new@gmail.com", "신규유저"));
         given(userRepository.findByGoogleId("gid-new")).willReturn(Optional.empty());
         given(userRepository.findByEmail("new@gmail.com")).willReturn(Optional.empty());
+        given(jwtProvider.generatePendingGoogleToken("gid-new", "new@gmail.com", "신규유저"))
+                .willReturn("pending-token");
 
         GoogleAuthResult result = googleAuthService.authenticate("valid-id-token");
 
         assertThat(result.requiresConsent()).isTrue();
         assertThat(result.googleEmail()).isEqualTo("new@gmail.com");
         assertThat(result.googleName()).isEqualTo("신규유저");
+        assertThat(result.pendingToken()).isEqualTo("pending-token");
         assertThat(result.accessToken()).isNull();
     }
 
@@ -112,15 +115,20 @@ class GoogleAuthServiceTest {
 
     @Test
     void register_정상_가입시_토큰_발급() {
-        Claims claims = mock(Claims.class);
-        given(claims.get("basicInfo", Boolean.class)).willReturn(true);
-        given(claims.get("sensitiveInfo", Boolean.class)).willReturn(true);
-        given(claims.get("caregiverShare", Boolean.class)).willReturn(true);
-        given(claims.get("marketing", Boolean.class)).willReturn(false);
-        given(claims.get("termsVersion", String.class)).willReturn("1.0");
-        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(claims);
-        given(tokenVerifier.verify("id-token"))
-                .willReturn(new GoogleUserInfo("gid-new", "new@gmail.com", "신규유저"));
+        Claims consentClaims = mock(Claims.class);
+        given(consentClaims.get("basicInfo", Boolean.class)).willReturn(true);
+        given(consentClaims.get("sensitiveInfo", Boolean.class)).willReturn(true);
+        given(consentClaims.get("caregiverShare", Boolean.class)).willReturn(true);
+        given(consentClaims.get("marketing", Boolean.class)).willReturn(false);
+        given(consentClaims.get("termsVersion", String.class)).willReturn("1.0");
+        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(consentClaims);
+
+        Claims googleClaims = mock(Claims.class);
+        given(googleClaims.get("email", String.class)).willReturn("new@gmail.com");
+        given(googleClaims.get("name", String.class)).willReturn("신규유저");
+        given(googleClaims.get("googleId", String.class)).willReturn("gid-new");
+        given(jwtProvider.parsePendingGoogleToken("pending-token")).willReturn(googleClaims);
+
         given(userRepository.existsByEmail("new@gmail.com")).willReturn(false);
         given(publicCodeGenerator.generate(UserRole.GUARDIAN)).willReturn("G-000001");
         given(userRepository.save(any())).willAnswer(inv -> {
@@ -135,7 +143,7 @@ class GoogleAuthServiceTest {
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         GoogleAuthResult result = googleAuthService.register(
-                new GoogleRegisterRequest("id-token", "consent-ticket", UserRole.GUARDIAN));
+                new GoogleRegisterRequest("pending-token", "consent-ticket", UserRole.GUARDIAN));
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
@@ -144,14 +152,16 @@ class GoogleAuthServiceTest {
 
     @Test
     void register_이메일_중복시_CONFLICT() {
-        Claims claims = mock(Claims.class);
-        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(claims);
-        given(tokenVerifier.verify("id-token"))
-                .willReturn(new GoogleUserInfo("gid-new", "existing@gmail.com", "중복유저"));
+        Claims consentClaims = mock(Claims.class);
+        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(consentClaims);
+
+        Claims googleClaims = mock(Claims.class);
+        given(googleClaims.get("email", String.class)).willReturn("existing@gmail.com");
+        given(jwtProvider.parsePendingGoogleToken("pending-token")).willReturn(googleClaims);
         given(userRepository.existsByEmail("existing@gmail.com")).willReturn(true);
 
         assertThatThrownBy(() -> googleAuthService.register(
-                new GoogleRegisterRequest("id-token", "consent-ticket", UserRole.GUARDIAN)))
+                new GoogleRegisterRequest("pending-token", "consent-ticket", UserRole.GUARDIAN)))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.CONFLICT);
     }

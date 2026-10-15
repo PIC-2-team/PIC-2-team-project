@@ -5,10 +5,10 @@ export type LoginResponse = { accessToken: string; user: User };
 
 export type GoogleAuthResult =
   | { requiresConsent: false; accessToken: string; refreshToken: string; user: User }
-  | { requiresConsent: true; googleEmail: string; googleName: string };
+  | { requiresConsent: true; googleEmail: string; googleName: string; pendingToken: string };
 
 export type GoogleRegisterRequest = {
-  idToken: string;
+  pendingToken: string;
   consentTicket: string;
   role: 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
 };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { submitConsent } from '../api/auth';
 import styles from './ConsentPage.module.css';
 
@@ -32,8 +32,12 @@ const CONSENT_ITEMS = [
 
 type ConsentKey = (typeof CONSENT_ITEMS)[number]['id'];
 
+type PendingGoogle = { pendingToken: string; email: string; name: string };
+
 export function ConsentPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pendingGoogle = (location.state as { pendingGoogle?: PendingGoogle } | null)?.pendingGoogle ?? null;
   const [consents, setConsents] = useState<Record<ConsentKey, boolean>>({
     basicInfo: false,
     sensitiveInfo: false,
@@ -63,9 +67,11 @@ export function ConsentPage() {
         marketing: consents.marketing,
         termsVersion: '1.0',
       });
-      sessionStorage.setItem('consentTicket', consentTicket);
-      const isGoogleFlow = sessionStorage.getItem('pendingGoogle') !== null;
-      navigate(isGoogleFlow ? '/google-register' : '/login');
+      if (pendingGoogle) {
+        navigate('/google-register', { state: { pendingGoogle, consentTicket } });
+      } else {
+        navigate('/login');
+      }
     } catch {
       setError('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');
     } finally {

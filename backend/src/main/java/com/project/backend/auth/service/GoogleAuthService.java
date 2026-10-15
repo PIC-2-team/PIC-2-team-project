@@ -62,21 +62,28 @@ public class GoogleAuthService {
             return issueTokens(byEmail.get());
         }
 
-        return GoogleAuthResult.requiresConsent(googleUser.email(), googleUser.name());
+        return GoogleAuthResult.requiresConsent(
+                googleUser.email(),
+                googleUser.name(),
+                jwtProvider.generatePendingGoogleToken(googleUser.googleId(), googleUser.email(), googleUser.name()));
     }
 
     public GoogleAuthResult register(GoogleRegisterRequest request) {
         Claims consentClaims = jwtProvider.parseConsentTicket(request.consentTicket());
-        GoogleUserInfo googleUser = tokenVerifier.verify(request.idToken());
+        Claims googleClaims = jwtProvider.parsePendingGoogleToken(request.pendingToken());
 
-        if (userRepository.existsByEmail(googleUser.email())) {
+        String email = googleClaims.get("email", String.class);
+        String name = googleClaims.get("name", String.class);
+        String googleId = googleClaims.get("googleId", String.class);
+
+        if (userRepository.existsByEmail(email)) {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 사용 중인 이메일입니다.");
         }
 
         User user = User.builder()
-                .name(googleUser.name())
-                .email(googleUser.email())
-                .googleId(googleUser.googleId())
+                .name(name)
+                .email(email)
+                .googleId(googleId)
                 .publicCode(publicCodeGenerator.generate(request.role()))
                 .role(request.role())
                 .build();

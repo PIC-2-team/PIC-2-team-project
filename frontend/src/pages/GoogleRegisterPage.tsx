@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { googleRegister } from '../api/auth';
 import type { GoogleRegisterRequest } from '../types/auth';
@@ -12,26 +12,24 @@ const ROLES: { value: Role; label: string; desc: string }[] = [
   { value: 'INSTITUTION', label: '기관 담당자', desc: '소속 이용자와 지원자를 관리합니다.' },
 ];
 
+type LocationState = {
+  pendingGoogle?: { pendingToken: string; email: string; name: string };
+  consentTicket?: string;
+} | null;
+
 export function GoogleRegisterPage() {
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState;
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pendingRaw = sessionStorage.getItem('pendingGoogle');
-  const consentTicket = sessionStorage.getItem('consentTicket');
+  const pending = state?.pendingGoogle ?? null;
+  const consentTicket = state?.consentTicket ?? null;
 
-  if (!pendingRaw || !consentTicket) {
-    navigate('/', { replace: true });
-    return null;
-  }
-
-  let pending: { idToken: string; email: string; name: string };
-  try {
-    pending = JSON.parse(pendingRaw) as { idToken: string; email: string; name: string };
-  } catch {
-    sessionStorage.removeItem('pendingGoogle');
+  if (!pending || !consentTicket) {
     navigate('/', { replace: true });
     return null;
   }
@@ -42,7 +40,7 @@ export function GoogleRegisterPage() {
     setError(null);
     try {
       const result = await googleRegister({
-        idToken: pending.idToken,
+        pendingToken: pending.pendingToken,
         consentTicket,
         role: selectedRole,
       });
@@ -50,8 +48,6 @@ export function GoogleRegisterPage() {
         setError('회원가입 중 오류가 발생했어요. 다시 시도해주세요.');
         return;
       }
-      sessionStorage.removeItem('pendingGoogle');
-      sessionStorage.removeItem('consentTicket');
       setAuth({ accessToken: result.accessToken, user: result.user });
       navigate('/home', { replace: true });
     } catch {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
@@ -26,6 +26,36 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
+  const handleGoogleCredential = async (idToken: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await loginWithGoogle(idToken);
+      if (!result.requiresConsent) {
+        const home = result.user.role === 'AGENCY' ? '/agency' : '/home';
+        navigate(searchParams.get('redirect') ?? home, { replace: true });
+      } else {
+        navigate('/', { replace: true, state: {
+          pendingGoogle: {
+            pendingToken: result.pendingToken,
+            email: result.googleEmail,
+            name: result.googleName,
+          },
+        }});
+      }
+    } catch {
+      setError('Google 로그인 중 오류가 발생했어요. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // always points to the latest handleGoogleCredential so the GSI callback isn't stale
+  const handleGoogleCredentialRef = useRef(handleGoogleCredential);
+  useLayoutEffect(() => {
+    handleGoogleCredentialRef.current = handleGoogleCredential;
+  });
+
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
     if (!clientId) return;
@@ -34,7 +64,7 @@ export function LoginPage() {
       if (!window.google || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: ({ credential }) => { void handleGoogleCredential(credential); },
+        callback: ({ credential }) => { void handleGoogleCredentialRef.current(credential); },
       });
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: 'outline',
@@ -52,31 +82,7 @@ export function LoginPage() {
       script?.addEventListener('load', initialize);
       return () => script?.removeEventListener('load', initialize);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleGoogleCredential = async (idToken: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await loginWithGoogle(idToken);
-      if (!result.requiresConsent) {
-        const home = result.user.role === 'AGENCY' ? '/agency' : '/home';
-        navigate(searchParams.get('redirect') ?? home, { replace: true });
-      } else {
-        sessionStorage.setItem('pendingGoogle', JSON.stringify({
-          idToken,
-          email: result.googleEmail,
-          name: result.googleName,
-        }));
-        navigate('/', { replace: true });
-      }
-    } catch {
-      setError('Google 로그인 중 오류가 발생했어요. 다시 시도해주세요.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +90,6 @@ export function LoginPage() {
     setError(null);
     try {
       const user = await login(email, password);
-      sessionStorage.removeItem('pendingGoogle');
       const redirect = searchParams.get('redirect');
       const home = user.role === 'AGENCY' ? '/agency' : '/home';
       navigate(redirect ?? home, { replace: true });
