@@ -55,6 +55,7 @@ class GoogleAuthServiceTest {
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
+        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
         assertThat(result.user().name()).isEqualTo("홍길동");
     }
 
@@ -74,6 +75,7 @@ class GoogleAuthServiceTest {
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
+        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
     }
 
     @Test

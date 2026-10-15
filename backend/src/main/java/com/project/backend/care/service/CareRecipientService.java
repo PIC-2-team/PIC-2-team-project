@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,13 +49,16 @@ public class CareRecipientService {
             return List.of();
         }
 
-        return careRecipientRepository.findAllById(recipientIds).stream()
-                .map(r -> {
-                    List<DisabilityType> disabilities = disabilityRepository
-                            .findByCareRecipientId(r.getId()).stream()
-                            .map(CareRecipientDisability::getDisabilityType).toList();
-                    return CareRecipientResponse.of(r, disabilities);
-                }).toList();
+        List<CareRecipient> recipients = careRecipientRepository.findAllById(recipientIds);
+        Map<Long, List<DisabilityType>> disabilityMap = disabilityRepository
+                .findByCareRecipientIdIn(recipientIds).stream()
+                .collect(Collectors.groupingBy(
+                        CareRecipientDisability::getCareRecipientId,
+                        Collectors.mapping(CareRecipientDisability::getDisabilityType, Collectors.toList())));
+
+        return recipients.stream()
+                .map(r -> CareRecipientResponse.of(r, disabilityMap.getOrDefault(r.getId(), List.of())))
+                .toList();
     }
 
     public CareRecipientResponse register(Long guardianUserId, CreateCareRecipientRequest request) {

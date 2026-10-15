@@ -97,7 +97,7 @@ class OrganizationServiceTest {
         given(organizationMemberRepository.findByOrganizationId(10L)).willReturn(List.of(member));
 
         User worker = supportWorkerUser(5L);
-        given(userRepository.findById(5L)).willReturn(Optional.of(worker));
+        given(userRepository.findAllById(List.of(5L))).willReturn(List.of(worker));
 
         List<MemberResponse> result = organizationService.getMembers(1L);
 
