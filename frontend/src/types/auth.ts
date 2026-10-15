@@ -7,4 +7,9 @@ export type ConsentRequest = {
   sensitiveInfo: boolean;
   caregiverShare: boolean;
   marketing: boolean;
+  termsVersion: string;
+};
+
+export type ConsentResponse = {
+  consentTicket: string;
 };
