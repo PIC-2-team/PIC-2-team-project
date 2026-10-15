@@ -1,8 +1,9 @@
 package com.project.backend.auth.service;
 
-import com.project.backend.auth.dto.AuthResponse;
 import com.project.backend.auth.dto.GoogleAuthResult;
+import com.project.backend.auth.repository.ConsentRepository;
 import com.project.backend.auth.repository.RefreshTokenRepository;
+import com.project.backend.auth.service.PublicCodeGenerator;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.security.JwtProvider;
 import com.project.backend.user.entity.User;
@@ -29,6 +30,8 @@ class GoogleAuthServiceTest {
 
     @Mock UserRepository userRepository;
     @Mock RefreshTokenRepository refreshTokenRepository;
+    @Mock ConsentRepository consentRepository;
+    @Mock PublicCodeGenerator publicCodeGenerator;
     @Mock JwtProvider jwtProvider;
     @Mock GoogleTokenVerifier tokenVerifier;
 
@@ -37,7 +40,8 @@ class GoogleAuthServiceTest {
     @BeforeEach
     void setUp() {
         googleAuthService = new GoogleAuthService(
-                userRepository, refreshTokenRepository, jwtProvider, tokenVerifier, 30);
+                userRepository, refreshTokenRepository, consentRepository,
+                publicCodeGenerator, jwtProvider, tokenVerifier, 30);
     }
 
     @Test
