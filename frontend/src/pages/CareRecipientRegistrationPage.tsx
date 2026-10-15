@@ -39,12 +39,17 @@ export function CareRecipientRegistrationPage() {
       setError('장애 유형을 입력해 주세요.');
       return;
     }
+    const grade = disabilityGrade.trim() ? Number(disabilityGrade) : null;
+    if (grade !== null && !Number.isInteger(grade)) {
+      setError('장애 정도는 정수로 입력해 주세요.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const recipient = await createCareRecipient({
         name: name.trim(), birthDate, gender: gender as CreateCareRecipientPayload['gender'],
-        disabilityTypes, disabilityGrade: disabilityGrade ? Number(disabilityGrade) : null,
+        disabilityTypes, disabilityGrade: grade,
         otherDisabilityType: disabilityTypes.includes('OTHER') ? otherDisabilityType.trim() : null,
       });
       setSelectedRecipient(recipient.id);
@@ -90,7 +95,7 @@ export function CareRecipientRegistrationPage() {
             </div>
             {disabilityTypes.includes('OTHER') && <label className={styles.field}>장애 유형<input value={otherDisabilityType} onChange={e => setOtherDisabilityType(e.target.value)} placeholder="장애 유형을 입력해 주세요" /></label>}
             <label className={styles.field}>장애 정도 <span className={styles.optional}>선택</span>
-              <input type="number" inputMode="numeric" value={disabilityGrade} onChange={e => setDisabilityGrade(e.target.value)} placeholder="숫자로 입력해 주세요" />
+              <input type="number" inputMode="numeric" step={1} aria-label="장애 정도" value={disabilityGrade} onChange={e => setDisabilityGrade(e.target.value)} placeholder="숫자로 입력해 주세요" />
             </label>
             <p className={styles.privacy}>입력한 정보는 당사자 돌봄을 위해서만 사용돼요.</p>
             <button className={styles.primary} type="button" disabled={saving} onClick={() => { void submit(); }}>{saving ? '등록 중…' : '등록하기'}</button>

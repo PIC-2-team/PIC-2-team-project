@@ -62,3 +62,23 @@ it('장애 유형을 선택하지 않으면 등록 요청을 보내지 않는다
   expect(await screen.findByRole('alert')).toHaveTextContent('장애 유형을 하나 이상 선택해 주세요.');
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it('정수가 아닌 장애 정도를 등록하지 않는다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch');
+  render(
+    <AuthProvider>
+      <MemoryRouter>
+        <CareRecipientRegistrationPage />
+      </MemoryRouter>
+    </AuthProvider>,
+  );
+  fireEvent.change(screen.getByLabelText('이름'), { target: { value: '김하늘' } });
+  fireEvent.change(screen.getByLabelText('생년월일'), { target: { value: '2010-01-01' } });
+  fireEvent.click(screen.getByRole('radio', { name: '여성' }));
+  fireEvent.click(screen.getByRole('button', { name: '다음' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: '자폐성 장애' }));
+  fireEvent.change(screen.getByLabelText('장애 정도'), { target: { value: '1.5' } });
+  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('장애 정도는 정수로 입력해 주세요.');
+  expect(fetchMock).not.toHaveBeenCalled();
+});
