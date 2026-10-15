@@ -91,6 +91,13 @@ class RecordApiTest {
     }
 
     @Test
+    void actuatorHealthIsPublicForRailwayHealthcheck() throws Exception {
+        mvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
     void lifecyclePreservesPreviousRevisionAndHidesDeletedRecords() throws Exception {
         long id = create(worker, "  원래 내용  ", "2026-10-14T12:00:00+09:00");
         perform(get(base + "/records/" + id), guardian)
