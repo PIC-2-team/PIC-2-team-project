@@ -40,8 +40,8 @@ Railway (CD)
 **파일:** `.github/workflows/ci-backend.yml`
 
 **트리거:**
-- `main` push
-- `main` 대상 PR open / update
+- `main` / `develop` push (backend/** 경로 변경 시)
+- `main` / `develop` 대상 PR open / update
 
 **단계:**
 
@@ -49,7 +49,7 @@ Railway (CD)
 1. Java 21 + Gradle 캐시 세팅
 2. ./gradlew build -x test     # 컴파일 검증
 3. ./gradlew test               # 단위/통합 테스트 (H2 인메모리 DB)
-4. 테스트 리포트 업로드 (선택)
+4. 실패 시 테스트 리포트 업로드
 ```
 
 **결정 사항:**
@@ -71,7 +71,7 @@ Railway (CD)
 | `CORS_ALLOWED_ORIGINS` | Vercel 프론트엔드 URL |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | S3 접근용 IAM 키 |
 | `AWS_REGION` | `ap-northeast-2` |
-| `S3_BUCKET_NAME` | S3 버킷명 |
+| `S3_BUCKET_NAME` | 버킷명 |
 | `OPENAI_API_KEY` | OpenAI 키 |
 
 ### GitHub Actions Secrets
@@ -120,6 +120,8 @@ PR 생성
 ### 이번 작업
 
 - [ ] `spring-boot-starter-actuator` 의존성 추가
+- [ ] `SecurityConfig`에 `/actuator/health` permitAll 추가
+- [ ] `backend/Procfile` 추가 (Railway 시작 커맨드)
 - [ ] `.github/workflows/ci-backend.yml` 작성
 - [ ] Railway 프로젝트 생성 + MySQL plugin 연결
 - [ ] Railway 환경변수 설정
