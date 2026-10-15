@@ -55,6 +55,7 @@ public class SecondaryGuardianService {
 
     @Transactional(readOnly = true)
     public Optional<SecondaryGuardianResponse> getSecondaryGuardian(Long userId, Long careRecipientId) {
+        verifyPrimaryGuardian(userId, careRecipientId);
         return careGuardianRepository
                 .findByCareRecipientIdAndTypeAndStatus(careRecipientId, GuardianType.SECONDARY, GuardianStatus.ACTIVE)
                 .map(SecondaryGuardianResponse::from);
@@ -86,8 +87,8 @@ public class SecondaryGuardianService {
     }
 
     private void verifyPrimaryGuardian(Long userId, Long careRecipientId) {
-        if (!careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
-                careRecipientId, userId, GuardianStatus.ACTIVE)) {
+        if (!careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndTypeAndStatus(
+                careRecipientId, userId, GuardianType.PRIMARY, GuardianStatus.ACTIVE)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "PRIMARY 보호자만 세컨드 보호자를 관리할 수 있습니다.");
         }
     }

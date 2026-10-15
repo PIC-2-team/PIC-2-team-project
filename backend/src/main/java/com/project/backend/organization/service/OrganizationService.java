@@ -23,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -100,8 +103,12 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public List<MemberResponse> getMembers(Long ownerId) {
         Organization org = findOrgByOwner(ownerId);
-        return organizationMemberRepository.findByOrganizationId(org.getId()).stream()
-                .map(m -> MemberResponse.of(m, findUser(m.getUserId())))
+        List<OrganizationMember> members = organizationMemberRepository.findByOrganizationId(org.getId());
+        List<Long> userIds = members.stream().map(OrganizationMember::getUserId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return members.stream()
+                .map(m -> MemberResponse.of(m, userMap.get(m.getUserId())))
                 .toList();
     }
 
