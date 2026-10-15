@@ -28,13 +28,31 @@ export interface RequestOptions {
   body?: unknown;
 }
 
+const PROD_BACKEND = 'https://backend-production-51de.up.railway.app';
+
+function resolveUrl(path: string): string {
+  const vercelEnv = import.meta.env.VITE_VERCEL_ENV as string | undefined;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+
+  if (vercelEnv === 'preview') {
+    const isUsable =
+      apiBase.startsWith('https://') && !apiBase.startsWith(PROD_BACKEND);
+    if (!isUsable) {
+      throw new ApiError('PREVIEW_BACKEND_NOT_CONFIGURED', 'Preview 백엔드 주소가 설정되지 않았습니다.');
+    }
+    return `${apiBase}${path}`;
+  }
+
+  return path;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
   const token = _getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(path, {
+  const res = await fetch(resolveUrl(path), {
     method: options.method ?? 'GET',
     headers,
     body: options.body === undefined ? undefined : isFormData ? options.body as FormData : JSON.stringify(options.body),
