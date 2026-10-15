@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    authApi.logout().catch(() => {});
+    authApi.logout().catch(console.error);
     dispatch({ type: 'CLEAR' });
   };
 

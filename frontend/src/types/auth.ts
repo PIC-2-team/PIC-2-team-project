@@ -4,7 +4,7 @@ export type LoginRequest = { email: string; password: string };
 export type LoginResponse = { accessToken: string; user: User };
 
 export type GoogleAuthResult =
-  | { requiresConsent: false; accessToken: string; refreshToken: string; user: User }
+  | { requiresConsent: false; accessToken: string; user: User }
   | { requiresConsent: true; googleEmail: string; googleName: string; pendingToken: string };
 
 export type GoogleRegisterRequest = {

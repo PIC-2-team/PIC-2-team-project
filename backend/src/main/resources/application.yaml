@@ -17,3 +17,6 @@ springdoc:
 jwt:
   access-token-expiry-seconds: 900      # 15분
   refresh-token-expiry-days: 30
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}

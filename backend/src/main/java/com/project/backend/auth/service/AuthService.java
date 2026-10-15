@@ -58,7 +58,7 @@ public class AuthService {
         return new ConsentResponse(jwtProvider.generateConsentTicket(claims));
     }
 
-    public AuthResponse register(RegisterRequest request) {
+    public SessionResult<AuthResponse> register(RegisterRequest request) {
         Claims consentClaims = jwtProvider.parseConsentTicket(request.consentTicket());
 
         if (userRepository.existsByEmail(request.email())) {
@@ -89,12 +89,11 @@ public class AuthService {
                 .build());
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getRole().name());
-        saveRefreshToken(user.getId());
-
-        return new AuthResponse(accessToken, UserInfo.from(user));
+        String raw = saveRefreshToken(user.getId());
+        return new SessionResult<>(new AuthResponse(accessToken, UserInfo.from(user)), raw);
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public SessionResult<AuthResponse> login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다."));
@@ -104,12 +103,11 @@ public class AuthService {
         }
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getRole().name());
-        saveRefreshToken(user.getId());
-
-        return new AuthResponse(accessToken, UserInfo.from(user));
+        String raw = saveRefreshToken(user.getId());
+        return new SessionResult<>(new AuthResponse(accessToken, UserInfo.from(user)), raw);
     }
 
-    public RefreshResponse refresh(String rawRefreshToken) {
+    public SessionResult<RefreshResponse> refresh(String rawRefreshToken) {
         String hash = jwtProvider.hashRefreshToken(rawRefreshToken);
         RefreshToken rt = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new ApiException(
@@ -128,9 +126,10 @@ public class AuthService {
 
         rt.revoke();
         refreshTokenRepository.save(rt);
-        saveRefreshToken(user.getId());
-
-        return new RefreshResponse(jwtProvider.generateAccessToken(user.getId(), user.getRole().name()));
+        String newRaw = saveRefreshToken(user.getId());
+        return new SessionResult<>(
+                new RefreshResponse(jwtProvider.generateAccessToken(user.getId(), user.getRole().name())),
+                newRaw);
     }
 
     public void logout(String rawRefreshToken) {

@@ -62,11 +62,12 @@ class AuthServiceTest {
         given(passwordEncoder.matches("rawpw", "encodedpw")).willReturn(true);
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        AuthResponse response = authService.login(new LoginRequest("test@example.com", "rawpw"));
+        SessionResult<AuthResponse> session = authService.login(new LoginRequest("test@example.com", "rawpw"));
 
-        assertThat(jwtProvider.isValid(response.accessToken())).isTrue();
-        assertThat(jwtProvider.extractUserId(response.accessToken())).isEqualTo(1L);
-        assertThat(jwtProvider.extractRole(response.accessToken())).isEqualTo("GUARDIAN");
+        assertThat(jwtProvider.isValid(session.data().accessToken())).isTrue();
+        assertThat(jwtProvider.extractUserId(session.data().accessToken())).isEqualTo(1L);
+        assertThat(jwtProvider.extractRole(session.data().accessToken())).isEqualTo("GUARDIAN");
+        assertThat(session.rawRefreshToken()).isNotNull();
     }
 
     @Test
@@ -109,9 +110,10 @@ class AuthServiceTest {
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         RegisterRequest req = new RegisterRequest(ticket, "홍길동", "test@example.com", "password123", null, UserRole.GUARDIAN);
-        AuthResponse response = authService.register(req);
+        SessionResult<AuthResponse> session = authService.register(req);
 
-        assertThat(jwtProvider.isValid(response.accessToken())).isTrue();
+        assertThat(jwtProvider.isValid(session.data().accessToken())).isTrue();
+        assertThat(session.rawRefreshToken()).isNotNull();
         verify(userRepository).save(any(User.class));
         verify(consentRepository).save(any(Consent.class));
         verify(refreshTokenRepository).save(any(RefreshToken.class));
@@ -151,10 +153,11 @@ class AuthServiceTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(userWithId(1L)));
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        RefreshResponse response = authService.refresh(rawToken);
+        SessionResult<RefreshResponse> session = authService.refresh(rawToken);
 
-        assertThat(jwtProvider.isValid(response.accessToken())).isTrue();
-        assertThat(jwtProvider.extractUserId(response.accessToken())).isEqualTo(1L);
+        assertThat(jwtProvider.isValid(session.data().accessToken())).isTrue();
+        assertThat(jwtProvider.extractUserId(session.data().accessToken())).isEqualTo(1L);
+        assertThat(session.rawRefreshToken()).isNotNull();
     }
 
     @Test

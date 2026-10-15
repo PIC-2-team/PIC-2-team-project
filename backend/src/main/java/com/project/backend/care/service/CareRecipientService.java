@@ -110,6 +110,10 @@ public class CareRecipientService {
     }
 
     public CareRecipientResponse update(Long userId, Long careRecipientId, UpdateCareRecipientRequest request) {
+        User user = findUser(userId);
+        if (user.getRole() != UserRole.GUARDIAN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 당사자 정보를 수정할 수 있습니다.");
+        }
         careAccessService.verifyAccess(userId, careRecipientId);
         CareRecipient recipient = findRecipient(careRecipientId);
 

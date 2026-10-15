@@ -2,6 +2,7 @@ package com.project.backend.auth.service;
 
 import com.project.backend.auth.dto.GoogleAuthResult;
 import com.project.backend.auth.dto.GoogleRegisterRequest;
+import com.project.backend.auth.dto.SessionResult;
 import com.project.backend.auth.dto.UserInfo;
 import com.project.backend.auth.entity.Consent;
 import com.project.backend.auth.entity.RefreshToken;
@@ -49,7 +50,7 @@ public class GoogleAuthService {
         this.refreshTokenExpiryDays = refreshTokenExpiryDays;
     }
 
-    public GoogleAuthResult authenticate(String idToken) {
+    public SessionResult<GoogleAuthResult> authenticate(String idToken) {
         GoogleUserInfo googleUser = tokenVerifier.verify(idToken);
 
         Optional<User> byGoogleId = userRepository.findByGoogleId(googleUser.googleId());
@@ -62,13 +63,14 @@ public class GoogleAuthService {
             return issueTokens(byEmail.get());
         }
 
-        return GoogleAuthResult.requiresConsent(
+        return new SessionResult<>(GoogleAuthResult.requiresConsent(
                 googleUser.email(),
                 googleUser.name(),
-                jwtProvider.generatePendingGoogleToken(googleUser.googleId(), googleUser.email(), googleUser.name()));
+                jwtProvider.generatePendingGoogleToken(googleUser.googleId(), googleUser.email(), googleUser.name())),
+                null);
     }
 
-    public GoogleAuthResult register(GoogleRegisterRequest request) {
+    public SessionResult<GoogleAuthResult> register(GoogleRegisterRequest request) {
         Claims consentClaims = jwtProvider.parseConsentTicket(request.consentTicket());
         Claims googleClaims = jwtProvider.parsePendingGoogleToken(request.pendingToken());
 
@@ -101,7 +103,7 @@ public class GoogleAuthService {
         return issueTokens(user);
     }
 
-    private GoogleAuthResult issueTokens(User user) {
+    private SessionResult<GoogleAuthResult> issueTokens(User user) {
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getRole().name());
         String raw = jwtProvider.generateRefreshTokenValue();
         String hash = jwtProvider.hashRefreshToken(raw);
@@ -110,6 +112,6 @@ public class GoogleAuthService {
                 .tokenHash(hash)
                 .expiryDays(refreshTokenExpiryDays)
                 .build());
-        return GoogleAuthResult.success(accessToken, raw, UserInfo.from(user));
+        return new SessionResult<>(GoogleAuthResult.success(accessToken, UserInfo.from(user)), raw);
     }
 }

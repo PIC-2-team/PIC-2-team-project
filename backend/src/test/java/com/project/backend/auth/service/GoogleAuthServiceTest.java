@@ -2,6 +2,7 @@ package com.project.backend.auth.service;
 
 import com.project.backend.auth.dto.GoogleAuthResult;
 import com.project.backend.auth.dto.GoogleRegisterRequest;
+import com.project.backend.auth.dto.SessionResult;
 import com.project.backend.auth.repository.ConsentRepository;
 import com.project.backend.auth.repository.RefreshTokenRepository;
 import com.project.backend.auth.service.PublicCodeGenerator;
@@ -58,11 +59,12 @@ class GoogleAuthServiceTest {
         given(jwtProvider.hashRefreshToken("raw-refresh")).willReturn("hashed");
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        GoogleAuthResult result = googleAuthService.authenticate("valid-id-token");
+        SessionResult<GoogleAuthResult> session = googleAuthService.authenticate("valid-id-token");
+        GoogleAuthResult result = session.data();
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
-        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
+        assertThat(session.rawRefreshToken()).isEqualTo("raw-refresh");
         assertThat(result.user().name()).isEqualTo("홍길동");
     }
 
@@ -78,11 +80,12 @@ class GoogleAuthServiceTest {
         given(jwtProvider.hashRefreshToken("raw-refresh")).willReturn("hashed");
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        GoogleAuthResult result = googleAuthService.authenticate("valid-id-token");
+        SessionResult<GoogleAuthResult> session = googleAuthService.authenticate("valid-id-token");
+        GoogleAuthResult result = session.data();
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
-        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
+        assertThat(session.rawRefreshToken()).isEqualTo("raw-refresh");
     }
 
     @Test
@@ -94,13 +97,15 @@ class GoogleAuthServiceTest {
         given(jwtProvider.generatePendingGoogleToken("gid-new", "new@gmail.com", "신규유저"))
                 .willReturn("pending-token");
 
-        GoogleAuthResult result = googleAuthService.authenticate("valid-id-token");
+        SessionResult<GoogleAuthResult> session = googleAuthService.authenticate("valid-id-token");
+        GoogleAuthResult result = session.data();
 
         assertThat(result.requiresConsent()).isTrue();
         assertThat(result.googleEmail()).isEqualTo("new@gmail.com");
         assertThat(result.googleName()).isEqualTo("신규유저");
         assertThat(result.pendingToken()).isEqualTo("pending-token");
         assertThat(result.accessToken()).isNull();
+        assertThat(session.rawRefreshToken()).isNull();
     }
 
     @Test
@@ -142,12 +147,13 @@ class GoogleAuthServiceTest {
         given(jwtProvider.hashRefreshToken("raw-refresh")).willReturn("hashed");
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        GoogleAuthResult result = googleAuthService.register(
+        SessionResult<GoogleAuthResult> session = googleAuthService.register(
                 new GoogleRegisterRequest("pending-token", "consent-ticket", UserRole.GUARDIAN));
+        GoogleAuthResult result = session.data();
 
         assertThat(result.requiresConsent()).isFalse();
         assertThat(result.accessToken()).isEqualTo("access-token");
-        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
+        assertThat(session.rawRefreshToken()).isEqualTo("raw-refresh");
     }
 
     @Test
