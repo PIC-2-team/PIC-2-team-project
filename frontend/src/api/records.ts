@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, RecordCategory } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -29,4 +29,30 @@ export function createRecord(
     method: 'POST',
     body: payload,
   });
+}
+
+export type RecordDraft = {
+  transcript: string;
+  content: string;
+  category: RecordCategory;
+};
+
+export function createRecordDraft(
+  recipientId: number,
+  input: { inputType: 'TEXT'; text: string } | { inputType: 'AUDIO'; mediaId: number },
+): Promise<RecordDraft> {
+  return apiRequest('/api/ai/record-drafts', {
+    method: 'POST',
+    body: { careRecipientId: recipientId, ...input },
+  });
+}
+
+export function uploadRecordAudio(recipientId: number, file: File): Promise<{ mediaId: number }> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiRequest(`/api/care-recipients/${recipientId}/media`, { method: 'POST', body: form });
+}
+
+export function deleteRecordMedia(recipientId: number, mediaId: number): Promise<{ deleted: boolean }> {
+  return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }
