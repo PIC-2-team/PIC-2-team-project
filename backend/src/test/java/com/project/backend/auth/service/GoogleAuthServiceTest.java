@@ -1,6 +1,7 @@
 package com.project.backend.auth.service;
 
 import com.project.backend.auth.dto.GoogleAuthResult;
+import com.project.backend.auth.dto.GoogleRegisterRequest;
 import com.project.backend.auth.repository.ConsentRepository;
 import com.project.backend.auth.repository.RefreshTokenRepository;
 import com.project.backend.auth.service.PublicCodeGenerator;
@@ -9,6 +10,7 @@ import com.project.backend.common.security.JwtProvider;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class GoogleAuthServiceTest {
@@ -105,6 +108,52 @@ class GoogleAuthServiceTest {
         assertThatThrownBy(() -> googleAuthService.authenticate("bad-token"))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void register_정상_가입시_토큰_발급() {
+        Claims claims = mock(Claims.class);
+        given(claims.get("basicInfo", Boolean.class)).willReturn(true);
+        given(claims.get("sensitiveInfo", Boolean.class)).willReturn(true);
+        given(claims.get("caregiverShare", Boolean.class)).willReturn(true);
+        given(claims.get("marketing", Boolean.class)).willReturn(false);
+        given(claims.get("termsVersion", String.class)).willReturn("1.0");
+        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(claims);
+        given(tokenVerifier.verify("id-token"))
+                .willReturn(new GoogleUserInfo("gid-new", "new@gmail.com", "신규유저"));
+        given(userRepository.existsByEmail("new@gmail.com")).willReturn(false);
+        given(publicCodeGenerator.generate(UserRole.GUARDIAN)).willReturn("G-000001");
+        given(userRepository.save(any())).willAnswer(inv -> {
+            User u = inv.getArgument(0);
+            ReflectionTestUtils.setField(u, "id", 2L);
+            return u;
+        });
+        given(consentRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(jwtProvider.generateAccessToken(2L, "GUARDIAN")).willReturn("access-token");
+        given(jwtProvider.generateRefreshTokenValue()).willReturn("raw-refresh");
+        given(jwtProvider.hashRefreshToken("raw-refresh")).willReturn("hashed");
+        given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        GoogleAuthResult result = googleAuthService.register(
+                new GoogleRegisterRequest("id-token", "consent-ticket", UserRole.GUARDIAN));
+
+        assertThat(result.requiresConsent()).isFalse();
+        assertThat(result.accessToken()).isEqualTo("access-token");
+        assertThat(result.refreshToken()).isEqualTo("raw-refresh");
+    }
+
+    @Test
+    void register_이메일_중복시_CONFLICT() {
+        Claims claims = mock(Claims.class);
+        given(jwtProvider.parseConsentTicket("consent-ticket")).willReturn(claims);
+        given(tokenVerifier.verify("id-token"))
+                .willReturn(new GoogleUserInfo("gid-new", "existing@gmail.com", "중복유저"));
+        given(userRepository.existsByEmail("existing@gmail.com")).willReturn(true);
+
+        assertThatThrownBy(() -> googleAuthService.register(
+                new GoogleRegisterRequest("id-token", "consent-ticket", UserRole.GUARDIAN)))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
     }
 
     private User existingUser(Long id, String googleId) {

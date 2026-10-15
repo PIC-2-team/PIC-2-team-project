@@ -28,14 +28,14 @@ export function LoginPage() {
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-    if (!clientId || !window.google) return;
+    if (!clientId) return;
 
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: ({ credential }) => { void handleGoogleCredential(credential); },
-    });
-
-    if (googleBtnRef.current) {
+    const initialize = () => {
+      if (!window.google || !googleBtnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: ({ credential }) => { void handleGoogleCredential(credential); },
+      });
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: 'outline',
         size: 'large',
@@ -43,6 +43,14 @@ export function LoginPage() {
         text: 'signin_with',
         locale: 'ko',
       });
+    };
+
+    if (window.google) {
+      initialize();
+    } else {
+      const script = document.querySelector<HTMLScriptElement>('script[src*="accounts.google.com/gsi/client"]');
+      script?.addEventListener('load', initialize);
+      return () => script?.removeEventListener('load', initialize);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -76,6 +84,7 @@ export function LoginPage() {
     setError(null);
     try {
       const user = await login(email, password);
+      sessionStorage.removeItem('pendingGoogle');
       const redirect = searchParams.get('redirect');
       const home = user.role === 'AGENCY' ? '/agency' : '/home';
       navigate(redirect ?? home, { replace: true });

@@ -22,13 +22,19 @@ export function GoogleRegisterPage() {
   const pendingRaw = sessionStorage.getItem('pendingGoogle');
   const consentTicket = sessionStorage.getItem('consentTicket');
 
-  // 필요한 세션 데이터가 없으면 처음부터
   if (!pendingRaw || !consentTicket) {
     navigate('/', { replace: true });
     return null;
   }
 
-  const pending = JSON.parse(pendingRaw) as { idToken: string; email: string; name: string };
+  let pending: { idToken: string; email: string; name: string };
+  try {
+    pending = JSON.parse(pendingRaw) as { idToken: string; email: string; name: string };
+  } catch {
+    sessionStorage.removeItem('pendingGoogle');
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!selectedRole) return;
