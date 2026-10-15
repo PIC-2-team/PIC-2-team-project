@@ -74,14 +74,28 @@ describe('apiRequest', () => {
     expect(options.body).toBe(JSON.stringify({ key: 'value' }));
   });
 
-  it('path 앞에 BASE_URL이 붙는다', async () => {
+  it('API 요청은 현재 도메인의 상대 경로를 사용한다', async () => {
     const mockFetch = vi.fn().mockResolvedValueOnce(
       new Response(JSON.stringify({ success: true, data: null }), { status: 200 })
     );
     vi.stubGlobal('fetch', mockFetch);
     await apiRequest('/api/path');
     const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toMatch(/\/api\/path$/);
+    expect(url).toBe('/api/path');
+  });
+
+  it('localhost API 주소가 빌드 환경에 있어도 현재 도메인의 상대 경로로 요청한다', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.resetModules();
+    const { apiRequest: apiRequestWithLocalBase } = await import('./client');
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: null }), { status: 200 })
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    await apiRequestWithLocalBase('/api/auth/consent');
+
+    expect(mockFetch.mock.calls[0][0]).toBe('/api/auth/consent');
   });
 
   it('토큰이 있으면 Authorization 헤더를 포함한다', async () => {

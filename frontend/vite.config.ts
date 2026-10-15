@@ -11,6 +11,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      disable: process.env.VITE_DISABLE_PWA === 'true',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
