@@ -3,7 +3,7 @@ name: Deploy Frontend (dev)
 on:
   push:
     branches: [develop]
-    paths: ['frontend/**']
+    paths: ['frontend/**', '.github/workflows/deploy-frontend-dev.yml']
 
 jobs:
   deploy:
@@ -19,18 +19,18 @@ jobs:
         working-directory: frontend
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
 
       - name: Build
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: frontend
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
 
       - name: Deploy preview
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: frontend
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
