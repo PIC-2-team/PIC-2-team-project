@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRecordsByMonth } from '../api/records';
 import type { DailyRecord, RecordCategory } from '../types/record';
+import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
@@ -108,8 +109,8 @@ export function DailyRecordPage() {
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
 
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
-  const selectedRecords = monthRecords.filter(r => r.recordedAt.slice(0, 10) === selectedKey);
-  const datesWithRecords = new Set(monthRecords.map(r => r.recordedAt.slice(0, 10)));
+  const selectedRecords = monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
+  const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
   const canWrite = user?.role === 'GUARDIAN';
 

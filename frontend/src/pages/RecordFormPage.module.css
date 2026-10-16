@@ -299,6 +299,33 @@
   line-height: 1.5;
 }
 
+.pinSection {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.pinLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1a2533;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.pinLabel input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3cab7e;
+}
+
+.pinSection p {
+  margin: 0 0 0 1.5rem;
+  color: #6b7a8a;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .chip[aria-pressed='true'] {
   border-color: #3cab7e;
   color: #3cab7e;

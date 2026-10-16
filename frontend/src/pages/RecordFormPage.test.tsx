@@ -60,6 +60,29 @@ it('텍스트를 AI 초안으로 바꾸고 자동 분류를 확인한 뒤 기록
   }));
 });
 
+it('돌봄정보 함께 표시를 선택하면 고정 기록으로 저장한다', async () => {
+  vi.mocked(records.createRecordDraft).mockResolvedValue({
+    transcript: '산책했어요.', content: '오후에 산책을 했습니다.', category: 'LIFESTYLE',
+  });
+  vi.mocked(records.createRecord).mockResolvedValue({
+    id: 9, content: '오후에 산책을 했습니다.', category: 'LIFESTYLE', recordedAt: '2026-10-15T01:00:00Z',
+  });
+  renderPage();
+
+  fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
+  fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '산책했어요.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'AI로 정리하기' }));
+  await screen.findByText('AI가 이렇게 정리했어요');
+
+  const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
+  expect(showInCareInfo).not.toBeChecked();
+  fireEvent.click(showInCareInfo);
+  fireEvent.click(screen.getByRole('button', { name: '기록 저장하기' }));
+
+  await screen.findByText('기록 목록');
+  expect(records.createRecord).toHaveBeenCalledWith(42, expect.objectContaining({ pinned: true }));
+});
+
 it('텍스트 초안 생성에 실패하면 원문을 보존하고 오류를 표시한다', async () => {
   vi.mocked(records.createRecordDraft).mockRejectedValue(new Error('AI 서비스를 사용할 수 없습니다.'));
   renderPage();

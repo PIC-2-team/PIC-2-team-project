@@ -118,3 +118,40 @@
   margin: 2rem auto;
   text-align: center;
 }
+
+.sectionTitle {
+  margin: 1.5rem 0 0.75rem;
+  color: #1a2533;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.recordList {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recordCard {
+  display: block;
+  padding: 1rem;
+  border-left: 3px solid #3cab7e;
+  border-radius: 0.875rem;
+  background: white;
+  color: #1a2533;
+  text-decoration: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recordCard p {
+  margin: 0 0 0.5rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.recordCard time {
+  color: #8a9ab0;
+  font-size: 0.75rem;
+}

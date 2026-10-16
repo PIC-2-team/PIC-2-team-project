@@ -1,3 +1,5 @@
+import type { DailyRecord } from './record';
+
 // TODO: 카테고리 enum, content 스키마 미확정 (API-Spec.md §CareInfo). 변경 시 이 파일만 수정.
 export type CareInfoCategory =
   | 'COMMUNICATION'
@@ -10,5 +12,10 @@ export type CareInfoCategory =
 export type CareInfo = {
   category: CareInfoCategory;
   content: unknown; // 스키마 미확정 — 확정 후 구체적 타입으로 교체
-  updatedAt: string;
+  updatedAt: string | null;
+};
+
+export type CareInfoOverview = {
+  categories: CareInfo[];
+  pinnedRecords: DailyRecord[];
 };

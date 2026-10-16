@@ -21,4 +21,5 @@ export type CreateRecordPayload = {
   content: string;
   category: RecordCategory;
   recordedAt: string;
+  pinned?: boolean;
 };
