@@ -76,3 +76,37 @@ it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다'
   await screen.findByText('등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.');
   memoryRouter.dispose();
 });
+
+it('기록 화면에서 세션 갱신에 실패하면 로그인 화면으로 보내고 복귀 경로를 보존한다', async () => {
+  let expireSession = false;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+    const url = String(input);
+    if (url === '/api/auth/refresh') return new Response('', { status: 401 });
+    if (expireSession && url.includes('/records?')) return new Response('', { status: 401 });
+    const data = url === '/api/auth/login'
+      ? { accessToken: 'expired-token', user: { id: 1, name: '테스트', email: 'test@example.com', role: 'GUARDIAN' } }
+      : url === '/api/care-recipients'
+        ? [{ id: 42, name: '테스트 당사자' }]
+        : [];
+    return new Response(JSON.stringify({ success: true, data }));
+  });
+  vi.spyOn(authApi, 'login').mockImplementation(async credentials => {
+    const response = await fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
+    return (await response.json()).data;
+  });
+
+  const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/login'] });
+  render(<AuthProvider><RouterProvider router={memoryRouter} /></AuthProvider>);
+  fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
+  fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
+  fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
+  await screen.findByText('테스트 당사자님');
+
+  expireSession = true;
+  await memoryRouter.navigate('/records');
+
+  await screen.findByRole('heading', { name: '로그인' });
+  expect(memoryRouter.state.location.pathname).toBe('/login');
+  expect(memoryRouter.state.location.search).toBe('?redirect=%2Frecords');
+  memoryRouter.dispose();
+});
