@@ -103,6 +103,14 @@ class RecordApiTest {
     }
 
     @Test
+    void unauthenticatedRequestsReturn401InsteadOfPermissionDenied403() throws Exception {
+        mvc.perform(get("/api/care-recipients"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
     void lifecyclePreservesPreviousRevisionAndHidesDeletedRecords() throws Exception {
         long id = create(worker, "  원래 내용  ", "2026-10-14T12:00:00+09:00");
         perform(get(base + "/records/" + id), guardian)
