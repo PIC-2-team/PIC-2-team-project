@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -29,6 +32,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Transactional
 public class RecordMediaService {
+    private static final Logger log = LoggerFactory.getLogger(RecordMediaService.class);
     private static final Duration DOWNLOAD_URL_TTL = Duration.ofMinutes(5);
     private static final long MAX_TRANSCRIPTION_SIZE = 25_000_000L;
     private static final Set<String> AUDIO_TYPES = Set.of("audio/mpeg", "audio/mp4", "audio/wav", "audio/webm");
@@ -171,6 +175,14 @@ public class RecordMediaService {
     }
 
     private ApiException storageFailure(Exception cause) {
+        if (cause instanceof AwsServiceException awsException) {
+            var details = awsException.awsErrorDetails();
+            log.warn("S3 storage request failed: exceptionType={}, errorCode={}, statusCode={}, requestId={}, extendedRequestId={}",
+                    cause.getClass().getSimpleName(), details == null ? null : details.errorCode(),
+                    awsException.statusCode(), awsException.requestId(), awsException.extendedRequestId());
+        } else {
+            log.warn("S3 storage request failed: exceptionType={}", cause.getClass().getSimpleName());
+        }
         return new ApiException(HttpStatus.BAD_GATEWAY, "MEDIA_STORAGE_FAILED", "미디어 저장소 요청을 처리하지 못했습니다.");
     }
 

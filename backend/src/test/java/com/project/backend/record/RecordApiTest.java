@@ -11,6 +11,7 @@ import com.project.backend.user.entity.*;
 import com.project.backend.user.repository.UserRepository;
 import com.project.backend.record.media.*;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -28,6 +29,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.*;
 import java.util.List;
@@ -41,6 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @Transactional
+@ExtendWith(OutputCaptureExtension.class)
 class RecordApiTest {
     @Autowired WebApplicationContext context;
     @Autowired EntityManager entityManager;
@@ -527,6 +532,27 @@ class RecordApiTest {
                 .andExpect(status().isForbidden());
         org.mockito.Mockito.verify(s3).putObject(org.mockito.ArgumentMatchers.any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
                 org.mockito.ArgumentMatchers.any(software.amazon.awssdk.core.sync.RequestBody.class));
+    }
+
+    @Test
+    void uploadFailureLogsAwsDiagnosticsWithoutExceptionMessage(CapturedOutput output) throws Exception {
+        byte[] jpeg = {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0x01};
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "photo.jpg", "image/jpeg", jpeg);
+        given(s3.putObject(org.mockito.ArgumentMatchers.any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
+                org.mockito.ArgumentMatchers.any(software.amazon.awssdk.core.sync.RequestBody.class)))
+                .willThrow(S3Exception.builder().message("sensitive exception detail").statusCode(301)
+                        .requestId("request-123").extendedRequestId("extended-456").awsErrorDetails(
+                                software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+                                        .errorCode("PermanentRedirect").errorMessage("sensitive exception detail").build())
+                        .build());
+
+        mvc.perform(multipart(base + "/media").file(file).with(authentication(auth(worker))))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error.code").value("MEDIA_STORAGE_FAILED"));
+
+        assertThat(output.getAll()).contains("errorCode=PermanentRedirect", "statusCode=301",
+                "requestId=request-123", "extendedRequestId=extended-456")
+                .doesNotContain("sensitive exception detail");
     }
 
     @Test
