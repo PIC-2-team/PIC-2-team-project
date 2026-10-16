@@ -19,7 +19,7 @@ function formatToday() {
 }
 
 export function RecordFormPage() {
-  const { selectedRecipientId } = useAuth();
+  const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'voice' | 'text'>('voice');
   const [stage, setStage] = useState<'input' | 'review'>('input');
@@ -261,18 +261,20 @@ export function RecordFormPage() {
                 {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
               </div>
             </section>
-            <section className={styles.pinSection}>
-              <label className={styles.pinLabel} htmlFor="show-in-care-info">
-                <input
-                  id="show-in-care-info"
-                  type="checkbox"
-                  checked={showInCareInfo}
-                  onChange={event => setShowInCareInfo(event.target.checked)}
-                />
-                돌봄정보에도 표시
-              </label>
-              <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
-            </section>
+            {user?.role === 'GUARDIAN' && (
+              <section className={styles.pinSection}>
+                <label className={styles.pinLabel} htmlFor="show-in-care-info">
+                  <input
+                    id="show-in-care-info"
+                    type="checkbox"
+                    checked={showInCareInfo}
+                    onChange={event => setShowInCareInfo(event.target.checked)}
+                  />
+                  돌봄정보에도 표시
+                </label>
+                <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
+              </section>
+            )}
           </>
         )}
         {error && <p role="alert" className={styles.error}>{error}</p>}
