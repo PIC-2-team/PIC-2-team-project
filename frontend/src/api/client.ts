@@ -13,10 +13,18 @@ export class ApiError extends Error {
 }
 
 let _getToken: () => string | null = () => null;
+let _tokenOverride: string | null | undefined;
+let _updateAccessToken: (token: string) => void = () => {};
 let _onUnauthorized: (() => void) | null = null;
+let _refreshPromise: Promise<string | null> | null = null;
 
 export function setTokenProvider(fn: () => string | null) {
   _getToken = fn;
+  _tokenOverride = undefined;
+}
+
+export function setAccessTokenUpdater(fn: (token: string) => void) {
+  _updateAccessToken = fn;
 }
 
 export function setUnauthorizedHandler(fn: () => void) {
@@ -46,23 +54,48 @@ function resolveUrl(path: string): string {
   return path;
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+function currentToken() {
+  return _tokenOverride === undefined ? _getToken() : _tokenOverride;
+}
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!_refreshPromise) {
+    _refreshPromise = (async () => {
+      try {
+        const response = await fetch(resolveUrl('/api/auth/refresh'), {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!response.ok) return null;
+        const json = (await response.json()) as ApiResponse<{ accessToken: string }>;
+        if (!json.success || !json.data.accessToken) return null;
+        _tokenOverride = json.data.accessToken;
+        _updateAccessToken(json.data.accessToken);
+        return json.data.accessToken;
+      } catch {
+        return null;
+      }
+    })().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
+async function sendRequest(path: string, options: RequestOptions, token: string | null): Promise<Response> {
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
-  const token = _getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(resolveUrl(path), {
+  return fetch(resolveUrl(path), {
     method: options.method ?? 'GET',
     headers,
     body: options.body === undefined ? undefined : isFormData ? options.body as FormData : JSON.stringify(options.body),
+    credentials: 'include',
   });
+}
 
-  if (res.status === 401) {
-    _onUnauthorized?.();
-    throw new ApiError('UNAUTHORIZED', '인증이 만료됐어요.', 401);
-  }
-
+async function parseResponse<T>(res: Response): Promise<T> {
   let json: ApiResponse<T>;
   try {
     json = (await res.json()) as ApiResponse<T>;
@@ -75,4 +108,24 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   return json.data;
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const token = currentToken();
+  let res = await sendRequest(path, options, token);
+
+  if (res.status === 401) {
+    const latestToken = currentToken();
+    const refreshedToken = token && latestToken && latestToken !== token
+      ? latestToken
+      : token ? await refreshAccessToken() : null;
+    if (refreshedToken) res = await sendRequest(path, options, refreshedToken);
+    if (!refreshedToken || res.status === 401) {
+      _tokenOverride = null;
+      _onUnauthorized?.();
+      throw new ApiError('UNAUTHORIZED', '인증이 만료됐어요.', 401);
+    }
+  }
+
+  return parseResponse<T>(res);
 }

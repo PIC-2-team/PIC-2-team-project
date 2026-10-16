@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, useLayoutEffect, useReducer } f
 import type { User } from '../types/user';
 import type { GoogleAuthResult, LoginResponse } from '../types/auth';
 import * as authApi from '../api/auth';
-import { setTokenProvider, setUnauthorizedHandler } from '../api/client';
+import { setAccessTokenUpdater, setTokenProvider, setUnauthorizedHandler } from '../api/client';
 
 type State = {
   user: User | null;
@@ -12,6 +12,7 @@ type State = {
 
 type Action =
   | { type: 'SET'; payload: LoginResponse }
+  | { type: 'UPDATE_TOKEN'; token: string }
   | { type: 'CLEAR' }
   | { type: 'SELECT_RECIPIENT'; id: number | null };
 
@@ -19,6 +20,8 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET':
       return { ...state, user: action.payload.user, token: action.payload.accessToken };
+    case 'UPDATE_TOKEN':
+      return { ...state, token: action.token };
     case 'CLEAR':
       return { user: null, token: null, selectedRecipientId: null };
     case 'SELECT_RECIPIENT':
@@ -53,6 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokenProvider(() => state.token);
     return () => setTokenProvider(() => null);
   }, [state.token]);
+
+  useLayoutEffect(() => {
+    setAccessTokenUpdater(token => dispatch({ type: 'UPDATE_TOKEN', token }));
+    return () => setAccessTokenUpdater(() => {});
+  }, []);
 
   useLayoutEffect(() => {
     setUnauthorizedHandler(() => {
