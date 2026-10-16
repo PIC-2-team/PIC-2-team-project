@@ -84,7 +84,10 @@ function getWeekdayLabel(year: number, month: number, day: number) {
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
-  const [today] = useState(() => new Date());
+  const [today] = useState(() => {
+    const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
+    return new Date(year, month - 1, day);
+  });
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
