@@ -3,8 +3,11 @@ package com.project.backend.ai;
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.record.entity.CareInfo;
+import com.project.backend.record.entity.CareInfoCategory;
 import com.project.backend.record.media.RecordMedia;
 import com.project.backend.record.media.RecordMediaRepository;
+import com.project.backend.record.repository.CareInfoRepository;
 import com.project.backend.record.repository.DailyRecordRepository;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.entity.UserRole;
@@ -56,6 +59,7 @@ class RecordDraftApiTest {
     @Autowired CareRecipientRepository recipients;
     @Autowired CareGuardianRepository guardians;
     @Autowired RecordMediaRepository media;
+    @Autowired CareInfoRepository careInfos;
     @Autowired DailyRecordRepository records;
     @MockitoBean Clock clock;
     @MockitoBean OpenAIClient openAI;
@@ -113,6 +117,10 @@ class RecordDraftApiTest {
 
     @Test
     void textInputReturnsAnUnpersistedRecordDraft() throws Exception {
+        CareInfo careInfo = new CareInfo(recipient.getId(), CareInfoCategory.COMMUNICATION);
+        careInfo.update("낯선 장소에서는 천천히 설명하면 안정됩니다.", NOW);
+        careInfos.save(careInfo);
+
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
                         .content(textRequest("아침을 먹고 약을 복용했습니다."))
                         .with(authentication(auth(guardian))))
@@ -122,6 +130,8 @@ class RecordDraftApiTest {
                 .andExpect(jsonPath("$.data.category").value("MEAL"));
         org.mockito.ArgumentCaptor<ChatCompletionCreateParams> params = org.mockito.ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
         verify(completions).create(params.capture());
+        org.assertj.core.api.Assertions.assertThat(params.getValue().toString())
+                .contains("낯선 장소에서는 천천히 설명하면 안정됩니다.");
         org.assertj.core.api.Assertions.assertThat(params.getValue().responseFormat().orElseThrow().isJsonSchema()).isTrue();
         org.assertj.core.api.Assertions.assertThat(params.getValue().responseFormat().orElseThrow()
                 .asJsonSchema().jsonSchema().strict()).contains(true);
@@ -143,6 +153,9 @@ class RecordDraftApiTest {
     @Test
     void audioInputIsAuthorizedTranscribedAndReturnedWithoutPersistence() throws Exception {
         byte[] wav = wav(2);
+        CareInfo careInfo = new CareInfo(recipient.getId(), CareInfoCategory.PREFERENCE);
+        careInfo.update("식사는 작은 양으로 나누어 제공하면 편안해합니다.", NOW);
+        careInfos.save(careInfo);
         RecordMedia audio = media.save(new RecordMedia(recipient.getId(), guardian.getId(), "voice.wav", "audio/wav", wav.length,
                 "media/" + recipient.getId() + "/voice.wav", NOW));
         given(s3.getObjectAsBytes(any(GetObjectRequest.class))).willReturn(ResponseBytes.fromByteArray(
@@ -158,6 +171,11 @@ class RecordDraftApiTest {
         verify(transcriptions).create(params.capture());
         org.assertj.core.api.Assertions.assertThat(params.getValue().model()).isEqualTo(AudioModel.WHISPER_1);
         org.assertj.core.api.Assertions.assertThat(params.getValue().responseFormat()).contains(AudioResponseFormat.VERBOSE_JSON);
+        org.mockito.ArgumentCaptor<ChatCompletionCreateParams> chatParams = org.mockito.ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
+        verify(completions).create(chatParams.capture());
+        org.assertj.core.api.Assertions.assertThat(chatParams.getValue().toString())
+                .contains("식사는 작은 양으로 나누어 제공하면 편안해합니다.")
+                .contains("아침 식사 후 약을 복용했습니다.");
         org.assertj.core.api.Assertions.assertThat(records.count()).isZero();
     }
 
