@@ -179,9 +179,9 @@ public class RecordMediaService {
             var details = awsException.awsErrorDetails();
             log.warn("S3 storage request failed: exceptionType={}, errorCode={}, statusCode={}, requestId={}, extendedRequestId={}",
                     cause.getClass().getSimpleName(), details == null ? null : details.errorCode(),
-                    awsException.statusCode(), awsException.requestId(), awsException.extendedRequestId());
+                    awsException.statusCode(), awsException.requestId(), awsException.extendedRequestId(), cause);
         } else {
-            log.warn("S3 storage request failed: exceptionType={}", cause.getClass().getSimpleName());
+            log.warn("S3 storage request failed: exceptionType={}, message={}", cause.getClass().getSimpleName(), cause.getMessage(), cause);
         }
         return new ApiException(HttpStatus.BAD_GATEWAY, "MEDIA_STORAGE_FAILED", "미디어 저장소 요청을 처리하지 못했습니다.");
     }
