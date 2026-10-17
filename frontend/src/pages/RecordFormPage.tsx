@@ -19,7 +19,7 @@ function formatToday() {
 }
 
 export function RecordFormPage() {
-  const { selectedRecipientId } = useAuth();
+  const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'voice' | 'text'>('voice');
   const [stage, setStage] = useState<'input' | 'review'>('input');
@@ -27,6 +27,7 @@ export function RecordFormPage() {
   const [transcript, setTranscript] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<RecordCategory>('OTHER');
+  const [showInCareInfo, setShowInCareInfo] = useState(false);
   const [recording, setRecording] = useState(false);
   const [requestingMic, setRequestingMic] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -188,7 +189,9 @@ export function RecordFormPage() {
     setSaving(true);
     setError(null);
     try {
-      await createRecord(selectedRecipientId, { content: content.trim(), category, recordedAt: new Date().toISOString() });
+      await createRecord(selectedRecipientId, {
+        content: content.trim(), category, recordedAt: new Date().toISOString(), pinned: showInCareInfo,
+      });
       navigate('/records');
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장 중 오류가 발생했어요. 입력한 내용은 그대로 남아 있어요.');
@@ -258,6 +261,20 @@ export function RecordFormPage() {
                 {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
               </div>
             </section>
+            {user?.role === 'GUARDIAN' && (
+              <section className={styles.pinSection}>
+                <label className={styles.pinLabel} htmlFor="show-in-care-info">
+                  <input
+                    id="show-in-care-info"
+                    type="checkbox"
+                    checked={showInCareInfo}
+                    onChange={event => setShowInCareInfo(event.target.checked)}
+                  />
+                  돌봄정보에도 표시
+                </label>
+                <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
+              </section>
+            )}
           </>
         )}
         {error && <p role="alert" className={styles.error}>{error}</p>}

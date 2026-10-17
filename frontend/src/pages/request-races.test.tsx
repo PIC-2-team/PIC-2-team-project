@@ -6,7 +6,6 @@ import { CareInfoPage } from './CareInfoPage';
 import { DailyRecordPage } from './DailyRecordPage';
 import * as careApi from '../api/careInfo';
 import * as recordsApi from '../api/records';
-import type { CareInfo } from '../types/careInfo';
 import type { DailyRecord } from '../types/record';
 import type { PaginatedData } from '../types/common';
 
@@ -26,23 +25,19 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-it.each(['success', 'error'] as const)('카테고리 변경 후 이전 요청의 %s를 무시한다', async result => {
-  const old = deferred<CareInfo>();
-  vi.spyOn(careApi, 'getCareInfoByCategory').mockReturnValueOnce(old.promise).mockResolvedValueOnce({
-    category: 'PREFERENCE', content: '최신 선호정보', updatedAt: '2026-10-14',
+it('카테고리 변경 시 불러온 개요에서 해당 정보를 표시한다', async () => {
+  const overview = vi.spyOn(careApi, 'getCareInfoOverview').mockResolvedValue({
+    categories: [
+      { category: 'COMMUNICATION', content: '기존 의사소통정보', updatedAt: '2026-10-14' },
+      { category: 'PREFERENCE', content: '최신 선호정보', updatedAt: '2026-10-14' },
+    ],
+    pinnedRecords: [],
   });
   render(<CareInfoPage />);
+  await screen.findByText('기존 의사소통정보');
   fireEvent.click(screen.getByRole('button', { name: '선호·비선호' }));
   await screen.findByText('최신 선호정보');
-  expect(careApi.getCareInfoByCategory).toHaveBeenNthCalledWith(1, 42, 'COMMUNICATION');
-  expect(careApi.getCareInfoByCategory).toHaveBeenNthCalledWith(2, 42, 'PREFERENCE');
-  await act(async () => {
-    if (result === 'success') old.resolve({ category: 'COMMUNICATION', content: '오래된 의사소통정보', updatedAt: '2026-10-14' });
-    else old.reject(new Error('오래된 오류'));
-  });
-  expect(screen.getByText('최신 선호정보')).toBeInTheDocument();
-  expect(screen.queryByText('오래된 의사소통정보')).not.toBeInTheDocument();
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(overview).toHaveBeenCalledTimes(1);
 });
 
 it.each(['success', 'error'] as const)('월 변경 후 이전 요청의 %s를 무시한다', async result => {
