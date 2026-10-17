@@ -34,7 +34,7 @@ export function LoginPage() {
     try {
       const result = await loginWithGoogle(idToken);
       if (!result.requiresConsent) {
-        const home = result.user.role === 'AGENCY' ? '/agency' : '/home';
+        const home = result.user.role === 'INSTITUTION' ? '/agency' : '/home';
         navigate(searchParams.get('redirect') ?? home, { replace: true });
       } else {
         navigate('/consent', { replace: true, state: {
@@ -93,7 +93,7 @@ export function LoginPage() {
     try {
       const user = await login(email, password);
       const redirect = searchParams.get('redirect');
-      const home = user.role === 'AGENCY' ? '/agency' : '/home';
+      const home = user.role === 'INSTITUTION' ? '/agency' : '/home';
       navigate(redirect ?? home, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

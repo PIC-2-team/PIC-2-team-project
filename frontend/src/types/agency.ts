@@ -1,9 +1,38 @@
-// TODO: 기관 관련 API endpoint 전체 미정 (API-Spec.md §후속 화면 흐름)
-export type ProviderAssignment = {
+export type Organization = {
   id: number;
-  providerId: number;
-  recipientId: number;
+  name: string;
+  organizationCode: string;
+  createdAt: string;
+};
+
+export type MemberStatus = 'ACTIVE' | 'INACTIVE';
+
+export type OrganizationMember = {
+  id: number;
+  userId: number;
+  name: string;
+  publicCode: string;
+  status: MemberStatus;
+  joinedAt: string;
+};
+
+export type CareAssignment = {
+  id: number;
+  organizationId: number;
+  careRecipientId: number;
+  supportWorkerId: number;
   startDate: string;
   endDate: string | null;
-  active: boolean;
+  endedAt: string | null;
+  createdAt: string;
+};
+
+export type LinkRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type LinkRequest = {
+  id: number;
+  careRecipientId: number;
+  organizationId: number;
+  status: LinkRequestStatus;
+  createdAt: string;
 };

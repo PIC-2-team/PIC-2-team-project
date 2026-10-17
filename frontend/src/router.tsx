@@ -64,12 +64,11 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // AGENCY 전용 — 백엔드 AGENCY enum 확정 후 완전 활성화
   {
     element: <RequireAuth />,
     children: [
       {
-        element: <RequireRole role="AGENCY" />,
+        element: <RequireRole role="INSTITUTION" />,
         children: [{ path: '/agency', element: <AgencyDashboardPage /> }],
       },
     ],

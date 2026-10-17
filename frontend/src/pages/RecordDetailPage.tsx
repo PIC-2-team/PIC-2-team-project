@@ -63,7 +63,7 @@ export function RecordDetailPage() {
                 <button type="button" className="btn secondary" disabled>삭제 (준비 중)</button>
               </div>
             )}
-            {user?.role === 'CAREGIVER' && <button type="button" className="btn secondary" disabled>수정 제안 (준비 중)</button>}
+            {user?.role === 'SUPPORT_WORKER' && <button type="button" className="btn secondary" disabled>수정 제안 (준비 중)</button>}
           </>
         )}
       </main>

@@ -19,7 +19,7 @@ export function HomePage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' });
 
   useEffect(() => {
-    if (user?.role === 'AGENCY') {
+    if (user?.role === 'INSTITUTION') {
       navigate('/agency', { replace: true });
       return;
     }
@@ -44,12 +44,19 @@ export function HomePage() {
   if (page.status === 'loading') return <div className="demo-page status-page"><p className="empty-state" role="status">불러오는 중…</p></div>;
   if (page.status === 'error') return <div className="demo-page status-page"><p className="error" role="alert">{page.message}</p></div>;
   if (page.status === 'empty') {
+    const isSupportWorker = user?.role === 'SUPPORT_WORKER';
     return (
       <div className="demo-page status-page">
         <h1>안녕하세요, {user?.name}님!</h1>
         <div className="empty-state">
-          <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
-          <button className="btn" type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
+          {isSupportWorker ? (
+            <p>아직 배정된 담당 이용자가 없어요.</p>
+          ) : (
+            <>
+              <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
+              <button className="btn" type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
+            </>
+          )}
         </div>
       </div>
     );

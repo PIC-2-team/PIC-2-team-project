@@ -4,8 +4,8 @@ import styles from './MorePage.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
   GUARDIAN: '돌봄 보호자',
-  CAREGIVER: '활동지원사',
-  AGENCY: '기관 담당자',
+  SUPPORT_WORKER: '활동지원사',
+  INSTITUTION: '기관 담당자',
 };
 
 const MENU_SECTIONS = [
