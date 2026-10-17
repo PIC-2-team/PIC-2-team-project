@@ -12,14 +12,17 @@ import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import { MorePage } from './pages/MorePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
 import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LoginPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/consent', element: <ConsentPage /> },
+  { path: '/register', element: <RegisterPage /> },
   { path: '/google-register', element: <GoogleRegisterPage /> },
 
   {
@@ -70,6 +73,16 @@ export const router = createBrowserRouter([
       {
         element: <RequireRole role="INSTITUTION" />,
         children: [{ path: '/agency', element: <AgencyDashboardPage /> }],
+      },
+    ],
+  },
+
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <RequireRole role="ADMIN" />,
+        children: [{ path: '/admin', element: <AdminDashboardPage /> }],
       },
     ],
   },

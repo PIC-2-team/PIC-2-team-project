@@ -90,7 +90,7 @@ export function ConsentPage() {
       if (pendingGoogle) {
         navigate('/google-register', { state: { pendingGoogle, consentTicket, role: selectedRole } });
       } else {
-        navigate('/login');
+        navigate('/register', { state: { consentTicket, role: selectedRole } });
       }
     } catch {
       setError('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');
