@@ -55,7 +55,7 @@ export function AgencyDashboardPage() {
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {page.members.map(m => (
-                    <li key={m.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <li key={m.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
                       <span>{m.name}</span>
                       <span className="muted" style={{ marginLeft: 8 }}>
                         {m.status === 'ACTIVE' ? '활성' : '비활성'}
@@ -73,7 +73,7 @@ export function AgencyDashboardPage() {
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {page.assignments.filter(a => !a.endedAt).map(a => (
-                    <li key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <li key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
                       <span className="muted" style={{ fontSize: '0.85em' }}>
                         이용자 #{a.careRecipientId} · 지원사 #{a.supportWorkerId}
                       </span>

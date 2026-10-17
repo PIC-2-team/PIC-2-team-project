@@ -31,8 +31,10 @@ export type LinkRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 
 export type LinkRequest = {
   id: number;
-  careRecipientId: number;
   organizationId: number;
+  careRecipientId: number;
+  requestedById: number;
   status: LinkRequestStatus;
-  createdAt: string;
+  requestedAt: string;
+  decidedAt: string | null;
 };
