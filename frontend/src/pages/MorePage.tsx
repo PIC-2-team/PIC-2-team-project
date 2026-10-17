@@ -38,6 +38,7 @@ export function MorePage() {
 
   return (
     <div className={styles.page}>
+      <h1>더보기</h1>
       <div className={styles.profile}>
         <div className={styles.avatar}>
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">

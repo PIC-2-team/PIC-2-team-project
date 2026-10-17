@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.25rem 1.5rem;
+  padding: 24px 20px 32px;
   gap: 1.25rem;
   min-height: 100%;
 }
@@ -14,7 +14,7 @@
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 18px;
   font-weight: 700;
   color: var(--ink);
   margin: 0;
@@ -54,8 +54,8 @@
   font-size: 1.25rem;
   color: #4a5568;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,3 +221,6 @@
   cursor: pointer;
   margin-top: auto;
 }
+
+.recordCard { text-decoration: none; }
+.recordContent { min-width: 0; overflow-wrap: anywhere; }

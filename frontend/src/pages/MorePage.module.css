@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.25rem 2rem;
+  padding: 24px 20px 32px;
   gap: 1.5rem;
   min-height: 100%;
 }
@@ -11,16 +11,16 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: #f0f7f3;
+  background: white;
   border-radius: 16px;
   padding: 1.25rem;
 }
 
 .avatar {
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: #dde3ea;
+  background: #e8f5ee;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,7 +85,7 @@
 
 .card {
   background: white;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
@@ -135,3 +135,6 @@
   cursor: pointer;
   margin-top: auto;
 }
+
+.profileInfo { min-width: 0; }
+.email { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }

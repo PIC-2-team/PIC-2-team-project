@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.25rem 1.5rem;
+  padding: 24px 20px 32px;
   gap: 1.5rem;
   min-height: 100%;
 }
@@ -13,10 +13,13 @@
 }
 
 .avatar {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: #edf0f3;
+  background: #e8f5ee;
+  color: var(--green);
+  font-size: 22px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,8 +27,8 @@
   overflow: hidden;
 }
 
-.name {
-  font-size: 1.375rem;
+.profile .name {
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1a2533;
   margin: 0 0 0.25rem;
@@ -123,3 +126,7 @@
   cursor: pointer;
   margin-top: auto;
 }
+
+.recordCard { text-decoration: none; }
+.profile > div:last-child, .recordContent { min-width: 0; overflow-wrap: anywhere; }
+.viewAll { min-height: 44px; }

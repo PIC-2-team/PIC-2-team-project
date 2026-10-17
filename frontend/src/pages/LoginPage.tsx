@@ -1,3 +1,4 @@
+import { AppShell } from '../components/AppShell';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -106,46 +107,45 @@ export function LoginPage() {
   };
 
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <span className={styles.brand}>삶결</span>
-      </header>
-      <div className={styles.content}>
-        <div className={styles.heading}>
-          <p className={styles.eyebrow}>돌봄을 잇는 기록</p>
-          <h1>로그인</h1>
+    <AppShell>
+      <main className={styles.page}>
+        <div className={styles.content}>
+          <div className={styles.heading}>
+            <p className={styles.eyebrow}>돌봄을 잇는 기록</p>
+            <h1>로그인</h1>
+          </div>
+          <p className={styles.notice}>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
+          <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>
+            <label>
+              이메일
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </label>
+            <label>
+              비밀번호
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            {error && <p role="alert" className={styles.error}>{error}</p>}
+            <button className={styles.submit} type="submit" disabled={isLoading}>
+              {isLoading ? '로그인 중…' : '로그인'}
+            </button>
+          </form>
+          <div className={styles.divider}>또는</div>
+          <div ref={googleBtnRef} className={styles.googleButton} />
+          <p className={styles.signup}>계정이 없으신가요? 회원가입 (준비 중)</p>
         </div>
-        <p className={styles.notice}>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
-        <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>
-          <label>
-            이메일
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label>
-            비밀번호
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          {error && <p role="alert" className={styles.error}>{error}</p>}
-          <button className={styles.submit} type="submit" disabled={isLoading}>
-            {isLoading ? '로그인 중…' : '로그인'}
-          </button>
-        </form>
-        <div className={styles.divider}>또는</div>
-        <div ref={googleBtnRef} className={styles.googleButton} />
-        <p className={styles.signup}>계정이 없으신가요? 회원가입 (준비 중)</p>
-      </div>
-    </main>
+      </main>
+    </AppShell>
   );
 }

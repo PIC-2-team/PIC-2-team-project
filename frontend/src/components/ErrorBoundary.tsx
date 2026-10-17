@@ -1,3 +1,4 @@
+import '../styles/design-system.css';
 import { Component, type ReactNode } from 'react';
 
 type Props = { children: ReactNode };
@@ -13,18 +14,19 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <main style={{ maxWidth: 390, margin: '4rem auto', padding: '2rem 1.25rem', textAlign: 'center' }}>
-          <p role="alert" style={{ color: '#c0392b', marginBottom: '1.5rem' }}>
+        <div className="app-shell"><main className="demo-page status-page">
+          <h1>다시 시도해주세요</h1>
+          <p role="alert" className="error">
             예상치 못한 오류가 발생했어요.
           </p>
           <button
             type="button"
             onClick={() => this.setState({ error: null })}
-            style={{ padding: '0.875rem 2rem', background: '#3CAB7E', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+            className="btn"
           >
             다시 시도
           </button>
-        </main>
+        </main></div>
       );
     }
     return this.props.children;

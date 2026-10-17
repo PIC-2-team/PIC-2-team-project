@@ -1,3 +1,4 @@
+import { AppShell } from '../components/AppShell';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -58,49 +59,23 @@ export function GoogleRegisterPage() {
   };
 
   return (
-    <main style={{ maxWidth: 390, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1>역할 선택</h1>
-      <p style={{ color: '#555', marginBottom: '1.5rem' }}>
-        <strong>{pending.name}</strong>({pending.email})으로 가입합니다. 역할을 선택해주세요.
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {ROLES.map(({ value, label, desc }) => (
-          <label
-            key={value}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.75rem',
-              padding: '1rem',
-              border: `2px solid ${selectedRole === value ? '#3CAB7E' : '#e5e7eb'}`,
-              borderRadius: '0.75rem',
-              cursor: 'pointer',
-            }}
-          >
-            <input
-              type="radio"
-              name="role"
-              value={value}
-              checked={selectedRole === value}
-              onChange={() => setSelectedRole(value)}
-              style={{ marginTop: '0.2rem' }}
-            />
-            <div>
-              <div style={{ fontWeight: 600 }}>{label}</div>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>{desc}</div>
-            </div>
-          </label>
-        ))}
-      </div>
-      {error && <p role="alert" style={{ color: '#dc2626', marginTop: '1rem' }}>{error}</p>}
-      <button
-        type="button"
-        onClick={() => { void handleSubmit(); }}
-        disabled={!selectedRole || isLoading}
-        style={{ marginTop: '1.5rem', width: '100%', padding: '0.875rem', background: '#3CAB7E', color: '#fff', border: 'none', borderRadius: '0.75rem', fontSize: '1rem', fontWeight: 600, cursor: selectedRole && !isLoading ? 'pointer' : 'not-allowed', opacity: !selectedRole || isLoading ? 0.5 : 1 }}
-      >
-        {isLoading ? '가입 중…' : '가입하기'}
-      </button>
-    </main>
+    <AppShell>
+      <main className="demo-page">
+        <div className="page-heading"><h1>역할 선택</h1></div>
+        <p className="hint"><strong>{pending.name}</strong>({pending.email})으로 가입합니다. 역할을 선택해주세요.</p>
+        <div className="demo-form">
+          {ROLES.map(({ value, label, desc }) => (
+            <label key={value} className="choice">
+              <input type="radio" name="role" value={value} checked={selectedRole === value} onChange={() => setSelectedRole(value)} />
+              <span><strong>{label}</strong><small>{desc}</small></span>
+            </label>
+          ))}
+        </div>
+        {error && <p role="alert" className="error">{error}</p>}
+        <button className="btn" type="button" onClick={() => { void handleSubmit(); }} disabled={!selectedRole || isLoading}>
+          {isLoading ? '가입 중…' : '가입하기'}
+        </button>
+      </main>
+    </AppShell>
   );
 }

@@ -1,15 +1,16 @@
 .page {
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.25rem 1.5rem;
+  padding: 24px 20px 32px;
   min-height: 100%;
+  gap: 18px;
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 18px;
   font-weight: 700;
   color: #1a2533;
-  margin: 0 0 1.75rem;
+  margin: 0;
   text-align: center;
 }
 
@@ -26,7 +27,7 @@
   align-items: center;
   gap: 1rem;
   background: white;
-  border: none;
+  border: 1.5px solid transparent;
   border-radius: 16px;
   padding: 1.5rem 1rem 1rem;
   cursor: pointer;
@@ -40,8 +41,8 @@
 }
 
 .iconWrap {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -155,3 +156,7 @@
   color: #8a9ab0;
   font-size: 0.75rem;
 }
+
+.cardActive { border-color: var(--green); background: var(--soft); }
+.infoSection, .pinnedSection { display: grid; gap: 12px; align-content: start; }
+.infoContent { overflow-wrap: anywhere; }
