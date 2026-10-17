@@ -1,3 +1,4 @@
+import { AppShell } from '../components/AppShell';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createRecord, createRecordDraft, deleteRecordMedia, uploadRecordAudio } from '../api/records';
@@ -206,89 +207,91 @@ export function RecordFormPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <button type="button" className={styles.backButton} disabled={recording || requestingMic || processing || saving || orphanedMediaId !== null} onClick={() => stage === 'review' ? setStage('input') : navigate(-1)} aria-label="뒤로가기">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="#1a2533" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        <h1 className={styles.title}>{stage === 'review' ? 'AI 정리 확인' : '기록 작성'}</h1>
-        <div className={styles.headerRight} />
-      </header>
-
-      <div className={styles.body}>
-        <p className={styles.dateLabel}>{formatToday()}</p>
-        {stage === 'input' ? (
-          <>
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>어떤 방식으로 기록할까요?</h2>
-              <div className={styles.modeSwitch} role="group" aria-label="입력 방식 선택">
-                <button type="button" disabled={requestingMic || recording || processing} aria-pressed={mode === 'voice'} className={mode === 'voice' ? styles.modeActive : ''} onClick={() => { setMode('voice'); setError(null); }}>음성으로 기록하기</button>
-                <button type="button" disabled={requestingMic || recording || processing} aria-pressed={mode === 'text'} className={mode === 'text' ? styles.modeActive : ''} onClick={() => { setMode('text'); setError(null); }}>텍스트로 기록하기</button>
-              </div>
-            </section>
-            {mode === 'voice' ? (
-              <section className={styles.voicePanel}>
-                <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
-                <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
-                <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 유형을 분류해요.'}</p>
-                <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
-                  {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? 'AI가 정리하고 있어요…' : '녹음 시작하기'}
-                </button>
-                <p className={styles.privacyNote}>녹음 파일은 AI 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
-              </section>
-            ) : (
-              <section className={styles.section}>
-                <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
-                <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="예: 아침 식사 후 산책을 다녀왔어요." value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
-                <p className={styles.charCount}>{text.length} / 3,000</p>
-                <button type="button" className={styles.draftButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
-              </section>
-            )}
-          </>
-        ) : (
-          <>
-            <section className={styles.reviewCard}>
-              <h2>AI가 이렇게 정리했어요</h2>
-              <p>내용을 확인하고 필요한 부분을 고쳐 주세요.</p>
-              {transcript && transcript !== text && <details><summary>음성 인식 내용 보기</summary><p>{transcript}</p></details>}
-              <label htmlFor="record-review">정리된 기록</label>
-              <textarea id="record-review" aria-label="정리된 기록" className={styles.textarea} value={content} onChange={e => setContent(e.target.value)} rows={6} maxLength={500} />
-              <p className={styles.charCount}>{content.length} / 500</p>
-            </section>
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>AI 분류 · 필요하면 바꿀 수 있어요</h2>
-              <div className={styles.chips} role="group" aria-label="기록 유형 선택">
-                {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
-              </div>
-            </section>
-            {user?.role === 'GUARDIAN' && (
-              <section className={styles.pinSection}>
-                <label className={styles.pinLabel} htmlFor="show-in-care-info">
-                  <input
-                    id="show-in-care-info"
-                    type="checkbox"
-                    checked={showInCareInfo}
-                    onChange={event => setShowInCareInfo(event.target.checked)}
-                  />
-                  돌봄정보에도 표시
-                </label>
-                <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
-              </section>
-            )}
-          </>
-        )}
-        {error && <p role="alert" className={styles.error}>{error}</p>}
-        {cleanupError && <div className={styles.cleanupWarning}>
-          <p role="alert" className={styles.error}>{cleanupError}</p>
-          <button type="button" disabled={cleanupPending} onClick={() => { void retryAudioCleanup(); }}>
-            {cleanupPending ? '삭제 중…' : '녹음 파일 삭제 다시 시도'}
+    <AppShell role={user?.role} homeDisabled={recording || requestingMic || processing || saving || orphanedMediaId !== null}>
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <button type="button" className={styles.backButton} disabled={recording || requestingMic || processing || saving || orphanedMediaId !== null} onClick={() => stage === 'review' ? setStage('input') : navigate(-1)} aria-label="뒤로가기">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="#1a2533" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
+          <h1 className={styles.title}>{stage === 'review' ? 'AI 정리 확인' : '기록 작성'}</h1>
+          <div className={styles.headerRight} />
+        </header>
+
+        <div className={styles.body}>
+          <p className={styles.dateLabel}>{formatToday()}</p>
+          {stage === 'input' ? (
+            <>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>어떤 방식으로 기록할까요?</h2>
+                <div className={styles.modeSwitch} role="group" aria-label="입력 방식 선택">
+                  <button type="button" disabled={requestingMic || recording || processing} aria-pressed={mode === 'voice'} className={mode === 'voice' ? styles.modeActive : ''} onClick={() => { setMode('voice'); setError(null); }}>음성으로 기록하기</button>
+                  <button type="button" disabled={requestingMic || recording || processing} aria-pressed={mode === 'text'} className={mode === 'text' ? styles.modeActive : ''} onClick={() => { setMode('text'); setError(null); }}>텍스트로 기록하기</button>
+                </div>
+              </section>
+              {mode === 'voice' ? (
+                <section className={styles.voicePanel}>
+                  <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
+                  <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
+                  <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 유형을 분류해요.'}</p>
+                  <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
+                    {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? 'AI가 정리하고 있어요…' : '녹음 시작하기'}
+                  </button>
+                  <p className={styles.privacyNote}>녹음 파일은 AI 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
+                </section>
+              ) : (
+                <section className={styles.section}>
+                  <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
+                  <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="예: 아침 식사 후 산책을 다녀왔어요." value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
+                  <p className={styles.charCount}>{text.length} / 3,000</p>
+                  <button type="button" className={styles.draftButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
+                </section>
+              )}
+            </>
+          ) : (
+            <>
+              <section className={styles.reviewCard}>
+                <h2>AI가 이렇게 정리했어요</h2>
+                <p>내용을 확인하고 필요한 부분을 고쳐 주세요.</p>
+                {transcript && transcript !== text && <details><summary>음성 인식 내용 보기</summary><p>{transcript}</p></details>}
+                <label htmlFor="record-review">정리된 기록</label>
+                <textarea id="record-review" aria-label="정리된 기록" className={styles.textarea} value={content} onChange={e => setContent(e.target.value)} rows={6} maxLength={500} />
+                <p className={styles.charCount}>{content.length} / 500</p>
+              </section>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>AI 분류 · 필요하면 바꿀 수 있어요</h2>
+                <div className={styles.chips} role="group" aria-label="기록 유형 선택">
+                  {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
+                </div>
+              </section>
+              {user?.role === 'GUARDIAN' && (
+                <section className={styles.pinSection}>
+                  <label className={styles.pinLabel} htmlFor="show-in-care-info">
+                    <input
+                      id="show-in-care-info"
+                      type="checkbox"
+                      checked={showInCareInfo}
+                      onChange={event => setShowInCareInfo(event.target.checked)}
+                    />
+                    돌봄정보에도 표시
+                  </label>
+                  <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
+                </section>
+              )}
+            </>
+          )}
+          {error && <p role="alert" className={styles.error}>{error}</p>}
+          {cleanupError && <div className={styles.cleanupWarning}>
+            <p role="alert" className={styles.error}>{cleanupError}</p>
+            <button type="button" disabled={cleanupPending} onClick={() => { void retryAudioCleanup(); }}>
+              {cleanupPending ? '삭제 중…' : '녹음 파일 삭제 다시 시도'}
+            </button>
+          </div>}
+        </div>
+
+        {stage === 'review' && <div className={styles.footer}>
+          <button type="button" className={styles.saveButton} disabled={!content.trim() || processing || saving || orphanedMediaId !== null} onClick={() => { void saveRecord(); }}>{processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}</button>
         </div>}
       </div>
-
-      {stage === 'review' && <div className={styles.footer}>
-        <button type="button" className={styles.saveButton} disabled={!content.trim() || processing || saving || orphanedMediaId !== null} onClick={() => { void saveRecord(); }}>{processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}</button>
-      </div>}
-    </div>
+    </AppShell>
   );
 }

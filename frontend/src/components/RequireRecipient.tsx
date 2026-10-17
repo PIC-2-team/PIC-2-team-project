@@ -1,9 +1,11 @@
+import { AppShell } from './AppShell';
 import { useEffect, useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 
 export function RequireRecipient() {
+  const layout = useOutletContext<{ hasAppShell: boolean } | undefined>();
   const { selectedRecipientId, setSelectedRecipient } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [empty, setEmpty] = useState(false);
@@ -24,15 +26,17 @@ export function RequireRecipient() {
   }, [selectedRecipientId, setSelectedRecipient]);
 
   if (selectedRecipientId !== null) return <Outlet />;
-  if (error || empty) {
-    return (
-      <main>
-        <p role={error ? 'alert' : undefined}>
-          {error ?? '등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.'}
-        </p>
-        <Link to="/home">홈으로</Link>
-      </main>
-    );
-  }
-  return <p>당사자 정보를 불러오는 중…</p>;
+  const content = (
+    <div className="demo-page status-page">
+      {error || empty ? (
+        <>
+          <p className={error ? 'error' : 'empty-state'} role={error ? 'alert' : undefined}>
+            {error ?? '등록된 당사자가 없어요. 홈에서 당사자 정보를 확인해 주세요.'}
+          </p>
+          <Link className="btn" to="/home">홈으로</Link>
+        </>
+      ) : <p className="empty-state" role="status">당사자 정보를 불러오는 중…</p>}
+    </div>
+  );
+  return layout?.hasAppShell ? content : <AppShell>{content}</AppShell>;
 }
