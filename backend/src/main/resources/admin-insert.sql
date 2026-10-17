@@ -1,5 +1,5 @@
 -- 삶결 슈퍼어드민 계정 생성
--- 비밀번호: Admin1234!  (BCrypt 해시)
+-- 비밀번호는 BCrypt 해시로 저장됨 (실행 전 개인 보관 필요)
 -- 실행 전: public_code 중복 여부 확인 필요
 
 INSERT INTO users (
