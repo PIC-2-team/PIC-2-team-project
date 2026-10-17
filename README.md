@@ -64,6 +64,20 @@ cd backend
 
 ---
 
+## 슈퍼 어드민 계정 (Production)
+
+| 항목 | 값 |
+|------|----|
+| 이메일 | admin@samgyeol.com |
+| 역할 | ADMIN |
+| 비밀번호 | 팀 내부 채널로 별도 공유 |
+
+계정은 DB에 직접 삽입해야 합니다. `backend/src/main/resources/admin-insert.sql`을 prod DB에 실행하세요.
+
+로그인 후 `/admin` 경로로 이동하면 대시보드에 접근할 수 있습니다.
+
+---
+
 ## API 타입 생성
 
 BE 서버가 실행 중일 때:
