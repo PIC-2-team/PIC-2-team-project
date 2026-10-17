@@ -27,7 +27,7 @@ export type CareAssignment = {
   createdAt: string;
 };
 
-export type LinkRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type LinkRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 
 export type LinkRequest = {
   id: number;
