@@ -54,7 +54,7 @@ it('로그인 화면에서 이용 동의로 돌아가는 링크를 제공하지 
 
 it.each([
   ['GUARDIAN', '/login', '홈 화면'],
-  ['AGENCY', '/login', '기관 화면'],
+  ['INSTITUTION', '/login', '기관 화면'],
   ['GUARDIAN', '/login?redirect=/records', '기록 화면'],
 ] as const)('이메일 로그인 후 역할과 목적지를 유지한다: %s %s', async (role, path, heading) => {
   const login = vi.spyOn(authApi, 'login').mockResolvedValue({

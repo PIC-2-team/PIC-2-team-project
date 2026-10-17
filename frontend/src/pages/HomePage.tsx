@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
@@ -19,7 +19,7 @@ export function HomePage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' });
 
   useEffect(() => {
-    if (user?.role === 'AGENCY') {
+    if (user?.role === 'INSTITUTION') {
       navigate('/agency', { replace: true });
       return;
     }
@@ -41,14 +41,24 @@ export function HomePage() {
     void load();
   }, [user?.role, navigate, setSelectedRecipient]);
 
-  if (page.status === 'loading') return <p>불러오는 중…</p>;
-  if (page.status === 'error') return <p role="alert">{page.message}</p>;
+  if (page.status === 'loading') return <div className="demo-page status-page"><p className="empty-state" role="status">불러오는 중…</p></div>;
+  if (page.status === 'error') return <div className="demo-page status-page"><p className="error" role="alert">{page.message}</p></div>;
   if (page.status === 'empty') {
+    const isSupportWorker = user?.role === 'SUPPORT_WORKER';
     return (
-      <main className={styles.page}>
-        <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
-        <button type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
-      </main>
+      <div className="demo-page status-page">
+        <h1>안녕하세요, {user?.name}님!</h1>
+        <div className="empty-state">
+          {isSupportWorker ? (
+            <p>아직 배정된 담당 이용자가 없어요.</p>
+          ) : (
+            <>
+              <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
+              <button className="btn" type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
+            </>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -59,20 +69,18 @@ export function HomePage() {
     <div className={styles.page}>
       <div className={styles.profile}>
         <div className={styles.avatar} aria-hidden="true">
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-            <circle cx="18" cy="14" r="7" fill="#c8d0d8" />
-            <path d="M4 34c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#c8d0d8" />
-          </svg>
+          {Array.from(user?.name ?? '?')[0]}
         </div>
         <div>
-          <p className={styles.name}>{recipient.name}님</p>
+          <h1 className={styles.name}>안녕하세요, {user?.name}님!</h1>
           <p className={styles.greeting}>오늘도 좋은 하루 보내세요!</p>
         </div>
       </div>
 
+      <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>오늘의 생활기록</h2>
+          <h2 className={styles.sectionTitle}>오늘의 기록</h2>
           <button
             className={styles.viewAll}
             onClick={() => navigate('/records')}
@@ -87,7 +95,7 @@ export function HomePage() {
             <p>오늘 기록이 없어요.</p>
           ) : (
             todayRecords.map(record => (
-              <div key={record.id} className={styles.recordCard}>
+              <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
                 <p className={styles.recordContent}>{record.content}</p>
                 <span className={styles.recordTime}>
                   {new Date(record.recordedAt).toLocaleTimeString('ko-KR', {
@@ -95,7 +103,7 @@ export function HomePage() {
                     minute: '2-digit',
                   })}
                 </span>
-              </div>
+              </Link>
             ))
           )}
         </div>

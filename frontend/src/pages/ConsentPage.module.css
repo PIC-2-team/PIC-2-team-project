@@ -1,7 +1,7 @@
 .page {
   width: 100%;
   max-width: 390px;
-  height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -30,7 +30,7 @@
   margin-bottom: 1.5rem;
 }
 
-.title {
+.top .title {
   font-size: 2rem;
   font-weight: 700;
   color: #1a2533;
@@ -55,6 +55,8 @@
 
 .item {
   display: flex;
+  flex-direction: row;
+  font-weight: 400;
   align-items: center;
   gap: 0.75rem;
   background: white;
@@ -64,7 +66,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-.checkbox {
+.item .checkbox {
   appearance: none;
   -webkit-appearance: none;
   width: 26px;
@@ -78,12 +80,12 @@
   transition: background 0.15s, border-color 0.15s;
 }
 
-.checkbox:checked {
+.item .checkbox:checked {
   background: #3CAB7E;
   border-color: #3CAB7E;
 }
 
-.checkbox:checked::after {
+.item .checkbox:checked::after {
   content: '';
   position: absolute;
   left: 6px;
