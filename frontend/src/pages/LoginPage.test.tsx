@@ -18,6 +18,7 @@ function ConsentRoute() {
   return (
     <>
       <h1>이용 동의</h1>
+      <output data-testid="consent-path">{location.pathname}</output>
       <output data-testid="pending-google">{JSON.stringify(location.state?.pendingGoogle)}</output>
     </>
   );
@@ -32,7 +33,7 @@ function renderLogin(path = '/login') {
           <Route path="/home" element={<h1>홈 화면</h1>} />
           <Route path="/agency" element={<h1>기관 화면</h1>} />
           <Route path="/records" element={<h1>기록 화면</h1>} />
-          <Route path="/" element={<ConsentRoute />} />
+          <Route path="/consent" element={<ConsentRoute />} />
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
@@ -45,11 +46,10 @@ function submit() {
   fireEvent.click(screen.getByRole('button', { name: '로그인' }));
 }
 
-it('브랜드와 이용 동의로 돌아가는 링크를 제공한다', () => {
+it('로그인 화면에서 이용 동의로 돌아가는 링크를 제공하지 않는다', () => {
   renderLogin();
   expect(screen.getByText('삶결')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('link', { name: '이용 동의로 돌아가기' }));
-  expect(screen.getByRole('heading', { name: '이용 동의' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '이용 동의로 돌아가기' })).not.toBeInTheDocument();
 });
 
 it.each([
@@ -75,7 +75,7 @@ it('잘못된 인증 정보를 안내하고 재시도할 수 있다', async () =
   expect(screen.getByRole('button', { name: '로그인' })).toBeEnabled();
 });
 
-it('Google 가입이 필요한 사용자를 기존 동의 흐름으로 안내한다', async () => {
+it('Google 가입이 필요한 사용자는 별도 이용 동의 경로로 안내한다', async () => {
   vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-client');
   const initialize = vi.fn();
   window.google = { accounts: { id: { initialize, renderButton: vi.fn() } } };
@@ -85,6 +85,7 @@ it('Google 가입이 필요한 사용자를 기존 동의 흐름으로 안내한
   renderLogin();
   initialize.mock.calls[0][0].callback({ credential: 'test-google-token' });
   await screen.findByRole('heading', { name: '이용 동의' });
+  expect(screen.getByTestId('consent-path')).toHaveTextContent('/consent');
   expect(screen.getByTestId('pending-google')).toHaveTextContent(
     JSON.stringify({ pendingToken: 'test-pending', email: 'test@example.com', name: '테스트' }),
   );

@@ -17,8 +17,9 @@ import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <ConsentPage /> },
+  { path: '/', element: <LoginPage /> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/consent', element: <ConsentPage /> },
   { path: '/google-register', element: <GoogleRegisterPage /> },
 
   {

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
 import styles from './LoginPage.module.css';
@@ -36,7 +36,7 @@ export function LoginPage() {
         const home = result.user.role === 'AGENCY' ? '/agency' : '/home';
         navigate(searchParams.get('redirect') ?? home, { replace: true });
       } else {
-        navigate('/', { replace: true, state: {
+        navigate('/consent', { replace: true, state: {
           pendingGoogle: {
             pendingToken: result.pendingToken,
             email: result.googleEmail,
@@ -108,7 +108,6 @@ export function LoginPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link to="/" className={styles.back} aria-label="이용 동의로 돌아가기">←</Link>
         <span className={styles.brand}>삶결</span>
       </header>
       <div className={styles.content}>
