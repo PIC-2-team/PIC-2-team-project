@@ -20,3 +20,6 @@ jwt:
 
 google:
   client-id: ${GOOGLE_CLIENT_ID:}
+
+app:
+  seed-test-accounts: false
