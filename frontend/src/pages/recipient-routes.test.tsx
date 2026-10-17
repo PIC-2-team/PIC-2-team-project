@@ -16,6 +16,15 @@ afterEach(() => {
   localStorage.clear();
 });
 
+it('앱 첫 화면에서 이용 동의 단계를 거치지 않고 로그인 화면을 보여준다', async () => {
+  const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/'] });
+  render(<AuthProvider><RouterProvider router={memoryRouter} /></AuthProvider>);
+
+  await screen.findByRole('heading', { name: '로그인' });
+  expect(memoryRouter.state.location.pathname).toBe('/');
+  memoryRouter.dispose();
+});
+
 it.each(['/records', '/care-info', '/records/7', '/records/new'])(
   '%s 직접 진입 시 인증 헤더와 함께 당사자를 조회한다', async path => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {

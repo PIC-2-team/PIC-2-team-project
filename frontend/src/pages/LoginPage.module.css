@@ -24,18 +24,6 @@
   background: white;
 }
 
-.back {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  min-height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--ink);
-  font-size: 24px;
-  text-decoration: none;
-}
-
 .brand {
   color: var(--green-text);
   font-size: 22px;
@@ -122,11 +110,6 @@
   filter: brightness(0.93);
 }
 
-.back:hover {
-  background: var(--soft);
-}
-
-.back:focus-visible,
 .submit:focus-visible,
 .form input:focus-visible {
   outline: 2px solid var(--green);
