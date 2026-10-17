@@ -1,6 +1,6 @@
 import { AppShell } from '../components/AppShell';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
 import styles from './LoginPage.module.css';
@@ -34,7 +34,7 @@ export function LoginPage() {
     try {
       const result = await loginWithGoogle(idToken);
       if (!result.requiresConsent) {
-        const home = result.user.role === 'INSTITUTION' ? '/agency' : '/home';
+        const home = result.user.role === 'ADMIN' ? '/admin' : result.user.role === 'INSTITUTION' ? '/agency' : '/home';
         navigate(searchParams.get('redirect') ?? home, { replace: true });
       } else {
         navigate('/consent', { replace: true, state: {
@@ -93,7 +93,7 @@ export function LoginPage() {
     try {
       const user = await login(email, password);
       const redirect = searchParams.get('redirect');
-      const home = user.role === 'INSTITUTION' ? '/agency' : '/home';
+      const home = user.role === 'ADMIN' ? '/admin' : user.role === 'INSTITUTION' ? '/agency' : '/home';
       navigate(redirect ?? home, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -143,7 +143,10 @@ export function LoginPage() {
           </form>
           <div className={styles.divider}>또는</div>
           <div ref={googleBtnRef} className={styles.googleButton} />
-          <p className={styles.signup}>계정이 없으신가요? 회원가입 (준비 중)</p>
+          <p className={styles.signup}>
+            계정이 없으신가요?{' '}
+            <Link to="/consent" style={{ color: '#3CAB7E', fontWeight: 600 }}>회원가입</Link>
+          </p>
         </div>
       </main>
     </AppShell>

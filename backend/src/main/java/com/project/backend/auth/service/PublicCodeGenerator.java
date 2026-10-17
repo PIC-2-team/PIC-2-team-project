@@ -22,6 +22,7 @@ public class PublicCodeGenerator {
             case GUARDIAN -> "P-";
             case SUPPORT_WORKER -> "S-";
             case INSTITUTION -> "I-";
+            case ADMIN -> "A-";
         };
 
         String code;
