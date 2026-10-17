@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -124,18 +126,22 @@ public class AuthController {
     }
 
     private void setRefreshCookie(HttpServletResponse response, String raw) {
-        Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE, raw);
-        cookie.setMaxAge(refreshTokenExpiryDays * 24 * 60 * 60);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/api/auth");
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(REFRESH_TOKEN_COOKIE, raw)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/api/auth")
+                .maxAge(refreshTokenExpiryDays * 24 * 60 * 60)
+                .build().toString());
     }
 
     private void expireRefreshTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE, "");
-        cookie.setMaxAge(0);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/api/auth");
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/api/auth")
+                .maxAge(0)
+                .build().toString());
     }
 }

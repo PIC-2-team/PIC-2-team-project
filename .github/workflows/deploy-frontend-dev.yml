@@ -26,6 +26,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_DISABLE_PWA: 'true'
+          VITE_VERCEL_ENV: preview
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
 
