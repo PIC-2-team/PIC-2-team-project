@@ -36,22 +36,9 @@ export interface RequestOptions {
   body?: unknown;
 }
 
-const PROD_BACKEND = 'https://backend-production-51de.up.railway.app';
-
 function resolveUrl(path: string): string {
-  const vercelEnv = import.meta.env.VITE_VERCEL_ENV as string | undefined;
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
-
-  if (vercelEnv === 'preview') {
-    const isUsable =
-      apiBase.startsWith('https://') && !apiBase.startsWith(PROD_BACKEND);
-    if (!isUsable) {
-      throw new ApiError('PREVIEW_BACKEND_NOT_CONFIGURED', 'Preview 백엔드 주소가 설정되지 않았습니다.');
-    }
-    return `${apiBase}${path}`;
-  }
-
-  return path;
+  return apiBase.startsWith('https://') ? `${apiBase}${path}` : path;
 }
 
 function currentToken() {
