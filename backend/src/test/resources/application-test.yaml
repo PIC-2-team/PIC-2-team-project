@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:samgyeol;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+jwt:
+  secret: test-secret-key-must-be-at-least-32-characters-long
+
+cors:
+  allowed-origins: http://localhost:5173
