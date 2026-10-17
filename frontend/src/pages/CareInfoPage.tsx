@@ -152,8 +152,24 @@ export function CareInfoPage() {
   const hasInfoContent = info && (typeof info.content === 'string' ? info.content.length > 0 : info.content != null);
 
   return (
-    <div className={styles.page}>
-      <h1 className={styles.title}>돌봄정보</h1>
+    <div className="demo-page">
+      <h1>돌봄정보</h1>
+
+      {pinnedRecords.length > 0 && (
+        <section className="demo-card accent" aria-labelledby="pinned-records-title">
+          <h2 id="pinned-records-title">중요 생활기록</h2>
+          <ul className={styles.recordList}>
+            {pinnedRecords.map(record => (
+              <li key={record.id}>
+                <Link to={`/records/${record.id}`} className={styles.recordCard}>
+                  <p>{record.content}</p>
+                  <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.grid} role="group" aria-label="돌봄정보 카테고리">
         {CATEGORIES.map(cat => (
@@ -170,43 +186,26 @@ export function CareInfoPage() {
         ))}
       </div>
 
-      <section className={styles.infoSection} aria-label={activeMeta?.label}>
-        <h2 className={styles.sectionTitle}>{activeMeta?.label}</h2>
-        {isLoading && <p>불러오는 중…</p>}
-        {error && <p role="alert">{error}</p>}
-        {!isLoading && !error && !hasInfoContent && <p className={styles.empty}>아직 입력된 정보가 없어요.</p>}
+      <section aria-label={activeMeta?.label}>
+        {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+        {error && <p className="error" role="alert">{error}</p>}
+        {!isLoading && !error && !hasInfoContent && (
+          <div className="empty-state">
+            <p>{activeMeta?.label} 정보가 아직 없어요.</p>
+          </div>
+        )}
         {hasInfoContent && info && (
-          <div className={styles.infoContent}>
+          <div className="demo-card">
+            <h2>{activeMeta?.label}</h2>
             {/* content 스키마 미확정 — 확정 후 구조화 UI로 교체 */}
             {typeof info.content === 'string'
-              ? <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{info.content}</p>
+              ? <p>{info.content}</p>
               : <pre style={{ fontSize: '0.8125rem', overflow: 'auto' }}>{JSON.stringify(info.content, null, 2)}</pre>
             }
-            {info.updatedAt && <p className={styles.updatedAt}>
+            {info.updatedAt && <p className="muted">
               마지막 업데이트: {new Date(info.updatedAt).toLocaleDateString('ko-KR')}
             </p>}
           </div>
-        )}
-      </section>
-
-      <section className={styles.pinnedSection} aria-labelledby="pinned-records-title">
-        <h2 id="pinned-records-title" className={styles.sectionTitle}>중요 생활기록</h2>
-        {isLoading && <p>불러오는 중…</p>}
-        {error && <p role="alert">{error}</p>}
-        {!isLoading && !error && pinnedRecords.length === 0 && (
-          <p className={styles.empty}>아직 표시할 생활기록이 없어요.</p>
-        )}
-        {!isLoading && !error && pinnedRecords.length > 0 && (
-          <ul className={styles.recordList}>
-            {pinnedRecords.map(record => (
-              <li key={record.id}>
-                <Link to={`/records/${record.id}`} className={styles.recordCard}>
-                  <p>{record.content}</p>
-                  <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
-                </Link>
-              </li>
-            ))}
-          </ul>
         )}
       </section>
     </div>

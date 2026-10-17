@@ -128,9 +128,9 @@ export function DailyRecordPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>생활기록</h1>
+    <div className="demo-page">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1>생활기록</h1>
         <button className={styles.filterButton} type="button">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <line x1="2" y1="4" x2="14" y2="4" stroke="#4a5568" strokeWidth="1.5" strokeLinecap="round" />
@@ -141,25 +141,17 @@ export function DailyRecordPage() {
         </button>
       </div>
 
-      <section className={styles.calendarSection} aria-label="월별 캘린더">
-        <div className={styles.monthNav}>
+      <section className="demo-card accent" aria-label="월별 캘린더">
+        <div className="calendar-heading">
           <button onClick={prevMonth} type="button" aria-label="이전 달">‹</button>
-          <span className={styles.monthLabel}>{viewYear}년 {viewMonth + 1}월</span>
+          <h2 style={{ margin: 0 }}>{viewYear}년 {viewMonth + 1}월</h2>
           <button onClick={nextMonth} type="button" aria-label="다음 달">›</button>
         </div>
 
-        <div className={styles.dayHeaders} role="row">
+        <div className="calendar-grid">
           {DAYS.map(d => (
-            <span
-              key={d}
-              className={`${styles.dayHeader} ${d === '일' ? styles.sun : ''} ${d === '토' ? styles.sat : ''}`}
-            >
-              {d}
-            </span>
+            <span key={d} style={{ color: d === '일' ? '#e05555' : d === '토' ? '#5b8dee' : undefined }}>{d}</span>
           ))}
-        </div>
-
-        <div className={styles.grid} role="grid">
           {Array.from({ length: firstDayOfWeek }).map((_, i) => (
             <div key={`empty-${i}`} />
           ))}
@@ -173,25 +165,25 @@ export function DailyRecordPage() {
               <button
                 key={day}
                 type="button"
-                className={`${styles.dayCell} ${isSelected ? styles.selected : ''} ${weekday === 0 ? styles.sun : ''} ${weekday === 6 ? styles.sat : ''}`}
+                style={{ color: !isSelected && weekday === 0 ? '#e05555' : !isSelected && weekday === 6 ? '#5b8dee' : undefined }}
                 onClick={() => setSelectedDay(day)}
                 aria-label={`${viewMonth + 1}월 ${day}일${hasRecord ? ', 기록 있음' : ''}`}
                 aria-pressed={isSelected}
               >
                 {day}
-                {hasRecord && <span className={styles.dot} aria-hidden="true" />}
+                {hasRecord && <span aria-hidden="true" />}
               </button>
             );
           })}
         </div>
       </section>
 
-      {isLoading && <p>불러오는 중…</p>}
-      {error && <p role="alert">{error}</p>}
+      {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+      {error && <p className="error" role="alert">{error}</p>}
 
-      <section className={styles.recordSection}>
-        <div className={styles.recordHeader}>
-          <h2 className={styles.recordDate}>
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
             {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
           </h2>
           <button
@@ -204,7 +196,7 @@ export function DailyRecordPage() {
         </div>
 
         {selectedRecords.length === 0 ? (
-          <p className={styles.empty}>이 날의 기록이 없어요.</p>
+          <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 기록이 없어요.</p>
         ) : (
           <div className={styles.records}>
             {selectedRecords.map(record => (
@@ -224,7 +216,7 @@ export function DailyRecordPage() {
 
       {canWrite && (
         <button
-          className={styles.recordButton}
+          className="btn"
           type="button"
           onClick={() => navigate('/records/new')}
         >

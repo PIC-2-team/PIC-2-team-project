@@ -37,54 +37,49 @@ export function MorePage() {
   };
 
   return (
-    <div className={styles.page}>
+    <div className="demo-page">
       <h1>더보기</h1>
-      <div className={styles.profile}>
+
+      <div className="demo-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <div className={styles.avatar}>
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
             <circle cx="18" cy="14" r="7" fill="#b8c4ce" />
             <path d="M4 32c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#b8c4ce" />
           </svg>
         </div>
-        <div className={styles.profileInfo}>
-          <p className={styles.name}>{user?.name ?? '—'}님</p>
-          <p className={styles.role}>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</p>
-          {user?.email && <p className={styles.email}>{user.email}</p>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 700, margin: '0 0 2px', fontSize: '1rem' }}>{user?.name ?? '—'}님</p>
+          <p className="muted" style={{ margin: 0 }}>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</p>
+          {user?.email && <p className="muted" style={{ margin: 0, overflowWrap: 'anywhere' }}>{user.email}</p>}
         </div>
-        {/* TODO: PATCH /api/users/me 필드 미정 — 확정 후 활성화 */}
-        <button type="button" className={styles.editButton} aria-label="프로필 편집 (준비 중)" disabled>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <path d="M12.5 2.5l3 3L5 16H2v-3L12.5 2.5z" stroke="#b8c4ce" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
       </div>
 
-      <div className={styles.sections}>
-        {MENU_SECTIONS.map(section => (
-          <div key={section.title} className={styles.section}>
-            <p className={styles.sectionTitle}>{section.title}</p>
-            <div className={styles.card}>
-              {section.items.map((item, idx) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`${styles.menuItem} ${idx < section.items.length - 1 ? styles.menuItemBorder : ''}`}
-                >
-                  <span className={styles.menuLabel}>{item.label}</span>
-                  {item.value
-                    ? <span className={styles.menuValue}>{item.value}</span>
-                    : <span className={styles.chevron} aria-hidden="true">›</span>
-                  }
-                </button>
-              ))}
-            </div>
+      {MENU_SECTIONS.map(section => (
+        <div key={section.title}>
+          <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>{section.title}</p>
+          <div className="demo-card" style={{ padding: 0, gap: 0 }}>
+            {section.items.map(item => (
+              <button
+                key={item.label}
+                type="button"
+                className="menu-link"
+                style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '16px 20px' }}
+              >
+                <span>{item.label}</span>
+                {item.value
+                  ? <span className="muted">{item.value}</span>
+                  : <span style={{ color: 'var(--green)' }} aria-hidden="true">›</span>
+                }
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
       <button
         type="button"
-        className={styles.logoutButton}
+        className="btn secondary"
+        style={{ color: '#e05555', borderColor: '#f5c6c4' }}
         onClick={handleLogout}
       >
         로그아웃
