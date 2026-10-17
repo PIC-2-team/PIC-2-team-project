@@ -1,13 +1,7 @@
-import type { DailyRecord } from './record';
+import type { DailyRecord, RecordCategory } from './record';
 
-// TODO: 카테고리 enum, content 스키마 미확정 (API-Spec.md §CareInfo). 변경 시 이 파일만 수정.
-export type CareInfoCategory =
-  | 'COMMUNICATION'
-  | 'PREFERENCE'
-  | 'LIFESTYLE'
-  | 'HEALTH_MEDICATION'
-  | 'PRECAUTION'
-  | 'EMERGENCY';
+// CareInfo와 Record 카테고리를 통일 — 변경 시 RecordCategory만 수정
+export type CareInfoCategory = RecordCategory;
 
 export type CareInfo = {
   category: CareInfoCategory;
