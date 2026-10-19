@@ -89,3 +89,7 @@ export const router = createBrowserRouter([
 
   { path: '*', element: <NotFoundPage /> },
 ]);
+
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  (window as unknown as { __router?: typeof router }).__router = router;
+}
