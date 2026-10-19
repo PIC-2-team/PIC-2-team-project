@@ -19,7 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.project.backend.care.dto.CareRelationsResponse;
+import com.project.backend.organization.entity.Organization;
+import com.project.backend.organization.entity.OrganizationRecipientLink;
+import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
+import com.project.backend.organization.repository.OrganizationRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +40,8 @@ public class CareRecipientService {
     private final CareRecipientNumberGenerator numberGenerator;
     private final CareAccessService careAccessService;
     private final UserRepository userRepository;
+    private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Transactional(readOnly = true)
     public List<CareRecipientResponse> getAll(Long userId) {
@@ -132,6 +141,45 @@ public class CareRecipientService {
                 .findByCareRecipientId(careRecipientId).stream()
                 .map(CareRecipientDisability::getDisabilityType).toList();
         return CareRecipientResponse.of(recipient, disabilities);
+    }
+
+    @Transactional(readOnly = true)
+    public CareRelationsResponse getRelations(Long userId, Long careRecipientId) {
+        careAccessService.verifyAccess(userId, careRecipientId);
+
+        List<OrganizationRecipientLink> links = organizationRecipientLinkRepository.findByCareRecipientId(careRecipientId);
+        List<Long> orgIds = links.stream().map(OrganizationRecipientLink::getOrganizationId).distinct().toList();
+        Map<Long, Organization> orgMap = organizationRepository.findAllById(orgIds).stream()
+                .collect(Collectors.toMap(Organization::getId, Function.identity()));
+
+        List<CareRelationsResponse.OrganizationLinkInfo> orgInfos = links.stream().map(link -> {
+            Organization org = orgMap.get(link.getOrganizationId());
+            String orgName = org != null ? org.getName() : "기관 #" + link.getOrganizationId();
+            String orgCode = org != null ? org.getOrganizationCode() : "";
+            return new CareRelationsResponse.OrganizationLinkInfo(
+                    link.getId(), link.getOrganizationId(), orgName, orgCode, link.getStatus(), link.getRequestedAt());
+        }).toList();
+
+        List<CareAssignment> assignments = careAssignmentRepository.findByCareRecipientIdAndEndedAtIsNull(careRecipientId);
+        List<Long> workerIds = assignments.stream().map(CareAssignment::getSupportWorkerId).distinct().toList();
+        Map<Long, User> userMap = userRepository.findAllById(workerIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        List<CareRelationsResponse.AssignedWorkerInfo> workerInfos = assignments.stream().map(a -> {
+            User worker = userMap.get(a.getSupportWorkerId());
+            String workerName = worker != null ? worker.getName() : "지원사 #" + a.getSupportWorkerId();
+            Organization org = orgMap.get(a.getOrganizationId());
+            if (org == null) {
+                org = organizationRepository.findById(a.getOrganizationId()).orElse(null);
+            }
+            String orgName = org != null ? org.getName() : "기관 #" + a.getOrganizationId();
+            return new CareRelationsResponse.AssignedWorkerInfo(
+                    a.getId(), a.getSupportWorkerId(), workerName,
+                    a.getOrganizationId(), orgName,
+                    a.getStartDate(), a.getEndDate(), a.getEndedAt());
+        }).toList();
+
+        return new CareRelationsResponse(careRecipientId, orgInfos, workerInfos);
     }
 
     private CareRecipient findRecipient(Long id) {

@@ -17,6 +17,7 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
 import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { CareRelationsPage } from './pages/CareRelationsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -65,7 +66,10 @@ export const router = createBrowserRouter([
         element: <RequireRole role="GUARDIAN" />,
         children: [{
           element: <RequireRecipient />,
-          children: [{ path: '/records/new', element: <RecordFormPage /> }],
+          children: [
+            { path: '/records/new', element: <RecordFormPage /> },
+            { path: '/care-relations', element: <CareRelationsPage /> },
+          ],
         }],
       },
     ],
