@@ -39,6 +39,11 @@ const MOCK_USERS = {
   pagination: { page: 1, pageSize: 20, totalItems: 2, totalPages: 1 },
 };
 
+const MOCK_ORGS = [
+  { id: 1, name: '행복복지관', organizationCode: 'KNU001', ownerId: 10, ownerName: '박담당', createdAt: '2026-10-18T10:00:00Z' },
+  { id: 2, name: '미등록센터', organizationCode: 'NOT999', ownerId: null, ownerName: null, createdAt: '2026-10-19T10:00:00Z' },
+];
+
 function renderAdminPage() {
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
     user: { id: 999, name: '최고관리자', email: 'admin@samgyeol.com', role: 'ADMIN' } as User,
@@ -67,6 +72,9 @@ it('통계 및 사용자 목록을 성공적으로 렌더링한다', async () =>
     if (url.includes('/api/admin/users')) {
       return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
     }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
 
@@ -88,6 +96,9 @@ it('역할 필터를 변경하면 해당 역할을 포함하여 사용자 목록
     if (url.includes('/api/admin/users')) {
       return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
     }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
 
@@ -102,4 +113,54 @@ it('역할 필터를 변경하면 해당 역할을 포함하여 사용자 목록
     expect.stringContaining('/api/admin/users?page=1&size=20&role=GUARDIAN'),
     expect.anything()
   );
+});
+
+it('기관 관리 섹션에서 기관 목록을 조회하고 새로운 기관을 생성(코드 발급)할 수 있다', async () => {
+  let orgs = [...MOCK_ORGS];
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+
+    if (url.includes('/api/admin/stats')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_STATS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/users')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
+    }
+    if (url.endsWith('/api/admin/organizations') && method === 'POST') {
+      const newOrg = {
+        id: 3,
+        name: '새솔복지관',
+        organizationCode: 'NEW003',
+        ownerId: null,
+        ownerName: null,
+        createdAt: '2026-10-20T12:00:00Z',
+      };
+      orgs = [newOrg, ...orgs];
+      return new Response(JSON.stringify({ success: true, data: newOrg }), { status: 201 });
+    }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: orgs }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+
+  renderAdminPage();
+
+  expect(await screen.findByText('행복복지관')).toBeInTheDocument();
+  expect(screen.getByText('KNU001')).toBeInTheDocument();
+  expect(screen.getByText('박담당')).toBeInTheDocument();
+  expect(screen.getByText('미등록')).toBeInTheDocument();
+
+  // 신규 기관 생성
+  fireEvent.change(screen.getByLabelText('신규 기관 이름'), { target: { value: '새솔복지관' } });
+  fireEvent.click(screen.getByRole('button', { name: '기관 코드 발급' }));
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/admin/organizations', expect.objectContaining({
+    method: 'POST',
+    body: JSON.stringify({ name: '새솔복지관' }),
+  }));
+
+  expect(await screen.findByText('새솔복지관')).toBeInTheDocument();
+  expect(screen.getByText('NEW003')).toBeInTheDocument();
 });

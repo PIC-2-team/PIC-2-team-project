@@ -22,7 +22,7 @@ function renderWithProviders() {
   );
 }
 
-it('기관이 등록되어 있지 않은 경우 (404) 기관 등록 온보딩 폼을 표시한다', async () => {
+it('기관이 등록되어 있지 않은 경우 (404) 기관 코드 등록 온보딩 폼을 표시한다', async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
     if (url.includes('/api/organizations/me')) {
@@ -37,13 +37,13 @@ it('기관이 등록되어 있지 않은 경우 (404) 기관 등록 온보딩 �
   renderWithProviders();
 
   expect(await screen.findByText('소속 기관을 등록해 주세요')).toBeInTheDocument();
-  expect(screen.getByLabelText('기관 이름')).toBeInTheDocument();
+  expect(screen.getByLabelText('기관 코드 (6자리)')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '기관 등록' })).toBeInTheDocument();
   expect(screen.queryByText('기관을 찾을 수 없습니다.')).not.toBeInTheDocument();
 });
 
-it('기관 등록 폼을 제출하면 기관을 생성하고 대시보드를 갱신한다', async () => {
-  let created = false;
+it('6자리 기관 코드 폼을 제출하면 기관을 등록하고 대시보드를 갱신한다', async () => {
+  let registered = false;
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
     const method = init?.method ?? 'GET';
@@ -55,14 +55,14 @@ it('기관 등록 폼을 제출하면 기관을 생성하고 대시보드를 갱
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
     if (url.endsWith('/api/organizations') && method === 'POST') {
-      created = true;
+      registered = true;
       return new Response(JSON.stringify({
         success: true,
-        data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE1234' },
+        data: { id: 1, name: '희망 복지관', organizationCode: 'KNU001' },
       }), { status: 201 });
     }
     if (url.includes('/api/organizations/me')) {
-      if (!created) {
+      if (!registered) {
         return new Response(JSON.stringify({
           success: false,
           error: { code: 'ORGANIZATION_NOT_FOUND', message: '기관을 찾을 수 없습니다.' },
@@ -70,7 +70,7 @@ it('기관 등록 폼을 제출하면 기관을 생성하고 대시보드를 갱
       }
       return new Response(JSON.stringify({
         success: true,
-        data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE1234' },
+        data: { id: 1, name: '희망 복지관', organizationCode: 'KNU001' },
       }), { status: 200 });
     }
 
@@ -81,14 +81,14 @@ it('기관 등록 폼을 제출하면 기관을 생성하고 대시보드를 갱
 
   await screen.findByText('소속 기관을 등록해 주세요');
 
-  fireEvent.change(screen.getByLabelText('기관 이름'), { target: { value: '희망 복지관' } });
+  fireEvent.change(screen.getByLabelText('기관 코드 (6자리)'), { target: { value: 'knu001' } });
   fireEvent.click(screen.getByRole('button', { name: '기관 등록' }));
 
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
-  expect(screen.getByText('기관 코드: HOPE1234')).toBeInTheDocument();
+  expect(screen.getByText('기관 코드: KNU001')).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledWith('/api/organizations', expect.objectContaining({
     method: 'POST',
-    body: JSON.stringify({ name: '희망 복지관' }),
+    body: JSON.stringify({ organizationCode: 'KNU001' }),
   }));
 });
 
@@ -114,7 +114,7 @@ it('기관 등록 요청이 실패하면 온보딩 폼 내에 에러 메시지�
     if (url.endsWith('/api/organizations') && method === 'POST') {
       return new Response(JSON.stringify({
         success: false,
-        error: { code: 'CONFLICT', message: '이미 등록된 기관입니다.' },
+        error: { code: 'CONFLICT', message: '이미 등록된 기관 코드입니다.' },
       }), { status: 409 });
     }
     if (url.includes('/api/organizations/me')) {
@@ -130,9 +130,9 @@ it('기관 등록 요청이 실패하면 온보딩 폼 내에 에러 메시지�
 
   await screen.findByText('소속 기관을 등록해 주세요');
 
-  fireEvent.change(screen.getByLabelText('기관 이름'), { target: { value: '중복 복지관' } });
+  fireEvent.change(screen.getByLabelText('기관 코드 (6자리)'), { target: { value: 'DUP001' } });
   fireEvent.click(screen.getByRole('button', { name: '기관 등록' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('이미 등록된 기관입니다.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('이미 등록된 기관 코드입니다.');
   expect(screen.getByText('소속 기관을 등록해 주세요')).toBeInTheDocument();
 });
