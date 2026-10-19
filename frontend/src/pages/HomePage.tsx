@@ -19,6 +19,10 @@ export function HomePage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' });
 
   useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin', { replace: true });
+      return;
+    }
     if (user?.role === 'INSTITUTION') {
       navigate('/agency', { replace: true });
       return;

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest } from '../api/client';
+import { AppShell } from '../components/AppShell';
+import styles from './AdminDashboardPage.module.css';
 
 type Stats = {
   totalUsers: number;
@@ -76,141 +78,163 @@ export function AdminDashboardPage() {
   };
 
   const handleLogout = async () => {
+    if (!window.confirm('로그아웃할까요?')) return;
     await logout();
     navigate('/login', { replace: true });
   };
 
+  const getRoleBadgeClass = (role: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return `${styles.roleBadge} ${styles.roleBadgeAdmin}`;
+      case 'INSTITUTION':
+        return `${styles.roleBadge} ${styles.roleBadgeInstitution}`;
+      case 'SUPPORT_WORKER':
+        return `${styles.roleBadge} ${styles.roleBadgeWorker}`;
+      case 'GUARDIAN':
+      default:
+        return `${styles.roleBadge} ${styles.roleBadgeGuardian}`;
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100dvh', background: '#f5f6f7', color: '#1a2533' }}>
-      {/* 헤더 */}
-      <header style={{
-        background: 'white', borderBottom: '1px solid #e8ecf0',
-        padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-1px', color: '#3CAB7E' }}>삶결</span>
-          <span style={{ fontSize: '12px', background: '#3CAB7E', color: 'white', borderRadius: '6px', padding: '3px 8px', fontWeight: 700 }}>관리자</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '13px', color: '#6b7a8a' }}>{user?.name ?? user?.email}</span>
+    <AppShell role={user?.role}>
+      <main className="demo-page">
+        {/* 상단 관리자 프로필 카드 */}
+        <section className={styles.headerCard}>
+          <div className={styles.profileInfo}>
+            <p className="eyebrow" style={{ margin: 0 }}>슈퍼 어드민</p>
+            <h1 className={styles.adminTitle}>{user?.name ?? '관리자'}님</h1>
+            <p className={styles.adminSubtitle}>{user?.email}</p>
+          </div>
           <button
+            type="button"
+            className={styles.logoutButton}
             onClick={() => { void handleLogout(); }}
-            style={{ fontSize: '13px', background: 'none', border: '1px solid #e8ecf0', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#6b7a8a' }}
           >
             로그아웃
           </button>
-        </div>
-      </header>
+        </section>
 
-      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>관리자 대시보드</h1>
+        {error && <div className={styles.errorBanner} role="alert">{error}</div>}
 
-        {error && (
-          <div style={{ background: '#fff0eb', color: '#91372d', padding: '14px', borderRadius: '10px', fontSize: '14px' }}>
-            {error}
+        {/* 1. 핵심 지표 통계 */}
+        <section>
+          <div className={styles.sectionHeading}>
+            <h2 className={styles.sectionTitle}>서비스 통계</h2>
           </div>
-        )}
-
-        {/* 통계 카드 */}
-        {stats && (
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px' }}>
-            {[
-              { label: '전체 사용자', value: stats.totalUsers },
-              { label: '보호자', value: stats.guardians },
-              { label: '활동지원사', value: stats.supportWorkers },
-              { label: '기관', value: stats.institutions },
-              { label: '기관 수', value: stats.totalOrganizations },
-              { label: '돌봄 대상자', value: stats.totalCareRecipients },
-              { label: '기록 수', value: stats.totalRecords },
-            ].map(({ label, value }) => (
-              <div key={label} style={{
-                background: 'white', border: '1px solid #e8ecf0', borderRadius: '14px',
-                padding: '18px', display: 'flex', flexDirection: 'column', gap: '6px',
-              }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#6b7a8a', fontWeight: 600 }}>{label}</p>
-                <p style={{ margin: 0, fontSize: '28px', fontWeight: 750, color: '#3CAB7E', lineHeight: 1.2 }}>{value.toLocaleString()}</p>
+          {stats ? (
+            <div className={styles.statsGrid}>
+              <div className={`${styles.statCard} ${styles.highlight}`}>
+                <p className={styles.statLabel}>전체 사용자</p>
+                <p className={styles.statValue}>{stats.totalUsers.toLocaleString()}</p>
               </div>
-            ))}
-          </section>
-        )}
+              <div className={`${styles.statCard} ${styles.highlight}`}>
+                <p className={styles.statLabel}>돌봄 대상자</p>
+                <p className={styles.statValue}>{stats.totalCareRecipients.toLocaleString()}</p>
+              </div>
+              <div className={styles.statCard}>
+                <p className={styles.statLabel}>보호자</p>
+                <p className={styles.statValue}>{stats.guardians.toLocaleString()}</p>
+              </div>
+              <div className={styles.statCard}>
+                <p className={styles.statLabel}>활동지원사</p>
+                <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
+              </div>
+              <div className={styles.statCard}>
+                <p className={styles.statLabel}>기관 담당자</p>
+                <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
+              </div>
+              <div className={styles.statCard}>
+                <p className={styles.statLabel}>등록 기관 수</p>
+                <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
+              </div>
+              <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
+                <p className={styles.statLabel}>총 생활기록</p>
+                <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.emptyBox}>통계를 불러오는 중…</div>
+          )}
+        </section>
 
-        {/* 사용자 목록 */}
-        <section style={{ background: 'white', border: '1px solid #e8ecf0', borderRadius: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '18px 20px', borderBottom: '1px solid #e8ecf0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>사용자 목록</h2>
+        {/* 2. 사용자 목록 */}
+        <section>
+          <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
+            <h2 className={styles.sectionTitle}>
+              사용자 목록 {users ? `(${users.pagination.totalItems})` : ''}
+            </h2>
             <select
+              className={styles.filterSelect}
               value={roleFilter}
-              onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
-              style={{ fontSize: '14px', border: '1px solid #e8ecf0', borderRadius: '8px', padding: '6px 10px', background: 'white', color: '#1a2533', cursor: 'pointer' }}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
+              aria-label="역할 필터"
             >
               <option value="">전체 역할</option>
               <option value="GUARDIAN">보호자</option>
               <option value="SUPPORT_WORKER">활동지원사</option>
               <option value="INSTITUTION">기관</option>
+              <option value="ADMIN">관리자</option>
             </select>
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#6b7a8a', fontSize: '14px' }}>불러오는 중…</div>
+            <div className={styles.emptyBox}>사용자 목록을 불러오는 중…</div>
+          ) : !users || users.items.length === 0 ? (
+            <div className={styles.emptyBox}>등록된 사용자가 없어요.</div>
           ) : (
-            <>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ background: '#f5f6f7' }}>
-                    {['이름', '이메일', '역할', '코드', '가입일'].map(h => (
-                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: '#6b7a8a', fontSize: '12px', borderBottom: '1px solid #e8ecf0' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users?.items.map(u => (
-                    <tr key={u.id} style={{ borderBottom: '1px solid #f0f2f4' }}>
-                      <td style={{ padding: '12px 16px' }}>{u.name}</td>
-                      <td style={{ padding: '12px 16px', color: '#6b7a8a' }}>{u.email}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ background: '#f0f7f3', color: '#3CAB7E', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600 }}>
-                          {ROLE_LABELS[u.role] ?? u.role}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: '12px', color: '#6b7a8a' }}>{u.publicCode}</td>
-                      <td style={{ padding: '12px 16px', color: '#6b7a8a' }}>
-                        {new Date(u.createdAt).toLocaleDateString('ko-KR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* 페이지네이션 */}
-              {users && users.pagination.totalPages > 1 && (
-                <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'center', gap: '8px', borderTop: '1px solid #e8ecf0' }}>
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage(p => p - 1)}
-                    style={{ padding: '6px 14px', border: '1px solid #e8ecf0', borderRadius: '8px', background: 'white', cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? '#b0bec5' : '#1a2533', fontSize: '13px' }}
-                  >
-                    이전
-                  </button>
-                  <span style={{ padding: '6px 12px', fontSize: '13px', color: '#6b7a8a' }}>
-                    {page} / {users.pagination.totalPages}
-                  </span>
-                  <button
-                    disabled={page >= users.pagination.totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    style={{ padding: '6px 14px', border: '1px solid #e8ecf0', borderRadius: '8px', background: 'white', cursor: page >= users.pagination.totalPages ? 'not-allowed' : 'pointer', color: page >= users.pagination.totalPages ? '#b0bec5' : '#1a2533', fontSize: '13px' }}
-                  >
-                    다음
-                  </button>
+            <div className={styles.userList}>
+              {users.items.map((u) => (
+                <div key={u.id} className={styles.userCard}>
+                  <div className={styles.userCardHeader}>
+                    <span className={styles.userName}>{u.name}</span>
+                    <span className={getRoleBadgeClass(u.role)}>
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                  </div>
+                  <div className={styles.userDetails}>
+                    <span className={styles.userEmail}>{u.email}</span>
+                    <div className={styles.userMeta}>
+                      <span>코드 <span className={styles.userCode}>{u.publicCode}</span></span>
+                      <span>·</span>
+                      <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
 
-              {users?.items.length === 0 && (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#6b7a8a', fontSize: '14px' }}>사용자가 없어요.</div>
-              )}
-            </>
+          {/* 페이지네이션 */}
+          {users && users.pagination.totalPages > 1 && (
+            <div className={styles.pagination}>
+              <button
+                type="button"
+                className={styles.pageButton}
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                이전
+              </button>
+              <span className={styles.pageInfo}>
+                {page} / {users.pagination.totalPages}
+              </span>
+              <button
+                type="button"
+                className={styles.pageButton}
+                disabled={page >= users.pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                다음
+              </button>
+            </div>
           )}
         </section>
       </main>
-    </div>
+    </AppShell>
   );
 }

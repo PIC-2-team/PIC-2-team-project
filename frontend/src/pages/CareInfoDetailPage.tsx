@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { getRecordsByCategory, pinRecord } from '../api/records';
+import { getCareInfoByCategory } from '../api/careInfo';
+import type { DailyRecord, RecordCategory } from '../types/record';
+import type { CareInfo } from '../types/careInfo';
+import { toSeoulDateKey } from '../utils/date';
 import styles from './CareInfoDetailPage.module.css';
 
 interface CareInfoItem {
@@ -9,55 +15,141 @@ interface CareInfoItem {
   updatedAt: string;
 }
 
-const CATEGORY_META: Record<string, { label: string; bg: string; color: string }> = {
-  COMMUNICATION: { label: '의사소통', bg: '#e8f5ee', color: '#3CAB7E' },
-  PREFERENCE: { label: '선호/비선호', bg: '#fdedf0', color: '#e05555' },
-  LIFESTYLE: { label: '생활습관', bg: '#fff3e8', color: '#f57c00' },
-  HEALTH_MEDICATION: { label: '건강·복약', bg: '#e8f0fb', color: '#5b8dee' },
-  PRECAUTION: { label: '주의사항', bg: '#fff8e1', color: '#f9a825' },
-  EMERGENCY: { label: '위기대응', bg: '#fdedf0', color: '#e05555' },
-};
-
-const MOCK_DATA: Record<string, CareInfoItem[]> = {
-  COMMUNICATION: [
-    { id: 1, content: '말로 표현하기 어려울 때 손을 잡거나 물건을 가리키는 방식으로 의사를 표현해요.', pinned: true, updatedAt: '2026.10.08' },
-    { id: 2, content: '싫다는 표현은 고개를 세게 흔들거나 자리를 피하는 행동으로 나타나요.', pinned: true, updatedAt: '2026.10.07' },
-    { id: 3, content: '원하는 것이 있을 때 해당 물건을 가져오거나 그림을 가리켜요.', pinned: false, updatedAt: '2026.10.05' },
-    { id: 4, content: '이름을 불러주면 잘 반응해요. 크게 부르면 놀랄 수 있으니 부드럽게 불러주세요.', pinned: false, updatedAt: '2026.09.30' },
-    { id: 5, content: '\"아니오\"라고 말하기 어려워해서 고개를 젓거나 손을 내미는 행동이 거절 표현이에요.', pinned: false, updatedAt: '2026.09.28' },
-  ],
-  PREFERENCE: [
-    { id: 1, content: '음악 듣기와 색연필 그림 그리기를 좋아해요. 동요를 들으면 금방 기분이 좋아져요.', pinned: true, updatedAt: '2026.10.08' },
-    { id: 2, content: '큰 소음(폭죽, 공사 소음)이나 갑작스러운 소리에 매우 예민하게 반응해요.', pinned: true, updatedAt: '2026.10.06' },
-    { id: 3, content: '외출 시 익숙한 경로와 장소를 선호해요. 새 장소는 사전에 사진으로 미리 보여주세요.', pinned: false, updatedAt: '2026.10.03' },
-    { id: 4, content: '파란색 계열 물건을 좋아하고 선호해요. 빨간색은 싫어하는 경향이 있어요.', pinned: false, updatedAt: '2026.09.25' },
-    { id: 5, content: '사람이 많은 곳을 힘들어해요. 마트 방문은 이른 오전이나 저녁 늦게가 좋아요.', pinned: false, updatedAt: '2026.09.20' },
-  ],
-  LIFESTYLE: [
-    { id: 1, content: '매일 오전 7시 기상, 오후 10시 취침. 루틴이 바뀌면 불안해할 수 있어요.', pinned: true, updatedAt: '2026.10.07' },
-    { id: 2, content: '양치 시 보조가 필요해요. 혼자 하면 잇몸에 상처를 낼 수 있어요.', pinned: true, updatedAt: '2026.10.05' },
-    { id: 3, content: '식사 후 약 30분 산책을 즐겨요. 날씨가 좋은 날에는 꼭 나가고 싶어해요.', pinned: false, updatedAt: '2026.10.03' },
-    { id: 4, content: '옷 입기는 스스로 할 수 있지만, 단추와 지퍼는 도움이 필요해요.', pinned: false, updatedAt: '2026.09.30' },
-    { id: 5, content: '샤워는 15분 이내로 끝내야 해요. 더 길어지면 피부가 건조해지고 가려움을 호소해요.', pinned: false, updatedAt: '2026.09.22' },
-  ],
-  HEALTH_MEDICATION: [
-    { id: 1, content: '리스페리돈 0.5mg — 매일 저녁 식후 30분 복용. 빠뜨리면 다음 날 기분 기복이 심해요.', pinned: true, updatedAt: '2026.10.08' },
-    { id: 2, content: '땅콩·호두 등 견과류 알레르기. 접촉만으로도 두드러기 반응. 식품 성분표 꼭 확인해주세요.', pinned: true, updatedAt: '2026.10.07' },
-    { id: 3, content: '두통이 있을 때 이마를 자주 만지고 눈을 찡그려요. 조용한 공간에서 쉬게 해주세요.', pinned: false, updatedAt: '2026.10.01' },
-    { id: 4, content: '변비 경향이 있어요. 수분과 섬유질 음식(채소, 과일)을 충분히 드실 수 있도록 신경 써주세요.', pinned: false, updatedAt: '2026.09.28' },
-  ],
-  PRECAUTION: [
-    { id: 1, content: '갑자기 손목을 잡으면 큰 소리를 지르거나 공격적 반응을 보일 수 있어요. 접촉 전 반드시 말로 알려주세요.', pinned: true, updatedAt: '2026.10.08' },
-    { id: 2, content: '새로운 환경 적응에 시간이 필요해요. 방문 전 사진·동영상으로 미리 설명해주세요.', pinned: true, updatedAt: '2026.10.06' },
-    { id: 3, content: '낯선 사람과의 첫 만남을 어려워해요. 처음에는 가까이 다가가기보다 조금 거리를 두세요.', pinned: false, updatedAt: '2026.10.02' },
-    { id: 4, content: '무언가를 강요하면 더 강하게 저항해요. 선택지를 두 개 주고 스스로 고르게 해주세요.', pinned: false, updatedAt: '2026.09.25' },
-  ],
-  EMERGENCY: [
-    { id: 1, content: '자해(손 물기, 머리 박기) 시: 부드럽게 이름을 부르고, 좋아하는 동요를 틀어주세요. 강제로 막으면 악화돼요.', pinned: true, updatedAt: '2026.10.08' },
-    { id: 2, content: '발작 증상 시: 즉시 119 신고 → 주변 위험물 제거 → 옆으로 눕히기. 강제로 입을 벌리지 마세요.', pinned: true, updatedAt: '2026.10.07' },
-    { id: 3, content: '긴급 보호자 연락처: 어머니 김○○ 010-XXXX-XXXX / 아버지 박○○ 010-XXXX-XXXX', pinned: true, updatedAt: '2026.10.01' },
-    { id: 4, content: '담당 사회복지사 이○○: 010-XXXX-XXXX (대구장애인복지관 053-XXX-XXXX)', pinned: false, updatedAt: '2026.09.30' },
-  ],
+const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; color: string; normalizedCategory: RecordCategory; icon: React.ReactNode }> = {
+  COMMUNICATION: {
+    label: '의사소통',
+    desc: '의사소통 방식 및 표현 특징',
+    bg: '#e8f5ee',
+    color: '#3CAB7E',
+    normalizedCategory: 'COMMUNICATION',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <circle cx="13" cy="15" r="8" fill="#3CAB7E" />
+        <circle cx="23" cy="19" r="8" fill="#2d9468" />
+        <circle cx="10" cy="13" r="3" fill="white" opacity="0.6" />
+        <circle cx="16" cy="13" r="3" fill="white" opacity="0.6" />
+        <circle cx="20" cy="17" r="3" fill="white" opacity="0.6" />
+        <circle cx="26" cy="17" r="3" fill="white" opacity="0.6" />
+      </svg>
+    ),
+  },
+  LIFESTYLE: {
+    label: '생활습관',
+    desc: '일과 루틴 및 생활 보조 정보',
+    bg: '#fff3e8',
+    color: '#f57c00',
+    normalizedCategory: 'LIFESTYLE',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M6 16L18 6l12 10v14H6V16z" fill="#f57c00" />
+        <rect x="14" y="22" width="8" height="8" rx="1" fill="white" opacity="0.8" />
+      </svg>
+    ),
+  },
+  MEAL: {
+    label: '식사',
+    desc: '식습관, 선호 음식 및 식사 보조 정보',
+    bg: '#fff0f6',
+    color: '#c2185b',
+    normalizedCategory: 'MEAL',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <ellipse cx="18" cy="20" rx="11" ry="8" fill="#c2185b" opacity="0.15" />
+        <ellipse cx="18" cy="20" rx="11" ry="8" stroke="#c2185b" strokeWidth="2" />
+        <line x1="10" y1="8" x2="10" y2="16" stroke="#c2185b" strokeWidth="2" strokeLinecap="round" />
+        <line x1="14" y1="8" x2="14" y2="16" stroke="#c2185b" strokeWidth="2" strokeLinecap="round" />
+        <line x1="26" y1="8" x2="26" y2="16" stroke="#c2185b" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  PREFERENCE: {
+    label: '선호/비선호',
+    desc: '좋아하는 것과 싫어하는 것',
+    bg: '#fdedf0',
+    color: '#e05555',
+    normalizedCategory: 'PREFERENCE',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 29s-13-8.5-13-16a8 8 0 0116 0 8 8 0 0116 0c0 7.5-13 16-19 16z" fill="#e05555" />
+      </svg>
+    ),
+  },
+  CHALLENGING_BEHAVIOR: {
+    label: '도전행동 · 주의사항',
+    desc: '주의해야 할 행동과 사전 대처방법',
+    bg: '#fef3e2',
+    color: '#e65100',
+    normalizedCategory: 'CHALLENGING_BEHAVIOR',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 6 L30 28 H6 Z" fill="#e65100" opacity="0.15" />
+        <path d="M18 6 L30 28 H6 Z" stroke="#e65100" strokeWidth="2" strokeLinejoin="round" />
+        <rect x="16.5" y="14" width="3" height="7" rx="1.5" fill="#e65100" />
+        <circle cx="18" cy="24.5" r="1.8" fill="#e65100" />
+      </svg>
+    ),
+  },
+  PRECAUTION: {
+    label: '주의사항',
+    desc: '주의해야 할 행동과 사전 대처방법',
+    bg: '#fff8e1',
+    color: '#f9a825',
+    normalizedCategory: 'CHALLENGING_BEHAVIOR',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 6 L30 28 H6 Z" fill="#f9a825" stroke="#f9a825" strokeWidth="2" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  HEALTH: {
+    label: '건강·복약',
+    desc: '복약 시간, 알레르기 및 건강 상태',
+    bg: '#e8f0fb',
+    color: '#5b8dee',
+    normalizedCategory: 'HEALTH',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <rect x="8" y="14" width="20" height="9" rx="4.5" fill="#5b8dee" transform="rotate(-45 18 18)" />
+      </svg>
+    ),
+  },
+  HEALTH_MEDICATION: {
+    label: '건강·복약',
+    desc: '복약 시간, 알레르기 및 건강 상태',
+    bg: '#e8f0fb',
+    color: '#5b8dee',
+    normalizedCategory: 'HEALTH',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <rect x="8" y="14" width="20" height="9" rx="4.5" fill="#5b8dee" transform="rotate(-45 18 18)" />
+      </svg>
+    ),
+  },
+  EMERGENCY: {
+    label: '위기대응',
+    desc: '위기 상황 발생 시 대처 및 비상 연락망',
+    bg: '#fdedf0',
+    color: '#e05555',
+    normalizedCategory: 'EMERGENCY',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <rect x="10" y="18" width="16" height="10" rx="2" fill="#e05555" />
+        <path d="M13 18V14a5 5 0 0110 0v4" stroke="#e05555" strokeWidth="2.5" fill="none" />
+      </svg>
+    ),
+  },
+  OTHER: {
+    label: '기타',
+    desc: '기타 돌봄 참고 사항',
+    bg: '#f5f5f5',
+    color: '#757575',
+    normalizedCategory: 'OTHER',
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <circle cx="18" cy="18" r="12" fill="#9e9e9e" opacity="0.15" />
+      </svg>
+    ),
+  },
 };
 
 function PinIcon({ filled }: { filled: boolean }) {
@@ -78,18 +170,77 @@ function PinIcon({ filled }: { filled: boolean }) {
 export default function CareInfoDetailPage() {
   const { categoryId = '' } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
+  const { selectedRecipientId, user } = useAuth();
   const meta = CATEGORY_META[categoryId];
-  const initial = MOCK_DATA[categoryId] ?? [];
-  const [items, setItems] = useState<CareInfoItem[]>(initial);
 
-  const togglePin = (id: number) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, pinned: !item.pinned } : item));
+  const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [careInfo, setCareInfo] = useState<CareInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedRecipientId || !meta) return;
+    let isCurrent = true;
+    setIsLoading(true);
+    setError(null);
+
+    Promise.allSettled([
+      getRecordsByCategory(selectedRecipientId, meta.normalizedCategory),
+      getCareInfoByCategory(selectedRecipientId, meta.normalizedCategory),
+    ]).then(([recResult, infoResult]) => {
+      if (!isCurrent) return;
+      if (recResult.status === 'fulfilled') {
+        setRecords(recResult.value.items ?? []);
+      } else {
+        setError(recResult.reason instanceof Error ? recResult.reason.message : '기록을 불러오지 못했어요.');
+      }
+      if (infoResult.status === 'fulfilled') {
+        setCareInfo(infoResult.value);
+      }
+    }).finally(() => {
+      if (isCurrent) setIsLoading(false);
+    });
+
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, meta]);
+
+  if (!meta) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <button type="button" className={styles.backButton} onClick={() => navigate('/care-info')} aria-label="뒤로가기">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 19l-7-7 7-7" stroke="#1a2533" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <h1 className={styles.title}>돌봄정보</h1>
+          <div className={styles.headerRight} />
+        </header>
+        <div className={styles.body}>
+          <p className="error">존재하지 않는 카테고리입니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isGuardian = user?.role === 'GUARDIAN';
+
+  const togglePin = async (recordId: number, currentPinned: boolean) => {
+    if (!selectedRecipientId || !isGuardian) return;
+    // 낙관적 업데이트
+    setRecords(prev => prev.map(r => r.id === recordId ? { ...r, pinned: !currentPinned } : r));
+    try {
+      await pinRecord(selectedRecipientId, recordId, !currentPinned);
+    } catch {
+      // 롤백
+      setRecords(prev => prev.map(r => r.id === recordId ? { ...r, pinned: currentPinned } : r));
+      setError('중요 정보 고정에 실패했어요.');
+    }
   };
 
-  const pinned = items.filter(i => i.pinned);
-  const unpinned = items.filter(i => !i.pinned);
-
-  if (!meta) return null;
+  const pinned = records.filter(r => r.pinned);
+  const unpinned = records.filter(r => !r.pinned);
+  const hasCareInfoContent = careInfo && (typeof careInfo.content === 'string' ? careInfo.content.length > 0 : careInfo.content != null);
 
   return (
     <div className={styles.page}>
@@ -109,22 +260,73 @@ export default function CareInfoDetailPage() {
       </header>
 
       <div className={styles.body}>
+        <div className={styles.bannerCard} style={{ background: meta.bg }}>
+          <div className={styles.bannerIcon}>{meta.icon}</div>
+          <div className={styles.bannerText}>
+            <h2 className={styles.bannerTitle}>{meta.label}</h2>
+            <p className={styles.bannerDesc}>{meta.desc}</p>
+          </div>
+        </div>
+
+        {isLoading && <p className="muted" role="status">기록을 불러오는 중…</p>}
+        {error && <p className="error" role="alert">{error}</p>}
+
+        {hasCareInfoContent && (
+          <section className="demo-card">
+            <p className={styles.sectionLabel}>📋 기본 안내</p>
+            {typeof careInfo.content === 'string'
+              ? <p className={styles.cardContent}>{careInfo.content}</p>
+              : <pre style={{ fontSize: '0.8125rem', overflow: 'auto' }}>{JSON.stringify(careInfo.content, null, 2)}</pre>
+            }
+            {careInfo.updatedAt && (
+              <p className={styles.cardDate}>
+                마지막 업데이트: {new Date(careInfo.updatedAt).toLocaleDateString('ko-KR')}
+              </p>
+            )}
+          </section>
+        )}
+
         {pinned.length > 0 && (
           <section className={styles.pinnedSection}>
             <p className={styles.sectionLabel}>📌 중요 정보</p>
             <div className={styles.list}>
               {pinned.map(item => (
-                <ItemCard key={item.id} item={item} onTogglePin={togglePin} />
+                <ItemCard
+                  key={item.id}
+                  item={{
+                    id: item.id,
+                    content: item.content,
+                    pinned: true,
+                    updatedAt: toSeoulDateKey(item.recordedAt),
+                  }}
+                  onTogglePin={() => void togglePin(item.id, true)}
+                  canPin={isGuardian}
+                />
               ))}
             </div>
           </section>
         )}
 
         <section className={styles.allSection}>
-          <p className={styles.sectionLabel}>전체 기록 ({items.length})</p>
+          <p className={styles.sectionLabel}>전체 기록 ({records.length})</p>
+          {records.length === 0 && !isLoading && (
+            <div className="empty-state">
+              <p>아직 등록된 {meta.label} 기록이 없어요.</p>
+            </div>
+          )}
           <div className={styles.list}>
             {unpinned.map(item => (
-              <ItemCard key={item.id} item={item} onTogglePin={togglePin} />
+              <ItemCard
+                key={item.id}
+                item={{
+                  id: item.id,
+                  content: item.content,
+                  pinned: false,
+                  updatedAt: toSeoulDateKey(item.recordedAt),
+                }}
+                onTogglePin={() => void togglePin(item.id, false)}
+                canPin={isGuardian}
+              />
             ))}
           </div>
         </section>
@@ -135,12 +337,12 @@ export default function CareInfoDetailPage() {
           type="button"
           className={styles.addButton}
           style={{ background: meta.color }}
-          onClick={() => navigate('/records/new')}
+          onClick={() => navigate('/records/new', { state: { category: meta.normalizedCategory, returnToCareInfo: true } })}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M10 4v12M4 10h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
-          정보 추가하기
+          기록하기
         </button>
       </div>
     </div>
@@ -150,24 +352,28 @@ export default function CareInfoDetailPage() {
 function ItemCard({
   item,
   onTogglePin,
+  canPin,
 }: {
   item: CareInfoItem;
-  onTogglePin: (id: number) => void;
+  onTogglePin: () => void;
+  canPin: boolean;
 }) {
   return (
     <div className={`${styles.card} ${item.pinned ? styles.cardPinned : ''}`}>
       <p className={styles.cardContent}>{item.content}</p>
       <div className={styles.cardMeta}>
         <span className={styles.cardDate}>{item.updatedAt}</span>
-        <button
-          type="button"
-          className={styles.pinButton}
-          onClick={() => onTogglePin(item.id)}
-          aria-label={item.pinned ? '핀 해제' : '중요 정보로 고정'}
-          aria-pressed={item.pinned}
-        >
-          <PinIcon filled={item.pinned} />
-        </button>
+        {canPin && (
+          <button
+            type="button"
+            className={styles.pinButton}
+            onClick={onTogglePin}
+            aria-label={item.pinned ? '핀 해제' : '중요 정보로 고정'}
+            aria-pressed={item.pinned}
+          >
+            <PinIcon filled={item.pinned} />
+          </button>
+        )}
       </div>
     </div>
   );

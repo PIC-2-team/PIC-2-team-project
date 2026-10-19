@@ -15,6 +15,7 @@ export type DailyRecord = {
   content: string;
   category: RecordCategory;
   recordedAt: string; // ISO 8601
+  pinned?: boolean;
 };
 
 export type CreateRecordPayload = {

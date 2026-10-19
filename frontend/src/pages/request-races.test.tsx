@@ -33,7 +33,7 @@ it('카테고리 변경 시 불러온 개요에서 해당 정보를 표시한다
     ],
     pinnedRecords: [],
   });
-  render(<CareInfoPage />);
+  render(<MemoryRouter><CareInfoPage /></MemoryRouter>);
   await screen.findByText('기존 의사소통정보');
   fireEvent.click(screen.getByRole('button', { name: '선호·비선호' }));
   await screen.findByText('최신 선호정보');

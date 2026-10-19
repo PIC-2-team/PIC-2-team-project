@@ -32,7 +32,8 @@ public class DevDataInitializer implements CommandLineRunner {
         createTestUser("guardian@test.com", "테스트 보호자", "010-0000-0001", UserRole.GUARDIAN);
         createTestUser("worker@test.com", "테스트 요양사", "010-0000-0002", UserRole.SUPPORT_WORKER);
         createTestUser("institution@test.com", "테스트 기관", "010-0000-0003", UserRole.INSTITUTION);
-        log.info("[Dev] 테스트 계정 3개 생성 완료 (비밀번호: {})", TEST_PASSWORD);
+        createTestUser("admin@test.com", "테스트 관리자", "010-0000-0004", UserRole.ADMIN);
+        log.info("[Dev] 테스트 계정 4개 생성 완료 (비밀번호: {})", TEST_PASSWORD);
     }
 
     private void createTestUser(String email, String name, String phone, UserRole role) {

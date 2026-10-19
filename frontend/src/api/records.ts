@@ -16,6 +16,28 @@ export function getRecordsByMonth(
   );
 }
 
+export function getRecordsByCategory(
+  recipientId: number,
+  category: RecordCategory,
+  page = 1,
+  pageSize = 50
+): Promise<PaginatedData<DailyRecord>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/records?category=${category}&page=${page}&pageSize=${pageSize}`
+  );
+}
+
+export function pinRecord(
+  recipientId: number,
+  recordId: number,
+  pinned: boolean
+): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/pin`, {
+    method: 'PATCH',
+    body: { pinned },
+  });
+}
+
 // TODO: GET /records/{recordId} — 경로 초안, 미구현 (API-Spec.md §상세·수정·삭제)
 export function getRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
@@ -55,4 +77,21 @@ export function uploadRecordAudio(recipientId: number, file: File): Promise<{ me
 
 export function deleteRecordMedia(recipientId: number, mediaId: number): Promise<{ deleted: boolean }> {
   return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
+}
+
+export type RecordSuggestion = {
+  id: number;
+  suggestedContent: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+};
+
+export function createSuggestion(
+  recipientId: number,
+  recordId: number,
+  suggestedContent: string,
+): Promise<RecordSuggestion> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/suggestions`, {
+    method: 'POST',
+    body: { suggestedContent },
+  });
 }

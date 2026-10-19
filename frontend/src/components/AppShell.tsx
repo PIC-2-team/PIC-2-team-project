@@ -8,10 +8,12 @@ const ROLE_LABEL = { GUARDIAN: '돌봄 보호자', SUPPORT_WORKER: '활동지원
 export function AppShell({ children, footer, role, homeDisabled = false }: { children: ReactNode; footer?: ReactNode; role?: UserRole; homeDisabled?: boolean }) {
   const [largeText, setLargeText] = useState(false);
 
+  const homePath = role === 'ADMIN' ? '/admin' : role === 'INSTITUTION' ? '/agency' : '/home';
+
   return (
     <div className={`app-shell ${largeText ? 'large-text' : ''}`}>
       <header className="app-header">
-        {homeDisabled ? <span className="brand">삶결</span> : <Link className="brand" to="/home">삶결</Link>}
+        {homeDisabled ? <span className="brand">삶결</span> : <Link className="brand" to={homePath}>삶결</Link>}
         <div>
           <button
             type="button"
