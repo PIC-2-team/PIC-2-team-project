@@ -47,9 +47,20 @@ npm run dev
 
 ### BE
 
+기본 (H2 인메모리):
 ```bash
 cd backend
 ./gradlew bootRun
+```
+
+MySQL 로컬 환경 (prod와 동일한 DB 드라이버로 테스트할 때):
+```bash
+# 1. MySQL 컨테이너 실행
+docker compose up -d
+
+# 2. local 프로파일로 기동
+cd backend
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
 ---
