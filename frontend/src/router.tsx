@@ -10,6 +10,7 @@ import { DailyRecordPage } from './pages/DailyRecordPage';
 import { RecordFormPage } from './pages/RecordFormPage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
+import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -48,7 +49,10 @@ export const router = createBrowserRouter([
       },
       {
         element: <RequireRecipient />,
-        children: [{ path: '/records/:id', element: <RecordDetailPage /> }],
+        children: [
+          { path: '/records/:id', element: <RecordDetailPage /> },
+          { path: '/care-info/:categoryId', element: <CareInfoDetailPage /> },
+        ],
       },
     ],
   },

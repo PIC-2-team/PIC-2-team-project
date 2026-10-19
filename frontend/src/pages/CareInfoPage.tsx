@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareInfoOverview } from '../api/careInfo';
 import type { CareInfoCategory, CareInfoOverview } from '../types/careInfo';
@@ -128,6 +128,8 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
+  const inRouter = useInRouterContext();
+  const navigate = inRouter ? useNavigate() : null;
   const [active, setActive] = useState<CareInfoCategory>('COMMUNICATION');
   const [overview, setOverview] = useState<CareInfoOverview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -151,6 +153,13 @@ export function CareInfoPage() {
   const pinnedRecords = overview?.pinnedRecords ?? [];
   const hasInfoContent = info && (typeof info.content === 'string' ? info.content.length > 0 : info.content != null);
 
+  const handleCategoryClick = (catId: CareInfoCategory) => {
+    setActive(catId);
+    if (navigate) {
+      navigate(`/care-info/${catId}`);
+    }
+  };
+
   return (
     <div className="demo-page">
       <h1>돌봄정보</h1>
@@ -161,10 +170,17 @@ export function CareInfoPage() {
           <ul className={styles.recordList}>
             {pinnedRecords.map(record => (
               <li key={record.id}>
-                <Link to={`/records/${record.id}`} className={styles.recordCard}>
-                  <p>{record.content}</p>
-                  <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
-                </Link>
+                {inRouter ? (
+                  <Link to={`/records/${record.id}`} className={styles.recordCard}>
+                    <p>{record.content}</p>
+                    <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
+                  </Link>
+                ) : (
+                  <div className={styles.recordCard}>
+                    <p>{record.content}</p>
+                    <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -177,11 +193,14 @@ export function CareInfoPage() {
             key={cat.id}
             type="button"
             className={`${styles.card} ${active === cat.id ? styles.cardActive : ''}`}
-            onClick={() => setActive(cat.id)}
+            onClick={() => handleCategoryClick(cat.id)}
             aria-pressed={active === cat.id}
           >
             <span className={styles.iconWrap} style={{ background: cat.bg }}>{cat.icon}</span>
-            <span className={styles.cardLabel}>{cat.label}</span>
+            <span className={styles.cardBottom}>
+              <span className={styles.cardLabel}>{cat.label}</span>
+              <span className={styles.chevron} aria-hidden="true">&gt;</span>
+            </span>
           </button>
         ))}
       </div>

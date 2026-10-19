@@ -260,6 +260,37 @@
   margin-top: 0.25rem;
 }
 
+.textMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.draftOutlineButton {
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #3cab7e;
+  border-radius: 20px;
+  background: #f0f7f3;
+  color: #26865f;
+  font: inherit;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.draftOutlineButton:hover:not(:disabled) {
+  background: #e1f2e8;
+}
+
+.draftOutlineButton:disabled {
+  border-color: #dde3ea;
+  background: #f5f7f9;
+  color: #b8c4ce;
+  cursor: not-allowed;
+}
+
 .reviewCard {
   display: flex;
   flex-direction: column;
