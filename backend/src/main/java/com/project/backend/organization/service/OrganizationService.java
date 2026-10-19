@@ -43,6 +43,26 @@ public class OrganizationService {
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
 
+    public OrganizationResponse register(Long ownerId, RegisterOrganizationRequest request) {
+        User owner = findUser(ownerId);
+        if (owner.getRole() != UserRole.INSTITUTION) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "기관 계정만 기관을 등록할 수 있습니다.");
+        }
+        if (organizationRepository.findByOwnerId(ownerId).isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_EXISTS", "이미 기관을 보유하고 있습니다.");
+        }
+
+        Organization org = organizationRepository.findByOrganizationCode(request.organizationCode().trim().toUpperCase())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관 코드를 찾을 수 없습니다."));
+
+        if (org.getOwnerId() != null) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_REGISTERED", "이미 등록된 기관 코드입니다.");
+        }
+
+        org.assignOwner(ownerId);
+        return OrganizationResponse.from(org);
+    }
+
     public OrganizationResponse create(Long ownerId, CreateOrganizationRequest request) {
         User owner = findUser(ownerId);
         if (owner.getRole() != UserRole.INSTITUTION) {

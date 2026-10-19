@@ -4,7 +4,7 @@ import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
 import com.project.backend.common.exception.ApiException;
-import com.project.backend.organization.dto.CreateOrganizationRequest;
+import com.project.backend.organization.dto.RegisterOrganizationRequest;
 import com.project.backend.organization.dto.LinkRequestResponse;
 import com.project.backend.organization.dto.MemberResponse;
 import com.project.backend.organization.dto.OrganizationResponse;
@@ -46,42 +46,68 @@ class OrganizationServiceTest {
     @InjectMocks OrganizationService organizationService;
 
     @Test
-    void create_INSTITUTION_사용자가_기관_생성() {
+    void register_INSTITUTION_사용자가_유효한_6자리_코드로_기관_등록() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(organizationRepository.existsByOrganizationCode(anyString())).willReturn(false);
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
-        given(organizationRepository.save(any())).willAnswer(inv -> {
-            Organization org = inv.getArgument(0);
-            ReflectionTestUtils.setField(org, "id", 10L);
-            return org;
-        });
 
-        OrganizationResponse response = organizationService.create(1L, new CreateOrganizationRequest("행복복지관"));
+        Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(null).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOrganizationCode("KNU001")).willReturn(Optional.of(org));
 
+        OrganizationResponse response = organizationService.register(1L, new RegisterOrganizationRequest("KNU001"));
+
+        assertThat(response.id()).isEqualTo(10L);
         assertThat(response.name()).isEqualTo("행복복지관");
-        assertThat(response.organizationCode()).isNotBlank();
+        assertThat(response.organizationCode()).isEqualTo("KNU001");
+        assertThat(org.getOwnerId()).isEqualTo(1L);
     }
 
     @Test
-    void create_비Institution_사용자는_FORBIDDEN_예외() {
+    void register_비Institution_사용자는_FORBIDDEN_예외() {
         User guardian = guardianUser(2L);
         given(userRepository.findById(2L)).willReturn(Optional.of(guardian));
 
-        assertThatThrownBy(() -> organizationService.create(2L, new CreateOrganizationRequest("기관")))
+        assertThatThrownBy(() -> organizationService.register(2L, new RegisterOrganizationRequest("KNU001")))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
-    void create_이미_기관_보유한_사용자는_CONFLICT_예외() {
+    void register_이미_기관_보유한_사용자는_CONFLICT_예외() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(
-                Organization.builder().ownerId(1L).name("기존기관").organizationCode("ORGCODE12").build()
+                Organization.builder().ownerId(1L).name("기존기관").organizationCode("ORG101").build()
         ));
 
-        assertThatThrownBy(() -> organizationService.create(1L, new CreateOrganizationRequest("새기관")))
+        assertThatThrownBy(() -> organizationService.register(1L, new RegisterOrganizationRequest("KNU001")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void register_존재하지_않는_기관코드는_NOT_FOUND_예외() {
+        User owner = institutionUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
+        given(organizationRepository.findByOrganizationCode("NOT999")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> organizationService.register(1L, new RegisterOrganizationRequest("NOT999")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void register_이미_다른_담당자가_등록한_기관코드는_CONFLICT_예외() {
+        User owner = institutionUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
+
+        Organization org = Organization.builder().name("선점기관").organizationCode("OCC001").ownerId(99L).build();
+        given(organizationRepository.findByOrganizationCode("OCC001")).willReturn(Optional.of(org));
+
+        assertThatThrownBy(() -> organizationService.register(1L, new RegisterOrganizationRequest("OCC001")))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.CONFLICT);
     }

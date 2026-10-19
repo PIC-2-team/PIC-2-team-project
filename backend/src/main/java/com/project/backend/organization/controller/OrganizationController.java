@@ -25,12 +25,12 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final CareAssignmentService careAssignmentService;
 
-    @Operation(summary = "기관 생성")
+    @Operation(summary = "기관 등록 (6자리 코드)")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<OrganizationResponse> create(@AuthenticationPrincipal Long userId,
-                                                     @Valid @RequestBody CreateOrganizationRequest request) {
-        return ApiResponse.ok(organizationService.create(userId, request));
+    public ApiResponse<OrganizationResponse> register(@AuthenticationPrincipal Long userId,
+                                                       @Valid @RequestBody RegisterOrganizationRequest request) {
+        return ApiResponse.ok(organizationService.register(userId, request));
     }
 
     @Operation(summary = "내 기관 조회")

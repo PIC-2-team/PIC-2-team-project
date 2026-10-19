@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppShell } from '../../components/AppShell';
 import TabBar from '../../components/TabBar/TabBar';
-import { getMyOrganization, getMembers, getAssignments, createOrganization } from '../../api/organizations';
+import { getMyOrganization, getMembers, getAssignments, registerOrganization } from '../../api/organizations';
 import { ApiError } from '../../api/client';
 import type { Organization, OrganizationMember, CareAssignment } from '../../types/agency';
 
@@ -15,7 +15,7 @@ type PageState =
 export function AgencyDashboardPage() {
   const { user } = useAuth();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
-  const [orgName, setOrgName] = useState('');
+  const [orgCode, setOrgCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
 
@@ -60,11 +60,12 @@ export function AgencyDashboardPage() {
 
   const handleRegisterOrg = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgName.trim() || isSubmitting) return;
+    const code = orgCode.trim().toUpperCase();
+    if (!code || isSubmitting) return;
     setIsSubmitting(true);
     setRegisterError(null);
     try {
-      await createOrganization({ name: orgName.trim() });
+      await registerOrganization({ organizationCode: code });
       await fetchDashboardData();
     } catch (err) {
       setRegisterError(err instanceof Error ? err.message : '기관 등록에 실패했어요.');
@@ -87,21 +88,21 @@ export function AgencyDashboardPage() {
         {page.status === 'not_found' && (
           <section className="demo-card">
             <h2>소속 기관을 등록해 주세요</h2>
-            <p className="muted">기관 대시보드를 이용하려면 먼저 소속 기관 정보를 등록해야 합니다.</p>
+            <p className="muted">기관 대시보드를 이용하려면 슈퍼 어드민에서 발급받은 6자리 기관 코드를 등록해야 합니다.</p>
             <form className="demo-form" onSubmit={(e) => { void handleRegisterOrg(e); }}>
               <label>
-                기관 이름
+                기관 코드 (6자리)
                 <input
                   type="text"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="예: 삶결 복지센터"
+                  value={orgCode}
+                  onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                  placeholder="예: KNU001"
                   required
-                  maxLength={100}
+                  maxLength={6}
                 />
               </label>
               {registerError && <p className="error" role="alert">{registerError}</p>}
-              <button className="btn" type="submit" disabled={!orgName.trim() || isSubmitting}>
+              <button className="btn" type="submit" disabled={!orgCode.trim() || isSubmitting}>
                 {isSubmitting ? '등록 중…' : '기관 등록'}
               </button>
             </form>

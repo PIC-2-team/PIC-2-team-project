@@ -1,7 +1,15 @@
 import type { Organization, OrganizationMember, CareAssignment, LinkRequest } from '../types/agency';
 import { apiRequest } from './client';
 
-export function createOrganization(payload: { name: string }): Promise<Organization> {
+export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
+  return apiRequest('/api/organizations', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+// 하위 호환성을 위해 유지
+export function createOrganization(payload: { name?: string; organizationCode?: string }): Promise<Organization> {
   return apiRequest('/api/organizations', {
     method: 'POST',
     body: payload,
