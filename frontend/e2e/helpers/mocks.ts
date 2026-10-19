@@ -1,10 +1,12 @@
 import type { Page, Route } from '@playwright/test';
+import type { LoginResponse } from '../../src/types/auth';
+import type { User } from '../../src/types/user';
 
 // 테스트용 계정 픽스처
 export const TEST_USERS = {
-  guardian: { email: 'guardian@test.com', password: 'Test1234!', role: 'GUARDIAN', id: 101, name: '테스트 보호자' },
-  worker:   { email: 'worker@test.com',   password: 'Test1234!', role: 'SUPPORT_WORKER', id: 102, name: '테스트 지원사' },
-  agency:   { email: 'institution@test.com', password: 'Test1234!', role: 'INSTITUTION', id: 103, name: '테스트 기관' },
+  guardian: { email: 'guardian@test.com', password: 'Test1234!', role: 'GUARDIAN' as const, id: 101, name: '테스트 보호자' },
+  worker:   { email: 'worker@test.com',   password: 'Test1234!', role: 'SUPPORT_WORKER' as const, id: 102, name: '테스트 지원사' },
+  agency:   { email: 'institution@test.com', password: 'Test1234!', role: 'INSTITUTION' as const, id: 103, name: '테스트 기관' },
 } as const;
 
 type TestUser = typeof TEST_USERS[keyof typeof TEST_USERS];
@@ -13,10 +15,18 @@ function ok<T>(data: T) {
   return { success: true, data };
 }
 
+function makeUser(u: TestUser): User {
+  return { id: u.id, name: u.name, email: u.email, role: u.role };
+}
+
+function makeLoginResponse(u: TestUser): LoginResponse {
+  return { accessToken: `mock-token-${u.id}`, user: makeUser(u) };
+}
+
 // 특정 사용자로 로그인하는 API 응답 모킹
 export async function mockLogin(page: Page, user: TestUser) {
   await page.route('**/api/auth/login', (route: Route) =>
-    route.fulfill({ json: ok({ accessToken: `mock-token-${user.id}`, user: { id: user.id, name: user.name, email: user.email, role: user.role } }) })
+    route.fulfill({ json: ok(makeLoginResponse(user)) })
   );
 }
 
@@ -30,14 +40,7 @@ export async function mockConsent(page: Page) {
 // 이메일 회원가입 API 모킹
 export async function mockRegister(page: Page, user: TestUser) {
   await page.route('**/api/auth/register', (route: Route) =>
-    route.fulfill({ json: ok({ accessToken: `mock-token-${user.id}`, user: { id: user.id, name: user.name, email: user.email, role: user.role } }) })
-  );
-}
-
-// refresh 토큰 모킹 (페이지 이동 시 자동 갱신)
-export async function mockRefresh(page: Page, user: TestUser) {
-  await page.route('**/api/auth/refresh', (route: Route) =>
-    route.fulfill({ json: ok({ accessToken: `mock-token-${user.id}` }) })
+    route.fulfill({ json: ok(makeLoginResponse(user)) })
   );
 }
 
@@ -82,7 +85,7 @@ export async function mockNotifications(page: Page) {
   );
 }
 
-// 로그인 후 홈까지 이동하는 헬퍼
+// 로그인 후 홈까지 이동하는 공유 헬퍼 — 모든 스펙에서 재사용
 export async function loginAndGoHome(page: Page, user: TestUser) {
   await mockLogin(page, user);
   await mockRecipients(page);

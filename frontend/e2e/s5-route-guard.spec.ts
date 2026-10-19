@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, mockLogin, mockRecipients, mockRecords, mockCareInfo, mockNotifications } from './helpers/mocks';
+import { TEST_USERS, loginAndGoHome, mockLogin, mockOrganization, mockNotifications } from './helpers/mocks';
 
 test.describe('S5 — 역할별 라우트 보호', () => {
   test('미인증 상태에서 /home 접근 시 /login으로 리다이렉트된다', async ({ page }) => {
@@ -23,18 +23,7 @@ test.describe('S5 — 역할별 라우트 보호', () => {
   });
 
   test('SUPPORT_WORKER는 /records/new에 접근하면 /home으로 리다이렉트된다', async ({ page }) => {
-    const user = TEST_USERS.worker;
-
-    await mockLogin(page, user);
-    await mockRecipients(page);
-    await mockRecords(page);
-    await mockCareInfo(page);
-    await mockNotifications(page);
-
-    await page.goto('/login');
-    await page.fill('input[type="email"]', user.email);
-    await page.fill('input[type="password"]', user.password);
-    await page.click('button[type="submit"]');
+    await loginAndGoHome(page, TEST_USERS.worker);
     await expect(page).toHaveURL('/home');
 
     await page.goto('/records/new');
@@ -43,11 +32,8 @@ test.describe('S5 — 역할별 라우트 보호', () => {
 
   test('INSTITUTION은 /home 접근 시 /agency로 리다이렉트된다', async ({ page }) => {
     const user = TEST_USERS.agency;
-
     await mockLogin(page, user);
-    await page.route('**/api/organizations*', route =>
-      route.fulfill({ json: { success: true, data: { id: 1, name: '테스트 기관', assignments: [] } } })
-    );
+    await mockOrganization(page);
     await mockNotifications(page);
 
     await page.goto('/login');
@@ -61,21 +47,11 @@ test.describe('S5 — 역할별 라우트 보호', () => {
   });
 
   test('로그인 후 원래 접근하려던 페이지로 돌아간다 (?redirect 파라미터)', async ({ page }) => {
-    const user = TEST_USERS.guardian;
-
-    await mockLogin(page, user);
-    await mockRecipients(page);
-    await mockRecords(page);
-    await mockCareInfo(page);
-    await mockNotifications(page);
-
+    // 미인증 상태에서 /home 접근 → /login?redirect=/home 으로 이동
     await page.goto('/home');
-    const loginUrl = page.url();
-    expect(loginUrl).toContain('redirect=');
+    await expect(page).toHaveURL(/\/login.*redirect/);
 
-    await page.fill('input[type="email"]', user.email);
-    await page.fill('input[type="password"]', user.password);
-    await page.click('button[type="submit"]');
+    await loginAndGoHome(page, TEST_USERS.guardian);
     await expect(page).toHaveURL('/home');
   });
 });
