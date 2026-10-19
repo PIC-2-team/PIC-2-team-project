@@ -54,6 +54,33 @@ export function MorePage() {
         </div>
       </div>
 
+      {user?.role === 'GUARDIAN' && (
+        <div>
+          <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>돌봄 관리</p>
+          <div className="demo-card" style={{ padding: 0, gap: 0 }}>
+            <button
+              type="button"
+              className="menu-link"
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                font: 'inherit',
+                padding: '16px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+              onClick={() => navigate('/record-suggestions')}
+            >
+              <span>수정 제안 검토</span>
+              <span style={{ color: 'var(--green)' }} aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {MENU_SECTIONS.map(section => (
         <div key={section.title}>
           <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>{section.title}</p>
