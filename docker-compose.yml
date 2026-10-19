@@ -1,0 +1,29 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: samgyeol
+      MYSQL_USER: samgyeol
+      MYSQL_PASSWORD: samgyeol
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "samgyeol", "-psamgyeol"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # S3 로컬 에뮬레이션이 필요할 때 주석 해제
+  # localstack:
+  #   image: localstack/localstack:3
+  #   ports:
+  #     - "4566:4566"
+  #   environment:
+  #     SERVICES: s3
+  #     AWS_DEFAULT_REGION: ap-northeast-2
+
+volumes:
+  mysql_data:
