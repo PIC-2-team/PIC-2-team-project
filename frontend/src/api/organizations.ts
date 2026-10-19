@@ -1,6 +1,13 @@
 import type { Organization, OrganizationMember, CareAssignment, LinkRequest } from '../types/agency';
 import { apiRequest } from './client';
 
+export function createOrganization(payload: { name: string }): Promise<Organization> {
+  return apiRequest('/api/organizations', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 export function getMyOrganization(): Promise<Organization> {
   return apiRequest('/api/organizations/me');
 }
