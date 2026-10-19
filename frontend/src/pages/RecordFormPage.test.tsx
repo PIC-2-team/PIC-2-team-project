@@ -269,3 +269,55 @@ it('임시 녹음 정리 중에는 화면을 떠나거나 기록을 중복 제�
   expect(screen.getByRole('button', { name: '기록 저장하기' })).toBeEnabled();
   expect(screen.getByRole('button', { name: '뒤로가기' })).toBeEnabled();
 });
+
+it('AI 초안 없이 직접 카테고리를 선택하고 내용을 입력해 바로 기록한다', async () => {
+  vi.mocked(records.createRecord).mockResolvedValue({
+    id: 11, content: '오늘 점심으로 생선구이를 맛있게 먹었습니다.', category: 'MEAL', recordedAt: '2026-10-15T01:00:00Z',
+  });
+  renderPage();
+
+  fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '식사' }));
+  fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '오늘 점심으로 생선구이를 맛있게 먹었습니다.' } });
+
+  const saveBtn = screen.getByRole('button', { name: '기록하기' });
+  fireEvent.click(saveBtn);
+
+  await screen.findByText('기록 목록');
+  expect(records.createRecordDraft).not.toHaveBeenCalled();
+  expect(records.createRecord).toHaveBeenCalledWith(42, expect.objectContaining({
+    content: '오늘 점심으로 생선구이를 맛있게 먹었습니다.',
+    category: 'MEAL',
+    pinned: false,
+  }));
+});
+
+it('돌봄정보에서 카테고리와 함께 진입 시 해당 카테고리가 기본 선택되고 저장 후 카테고리 상세로 이동한다', async () => {
+  vi.mocked(records.createRecord).mockResolvedValue({
+    id: 12, content: '저녁 약을 제시간에 복용했습니다.', category: 'HEALTH', recordedAt: '2026-10-15T01:00:00Z',
+  });
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/records/new', state: { category: 'HEALTH', returnToCareInfo: true } }]}>
+      <Routes>
+        <Route path="/records/new" element={<RecordFormPage />} />
+        <Route path="/care-info/HEALTH" element={<p>건강 상세 페이지</p>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+  expect(screen.getByRole('button', { name: '건강·복약' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '저녁 약을 제시간에 복용했습니다.' } });
+  
+  const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
+  fireEvent.click(showInCareInfo);
+
+  fireEvent.click(screen.getByRole('button', { name: '기록하기' }));
+
+  await screen.findByText('건강 상세 페이지');
+  expect(records.createRecord).toHaveBeenCalledWith(42, expect.objectContaining({
+    content: '저녁 약을 제시간에 복용했습니다.',
+    category: 'HEALTH',
+    pinned: true,
+  }));
+});

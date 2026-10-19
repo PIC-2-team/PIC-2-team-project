@@ -1,6 +1,6 @@
 import { AppShell } from '../components/AppShell';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createRecord, createRecordDraft, deleteRecordMedia, uploadRecordAudio } from '../api/records';
 import { useAuth } from '../contexts/AuthContext';
 import type { RecordCategory } from '../types/record';
@@ -22,12 +22,16 @@ function formatToday() {
 export function RecordFormPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'voice' | 'text'>('voice');
+  const location = useLocation();
+  const navState = location.state as { category?: RecordCategory; returnToCareInfo?: boolean } | null;
+  const initialCategory = navState?.category ?? 'OTHER';
+  const returnToCareInfo = Boolean(navState?.returnToCareInfo);
+  const [mode, setMode] = useState<'voice' | 'text'>(navState?.category ? 'text' : 'voice');
   const [stage, setStage] = useState<'input' | 'review'>('input');
   const [text, setText] = useState('');
   const [transcript, setTranscript] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState<RecordCategory>('OTHER');
+  const [category, setCategory] = useState<RecordCategory>(initialCategory);
   const [showInCareInfo, setShowInCareInfo] = useState(false);
   const [recording, setRecording] = useState(false);
   const [requestingMic, setRequestingMic] = useState(false);
@@ -185,15 +189,45 @@ export function RecordFormPage() {
     }
   };
 
+  const saveDirectRecord = async () => {
+    if (!selectedRecipientId || !text.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await createRecord(selectedRecipientId, {
+        content: text.trim(),
+        category,
+        recordedAt: new Date().toISOString(),
+        pinned: user?.role === 'GUARDIAN' ? showInCareInfo : false,
+      });
+      if (returnToCareInfo && category) {
+        navigate(`/care-info/${category}`);
+      } else {
+        navigate('/records');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장 중 오류가 발생했어요. 입력한 내용은 그대로 남아 있어요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveRecord = async () => {
     if (!selectedRecipientId || !content.trim()) return;
     setSaving(true);
     setError(null);
     try {
       await createRecord(selectedRecipientId, {
-        content: content.trim(), category, recordedAt: new Date().toISOString(), pinned: showInCareInfo,
+        content: content.trim(),
+        category,
+        recordedAt: new Date().toISOString(),
+        pinned: user?.role === 'GUARDIAN' ? showInCareInfo : false,
       });
-      navigate('/records');
+      if (returnToCareInfo && category) {
+        navigate(`/care-info/${category}`);
+      } else {
+        navigate('/records');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장 중 오류가 발생했어요. 입력한 내용은 그대로 남아 있어요.');
     } finally {
@@ -239,12 +273,47 @@ export function RecordFormPage() {
                   <p className={styles.privacyNote}>녹음 파일은 AI 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
                 </section>
               ) : (
-                <section className={styles.section}>
-                  <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
-                  <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="예: 아침 식사 후 산책을 다녀왔어요." value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
-                  <p className={styles.charCount}>{text.length} / 3,000</p>
-                  <button type="button" className={styles.draftButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
-                </section>
+                <>
+                  <section className={styles.section}>
+                    <h2 className={styles.sectionTitle}>기록 카테고리</h2>
+                    <div className={styles.chips} role="group" aria-label="기록 유형 선택">
+                      {CATEGORIES.map(cat => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          aria-pressed={category === cat.id}
+                          className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`}
+                          onClick={() => setCategory(cat.id)}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                  <section className={styles.section}>
+                    <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
+                    <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="오늘 있었던 일을 기록해주세요 (예: 아침 식사 후 산책을 다녀왔어요.)" value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
+                    <div className={styles.textMeta}>
+                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
+                      <span className={styles.charCount}>{text.length} / 3,000</span>
+                    </div>
+                  </section>
+                  {user?.role === 'GUARDIAN' && (
+                    <section className={styles.pinSection}>
+                      <label className={styles.pinLabel} htmlFor="show-in-care-info-input">
+                        <input
+                          id="show-in-care-info-input"
+                          type="checkbox"
+                          aria-label="돌봄정보에도 표시"
+                          checked={showInCareInfo}
+                          onChange={event => setShowInCareInfo(event.target.checked)}
+                        />
+                        돌봄정보에도 표시
+                      </label>
+                      <p>선택하면 돌봄정보의 중요 생활기록에 함께 표시돼요.</p>
+                    </section>
+                  )}
+                </>
               )}
             </>
           ) : (
@@ -288,9 +357,31 @@ export function RecordFormPage() {
           </div>}
         </div>
 
-        {stage === 'review' && <div className={styles.footer}>
-          <button type="button" className={styles.saveButton} disabled={!content.trim() || processing || saving || orphanedMediaId !== null} onClick={() => { void saveRecord(); }}>{processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}</button>
-        </div>}
+        {stage === 'input' && mode === 'text' && (
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.saveButton}
+              disabled={!text.trim() || saving || processing}
+              onClick={() => { void saveDirectRecord(); }}
+            >
+              {saving ? '기록 저장 중…' : '기록하기'}
+            </button>
+          </div>
+        )}
+
+        {stage === 'review' && (
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.saveButton}
+              disabled={!content.trim() || processing || saving || orphanedMediaId !== null}
+              onClick={() => { void saveRecord(); }}
+            >
+              {processing ? '임시 녹음 정리 중…' : saving ? '저장 중…' : '기록 저장하기'}
+            </button>
+          </div>
+        )}
       </div>
     </AppShell>
   );

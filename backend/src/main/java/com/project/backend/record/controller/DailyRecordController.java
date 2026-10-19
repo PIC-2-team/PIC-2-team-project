@@ -2,6 +2,7 @@ package com.project.backend.record.controller;
 
 import com.project.backend.common.response.*;
 import com.project.backend.record.dto.*;
+import com.project.backend.record.entity.RecordCategory;
 import com.project.backend.record.service.DailyRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,10 +28,11 @@ public class DailyRecordController {
     @GetMapping
     public ApiResponse<PaginatedData<RecordResponse>> list(@AuthenticationPrincipal Long userId,
             @PathVariable Long careRecipientId,
+            @RequestParam(required = false) RecordCategory category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
-        return ApiResponse.ok(service.list(userId, careRecipientId, date, year, month, page, pageSize));
+        return ApiResponse.ok(service.list(userId, careRecipientId, category, date, year, month, page, pageSize));
     }
 
     @Operation(summary = "오늘의 생활기록")

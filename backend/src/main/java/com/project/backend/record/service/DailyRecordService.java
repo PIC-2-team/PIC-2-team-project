@@ -116,13 +116,20 @@ public class DailyRecordService {
     @Transactional(readOnly = true)
     public PaginatedData<RecordResponse> list(Long userId, Long recipientId, LocalDate date,
                                                Integer year, Integer month, int page, int pageSize) {
+        return list(userId, recipientId, null, date, year, month, page, pageSize);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedData<RecordResponse> list(Long userId, Long recipientId, RecordCategory category, LocalDate date,
+                                               Integer year, Integer month, int page, int pageSize) {
         access.verifyRead(userId, recipientId);
         Pageable pageable = pageable(page, pageSize, "recordedAt");
         Instant[] range = range(date, year, month);
-        Page<DailyRecord> result = records.findAll(filter(recipientId, range), pageable);
+        Page<DailyRecord> result = records.findAll(filter(recipientId, category, range), pageable);
         accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, null);
         return new PaginatedData<>(responses(result.getContent()), pagination(result));
     }
+
 
     @Transactional(readOnly = true)
     public List<RecordResponse> today(Long userId, Long recipientId) {
@@ -219,10 +226,17 @@ public class DailyRecordService {
     }
 
     private Specification<DailyRecord> filter(Long recipientId, Instant[] range) {
+        return filter(recipientId, null, range);
+    }
+
+    private Specification<DailyRecord> filter(Long recipientId, RecordCategory category, Instant[] range) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("careRecipientId"), recipientId));
             predicates.add(cb.isNull(root.get("deletedAt")));
+            if (category != null) {
+                predicates.add(cb.equal(root.get("category"), category));
+            }
             if (range != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("recordedAt"), range[0]));
                 predicates.add(cb.lessThan(root.get("recordedAt"), range[1]));

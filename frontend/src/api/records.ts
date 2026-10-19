@@ -16,6 +16,28 @@ export function getRecordsByMonth(
   );
 }
 
+export function getRecordsByCategory(
+  recipientId: number,
+  category: RecordCategory,
+  page = 1,
+  pageSize = 50
+): Promise<PaginatedData<DailyRecord>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/records?category=${category}&page=${page}&pageSize=${pageSize}`
+  );
+}
+
+export function pinRecord(
+  recipientId: number,
+  recordId: number,
+  pinned: boolean
+): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/pin`, {
+    method: 'PATCH',
+    body: { pinned },
+  });
+}
+
 // TODO: GET /records/{recordId} — 경로 초안, 미구현 (API-Spec.md §상세·수정·삭제)
 export function getRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
