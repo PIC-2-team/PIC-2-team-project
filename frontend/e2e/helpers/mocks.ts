@@ -56,26 +56,40 @@ export async function mockRecipients(page: Page) {
 
 // 생활기록 목록·생성 모킹
 export async function mockRecords(page: Page) {
-  await page.route('**/api/care-recipients/*/records*', (route: Route) => {
-    if (route.request().method() === 'POST') {
-      return route.fulfill({ json: ok({ id: 10, content: '기록 내용', category: 'DAILY_LIFE' }) });
+  await page.route(/\/api\/care-recipients\/\d+\/records/, (route: Route) => {
+    const url = route.request().url();
+    if (url.includes('/today')) {
+      return route.fulfill({ json: ok([]) });
     }
-    return route.fulfill({ json: ok({ content: [], pagination: { page: 1, size: 20, totalCount: 0, totalPages: 0 } }) });
+    if (route.request().method() === 'POST') {
+      return route.fulfill({
+        json: ok({ id: 10, content: '기록 내용', category: 'DAILY_LIFE', recordedAt: new Date().toISOString() }),
+      });
+    }
+    if (/\/\d+$/.test(url)) {
+      return route.fulfill({
+        json: ok({ id: 10, content: '기록 내용', category: 'DAILY_LIFE', recordedAt: new Date().toISOString() }),
+      });
+    }
+    return route.fulfill({
+      json: ok({ content: [], pagination: { page: 1, size: 20, totalCount: 0, totalPages: 0 } }),
+    });
   });
 }
 
 // 돌봄정보 모킹
 export async function mockCareInfo(page: Page) {
-  await page.route('**/api/care-recipients/*/care-info*', (route: Route) =>
+  await page.route(/\/api\/care-recipients\/\d+\/care-info/, (route: Route) =>
     route.fulfill({ json: ok([]) })
   );
 }
 
-// 기관 정보 모킹
+// 기관 정보 모킹 — fetch 요청만 처리해 Vite 소스 파일 요청(/src/api/organizations.ts)은 통과시킴
 export async function mockOrganization(page: Page) {
-  await page.route('**/api/organizations*', (route: Route) =>
-    route.fulfill({ json: ok({ id: 1, name: '테스트 기관', code: 'ORG-001', assignments: [] }) })
-  );
+  await page.route('**/api/organizations*', (route: Route) => {
+    if (route.request().resourceType() !== 'fetch') return route.continue();
+    return route.fulfill({ json: ok({ id: 1, name: '테스트 기관', code: 'ORG-001', assignments: [] }) });
+  });
 }
 
 // 알림 목록 모킹
@@ -85,8 +99,30 @@ export async function mockNotifications(page: Page) {
   );
 }
 
+// AI 기록 초안 생성 모킹
+export async function mockAiDraft(page: Page, content = '오늘 밥을 잘 먹었어요') {
+  await page.route('**/api/ai/record-drafts', (route: Route) =>
+    route.fulfill({ json: ok({ transcript: content, content, category: 'DAILY_LIFE' }) })
+  );
+}
+
+// React Router SPA 내비게이션 헬퍼
+export async function spaNavigate(page: Page, path: string) {
+  await page.evaluate((url) => {
+    const r = (window as unknown as { __router?: { navigate: (to: string) => void } }).__router;
+    if (r?.navigate) {
+      r.navigate(url);
+    } else {
+      window.history.pushState({}, '', url);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  }, path);
+}
+
 // 로그인 후 홈까지 이동하는 공유 헬퍼 — 모든 스펙에서 재사용
 export async function loginAndGoHome(page: Page, user: TestUser) {
+  const { expect } = await import('@playwright/test');
+
   await mockLogin(page, user);
   await mockRecipients(page);
   await mockRecords(page);
@@ -97,4 +133,6 @@ export async function loginAndGoHome(page: Page, user: TestUser) {
   await page.fill('input[type="email"]', user.email);
   await page.fill('input[type="password"]', user.password);
   await page.click('button[type="submit"]');
+  // 홈 도달 확인 — 이후 selectedRecipientId가 설정됨을 보장
+  await expect(page).toHaveURL('/home');
 }

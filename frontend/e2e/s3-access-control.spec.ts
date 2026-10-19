@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, loginAndGoHome, mockLogin, mockRecipients, mockRecords, mockCareInfo, mockNotifications, mockOrganization } from './helpers/mocks';
+import { TEST_USERS, loginAndGoHome, mockLogin, mockRecipients, mockRecords, mockCareInfo, mockNotifications, mockOrganization, spaNavigate } from './helpers/mocks';
 
 test.describe('S3 — 기관 배정 및 접근 제어', () => {
   test('기관 담당자는 로그인 후 /agency로 이동한다', async ({ page }) => {
@@ -27,7 +27,8 @@ test.describe('S3 — 기관 배정 및 접근 제어', () => {
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL('/agency');
 
-    await page.goto('/home');
+    // auth 상태를 유지하며 SPA 내비게이션
+    await spaNavigate(page, '/home');
     await expect(page).toHaveURL('/agency');
   });
 
@@ -64,7 +65,8 @@ test.describe('S3 — 기관 배정 및 접근 제어', () => {
     await loginAndGoHome(page, user);
     await expect(page).toHaveURL('/home');
 
-    await page.goto('/records/new');
+    // auth 상태를 유지하며 SPA 내비게이션 — RequireRole이 /home으로 리다이렉트
+    await spaNavigate(page, '/records/new');
     await expect(page).toHaveURL('/home');
   });
 });

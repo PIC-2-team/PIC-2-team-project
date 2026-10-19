@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, loginAndGoHome, mockLogin, mockOrganization, mockNotifications } from './helpers/mocks';
+import { TEST_USERS, loginAndGoHome, mockLogin, mockOrganization, mockNotifications, spaNavigate } from './helpers/mocks';
 
 test.describe('S5 — 역할별 라우트 보호', () => {
   test('미인증 상태에서 /home 접근 시 /login으로 리다이렉트된다', async ({ page }) => {
@@ -26,7 +26,8 @@ test.describe('S5 — 역할별 라우트 보호', () => {
     await loginAndGoHome(page, TEST_USERS.worker);
     await expect(page).toHaveURL('/home');
 
-    await page.goto('/records/new');
+    // auth 상태를 유지하며 SPA 내비게이션 — RequireRole이 /home으로 리다이렉트
+    await spaNavigate(page, '/records/new');
     await expect(page).toHaveURL('/home');
   });
 
@@ -42,7 +43,8 @@ test.describe('S5 — 역할별 라우트 보호', () => {
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL('/agency');
 
-    await page.goto('/home');
+    // auth 상태를 유지하며 SPA 내비게이션
+    await spaNavigate(page, '/home');
     await expect(page).toHaveURL('/agency');
   });
 

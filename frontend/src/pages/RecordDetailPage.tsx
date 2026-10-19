@@ -2,7 +2,7 @@ import { AppShell } from '../components/AppShell';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getRecord } from '../api/records';
+import { getRecord, createSuggestion } from '../api/records';
 import type { DailyRecord } from '../types/record';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -25,6 +25,12 @@ export function RecordDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // 수정 제안 상태
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [suggestionText, setSuggestionText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [suggestionDone, setSuggestionDone] = useState(false);
+
   useEffect(() => {
     if (!selectedRecipientId || !id) {
       setIsLoading(false);
@@ -35,6 +41,20 @@ export function RecordDetailPage() {
       .catch(e => setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'))
       .finally(() => setIsLoading(false));
   }, [id, selectedRecipientId]);
+
+  const submitSuggestion = async () => {
+    if (!selectedRecipientId || !id || !suggestionText.trim()) return;
+    setSubmitting(true);
+    try {
+      await createSuggestion(selectedRecipientId, Number(id), suggestionText.trim());
+      setSuggestionDone(true);
+      setShowSuggestion(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '제안 제출 중 오류가 발생했어요.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AppShell role={user?.role}>
@@ -63,7 +83,36 @@ export function RecordDetailPage() {
                 <button type="button" className="btn secondary" disabled>삭제 (준비 중)</button>
               </div>
             )}
-            {user?.role === 'SUPPORT_WORKER' && <button type="button" className="btn secondary" disabled>수정 제안 (준비 중)</button>}
+            {user?.role === 'SUPPORT_WORKER' && (
+              <>
+                {suggestionDone ? (
+                  <p role="status">제안 전송 완료 — 보호자에게 전달됐어요.</p>
+                ) : showSuggestion ? (
+                  <div>
+                    <textarea
+                      aria-label="수정 제안 내용"
+                      value={suggestionText}
+                      onChange={e => setSuggestionText(e.target.value)}
+                      rows={4}
+                      placeholder="수정할 내용을 입력해 주세요."
+                    />
+                    <div className="actions">
+                      <button type="button" className="btn secondary" onClick={() => setShowSuggestion(false)}>취소</button>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        disabled={!suggestionText.trim() || submitting}
+                        onClick={() => { void submitSuggestion(); }}
+                      >
+                        {submitting ? '제출 중…' : '제안하기'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="btn secondary" onClick={() => setShowSuggestion(true)}>수정 제안</button>
+                )}
+              </>
+            )}
           </>
         )}
       </main>

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, loginAndGoHome } from './helpers/mocks';
+import { TEST_USERS, loginAndGoHome, spaNavigate } from './helpers/mocks';
 
 const RECORD_ID = 10;
 
@@ -7,13 +7,15 @@ test.describe('S4 — 수정 제안 흐름', () => {
   test('활동지원사는 기록 상세 페이지에서 수정 제안 버튼을 볼 수 있다', async ({ page }) => {
     await loginAndGoHome(page, TEST_USERS.worker);
 
-    await page.route(`**/api/care-recipients/*/records/${RECORD_ID}`, route =>
+    await page.route(new RegExp(`/api/care-recipients/\\d+/records/${RECORD_ID}`), route =>
       route.fulfill({
-        json: { success: true, data: { id: RECORD_ID, content: '오늘 점심을 먹었어요', category: 'DAILY_LIFE' } },
+        json: { success: true, data: { id: RECORD_ID, content: '오늘 점심을 먹었어요', category: 'DAILY_LIFE', recordedAt: new Date().toISOString() } },
       })
     );
 
-    await page.goto(`/records/${RECORD_ID}`);
+    // auth 상태를 유지하며 SPA 내비게이션
+    await spaNavigate(page, `/records/${RECORD_ID}`);
+    await expect(page).toHaveURL(`/records/${RECORD_ID}`);
 
     // 수정 제안 버튼이 존재해야 한다 — 없으면 테스트 실패 (조건부 skip 금지)
     await expect(page.getByRole('button', { name: /수정 제안|제안/ })).toBeVisible();
@@ -22,16 +24,19 @@ test.describe('S4 — 수정 제안 흐름', () => {
   test('활동지원사는 수정 제안을 작성하고 제출한다', async ({ page }) => {
     await loginAndGoHome(page, TEST_USERS.worker);
 
-    await page.route(`**/api/care-recipients/*/records/${RECORD_ID}`, route =>
+    await page.route(new RegExp(`/api/care-recipients/\\d+/records/${RECORD_ID}`), route =>
       route.fulfill({
-        json: { success: true, data: { id: RECORD_ID, content: '오늘 점심을 먹었어요', category: 'DAILY_LIFE' } },
+        json: { success: true, data: { id: RECORD_ID, content: '오늘 점심을 먹었어요', category: 'DAILY_LIFE', recordedAt: new Date().toISOString() } },
       })
     );
-    await page.route(`**/api/care-recipients/*/records/${RECORD_ID}/suggestions`, route =>
+    await page.route(new RegExp(`/api/care-recipients/\\d+/records/${RECORD_ID}/suggestions`), route =>
       route.fulfill({ json: { success: true, data: { id: 1, suggestedContent: '오늘 점심과 저녁을 먹었어요', status: 'PENDING' } } })
     );
 
-    await page.goto(`/records/${RECORD_ID}`);
+    // auth 상태를 유지하며 SPA 내비게이션
+    await spaNavigate(page, `/records/${RECORD_ID}`);
+    await expect(page).toHaveURL(`/records/${RECORD_ID}`);
+
     await page.getByRole('button', { name: /수정 제안|제안/ }).click();
 
     await page.locator('textarea').last().fill('오늘 점심과 저녁을 먹었어요');

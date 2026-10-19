@@ -56,3 +56,20 @@ export function uploadRecordAudio(recipientId: number, file: File): Promise<{ me
 export function deleteRecordMedia(recipientId: number, mediaId: number): Promise<{ deleted: boolean }> {
   return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }
+
+export type RecordSuggestion = {
+  id: number;
+  suggestedContent: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+};
+
+export function createSuggestion(
+  recipientId: number,
+  recordId: number,
+  suggestedContent: string,
+): Promise<RecordSuggestion> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/suggestions`, {
+    method: 'POST',
+    body: { suggestedContent },
+  });
+}

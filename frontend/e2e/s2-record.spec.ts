@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TEST_USERS, loginAndGoHome, mockLogin, mockRecipients, mockRecords, mockCareInfo, mockNotifications } from './helpers/mocks';
+import { TEST_USERS, loginAndGoHome, mockLogin, mockRecipients, mockRecords, mockCareInfo, mockNotifications, mockAiDraft, spaNavigate } from './helpers/mocks';
 
 test.describe('S2 — 로그인 → 당사자 등록 → 기록 작성', () => {
   test('이메일/비밀번호 로그인 후 홈에 도달한다', async ({ page }) => {
@@ -36,12 +36,8 @@ test.describe('S2 — 로그인 → 당사자 등록 → 기록 작성', () => {
     await mockRecipients(page);
     await mockCareInfo(page);
     await mockNotifications(page);
-    await page.route('**/api/care-recipients/*/records*', route => {
-      if (route.request().method() === 'POST') {
-        return route.fulfill({ json: { success: true, data: { id: 10, content: '오늘 밥을 잘 먹었어요', category: 'DAILY_LIFE' } } });
-      }
-      return route.fulfill({ json: { success: true, data: { content: [], pagination: { page: 1, size: 20, totalCount: 0, totalPages: 0 } } } });
-    });
+    await mockRecords(page);
+    await mockAiDraft(page, '오늘 밥을 잘 먹었어요');
 
     await page.goto('/login');
     await page.fill('input[type="email"]', user.email);
@@ -49,11 +45,19 @@ test.describe('S2 — 로그인 → 당사자 등록 → 기록 작성', () => {
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL('/home');
 
-    await page.goto('/records/new');
+    // auth 상태를 유지하며 SPA 내비게이션
+    await spaNavigate(page, '/records/new');
     await expect(page).toHaveURL('/records/new');
 
+    // 텍스트 입력 모드 선택 후 내용 입력
+    await page.getByRole('button', { name: '텍스트로 기록하기' }).click();
     await page.locator('textarea').fill('오늘 밥을 잘 먹었어요');
-    await page.getByRole('button', { name: '저장' }).click();
+
+    // AI 정리 요청
+    await page.getByRole('button', { name: 'AI로 정리하기' }).click();
+
+    // review 단계 — 저장 버튼 클릭
+    await page.getByRole('button', { name: '기록 저장하기' }).click();
 
     await expect(page).toHaveURL(/\/(records|home)/);
   });
