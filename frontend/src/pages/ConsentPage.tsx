@@ -14,31 +14,166 @@ const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
 
 type ConsentKey = 'basicInfo' | 'sensitiveInfo' | 'caregiverShare' | 'marketing';
 
+type ConsentDetail = {
+  collectedItems: string;
+  purpose: string;
+  retentionPeriod: string;
+  refusalRight: string;
+  refusalEffect: string;
+  thirdParty?: string;
+};
+
 type ConsentItem = {
   id: ConsentKey;
   required: boolean;
   title: string;
   description: string;
+  detail: ConsentDetail;
 };
 
 const CONSENT_ITEMS_BY_ROLE: Record<Role, ConsentItem[]> = {
   GUARDIAN: [
-    { id: 'basicInfo', required: true, title: '기본 개인정보 수집·이용 동의', description: '서비스 제공을 위한 필수 정보입니다.' },
-    { id: 'sensitiveInfo', required: true, title: '건강·복약정보 등 민감정보 처리 동의', description: '맞춤형 건강관리 서비스 제공을 위한 필수 정보입니다.' },
-    { id: 'caregiverShare', required: true, title: '담당 돌봄 제공자에게 필요한 정보 공유 동의', description: '더 나은 돌봄 서비스를 위한 필수 정보입니다.' },
-    { id: 'marketing', required: false, title: '마케팅·부가서비스 동의', description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.' },
+    {
+      id: 'basicInfo',
+      required: true,
+      title: '기본 개인정보 수집·이용 동의',
+      description: '서비스 제공을 위한 필수 정보입니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소, 역할(보호자)',
+        purpose: '회원 식별 및 서비스 제공, 본인 확인',
+        retentionPeriod: '[정책 확인 필요] 회원 탈퇴 후 즉시 파기 또는 일정 기간 보관',
+        refusalRight: '동의를 거부할 권리가 있습니다.',
+        refusalEffect: '필수 항목 미동의 시 서비스 이용이 불가합니다.',
+      },
+    },
+    {
+      id: 'sensitiveInfo',
+      required: true,
+      title: '건강·복약정보 등 민감정보 처리 동의',
+      description: '맞춤형 건강관리 서비스 제공을 위한 필수 정보입니다.',
+      detail: {
+        collectedItems: '당사자의 건강 상태, 복약 정보, 생활기록 내 의료 관련 기재 사항',
+        purpose: '생활기록 작성·관리, AI 초안 생성 시 맥락 반영',
+        retentionPeriod: '[정책 확인 필요] 기록 삭제 요청 시 또는 탈퇴 후 일정 기간 내 파기',
+        refusalRight: '동의를 거부할 권리가 있습니다.',
+        refusalEffect: '미동의 시 건강·복약 관련 기록 기능을 이용할 수 없습니다.',
+        thirdParty: '[정책 확인 필요] 제3자 제공 여부 및 범위',
+      },
+    },
+    {
+      id: 'caregiverShare',
+      required: true,
+      title: '담당 돌봄 제공자에게 필요한 정보 공유 동의',
+      description: '더 나은 돌봄 서비스를 위한 필수 정보입니다.',
+      detail: {
+        collectedItems: '당사자 생활기록, 돌봄 상태 요약',
+        purpose: '활동지원사·기관 담당자가 서비스 제공에 필요한 정보 열람',
+        retentionPeriod: '[정책 확인 필요] 기관 배정 해제 또는 탈퇴 시까지',
+        refusalRight: '동의를 거부할 권리가 있습니다.',
+        refusalEffect: '미동의 시 돌봄 제공자와의 기록 공유가 불가해 서비스 이용이 제한됩니다.',
+        thirdParty: '배정된 활동지원사 및 소속 기관 담당자에게 공유됩니다.',
+      },
+    },
+    {
+      id: 'marketing',
+      required: false,
+      title: '마케팅·부가서비스 동의',
+      description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소',
+        purpose: '이벤트·서비스 안내 발송',
+        retentionPeriod: '[정책 확인 필요] 동의 철회 시 즉시 파기',
+        refusalRight: '동의를 거부할 권리가 있으며, 언제든 철회할 수 있습니다.',
+        refusalEffect: '미동의 시 마케팅 정보를 받지 못하나 핵심 서비스 이용에는 지장이 없습니다.',
+      },
+    },
   ],
   SUPPORT_WORKER: [
-    { id: 'basicInfo', required: true, title: '기본 개인정보 수집·이용 동의', description: '서비스 제공을 위한 필수 정보입니다.' },
-    { id: 'marketing', required: false, title: '마케팅·부가서비스 동의', description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.' },
+    {
+      id: 'basicInfo',
+      required: true,
+      title: '기본 개인정보 수집·이용 동의',
+      description: '서비스 제공을 위한 필수 정보입니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소, 역할(활동지원사)',
+        purpose: '회원 식별 및 서비스 제공, 본인 확인',
+        retentionPeriod: '[정책 확인 필요] 회원 탈퇴 후 즉시 파기 또는 일정 기간 보관',
+        refusalRight: '동의를 거부할 권리가 있습니다.',
+        refusalEffect: '필수 항목 미동의 시 서비스 이용이 불가합니다.',
+      },
+    },
+    {
+      id: 'marketing',
+      required: false,
+      title: '마케팅·부가서비스 동의',
+      description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소',
+        purpose: '이벤트·서비스 안내 발송',
+        retentionPeriod: '[정책 확인 필요] 동의 철회 시 즉시 파기',
+        refusalRight: '동의를 거부할 권리가 있으며, 언제든 철회할 수 있습니다.',
+        refusalEffect: '미동의 시 마케팅 정보를 받지 못하나 핵심 서비스 이용에는 지장이 없습니다.',
+      },
+    },
   ],
   INSTITUTION: [
-    { id: 'basicInfo', required: true, title: '기본 개인정보 수집·이용 동의', description: '서비스 제공을 위한 필수 정보입니다.' },
-    { id: 'marketing', required: false, title: '마케팅·부가서비스 동의', description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.' },
+    {
+      id: 'basicInfo',
+      required: true,
+      title: '기본 개인정보 수집·이용 동의',
+      description: '서비스 제공을 위한 필수 정보입니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소, 역할(기관 담당자)',
+        purpose: '회원 식별 및 서비스 제공, 본인 확인',
+        retentionPeriod: '[정책 확인 필요] 회원 탈퇴 후 즉시 파기 또는 일정 기간 보관',
+        refusalRight: '동의를 거부할 권리가 있습니다.',
+        refusalEffect: '필수 항목 미동의 시 서비스 이용이 불가합니다.',
+      },
+    },
+    {
+      id: 'marketing',
+      required: false,
+      title: '마케팅·부가서비스 동의',
+      description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.',
+      detail: {
+        collectedItems: '이름, 이메일 주소',
+        purpose: '이벤트·서비스 안내 발송',
+        retentionPeriod: '[정책 확인 필요] 동의 철회 시 즉시 파기',
+        refusalRight: '동의를 거부할 권리가 있으며, 언제든 철회할 수 있습니다.',
+        refusalEffect: '미동의 시 마케팅 정보를 받지 못하나 핵심 서비스 이용에는 지장이 없습니다.',
+      },
+    },
   ],
 };
 
 type PendingGoogle = { pendingToken: string; email: string; name: string };
+
+function ConsentDetailPanel({ detail }: { detail: ConsentDetail }) {
+  return (
+    <dl className={styles.detailPanel}>
+      <dt>수집 항목</dt>
+      <dd>{detail.collectedItems}</dd>
+      <dt>이용 목적</dt>
+      <dd>{detail.purpose}</dd>
+      <dt>보유·이용 기간</dt>
+      <dd className={detail.retentionPeriod.startsWith('[정책') ? styles.pendingPolicy : undefined}>
+        {detail.retentionPeriod}
+      </dd>
+      {detail.thirdParty && (
+        <>
+          <dt>제3자 제공</dt>
+          <dd className={detail.thirdParty.startsWith('[정책') ? styles.pendingPolicy : undefined}>
+            {detail.thirdParty}
+          </dd>
+        </>
+      )}
+      <dt>동의 거부 권리</dt>
+      <dd>{detail.refusalRight}</dd>
+      <dt>거부 시 불이익</dt>
+      <dd>{detail.refusalEffect}</dd>
+    </dl>
+  );
+}
 
 export function ConsentPage() {
   const navigate = useNavigate();
@@ -53,6 +188,7 @@ export function ConsentPage() {
     caregiverShare: false,
     marketing: false,
   });
+  const [expandedId, setExpandedId] = useState<ConsentKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,9 +200,13 @@ export function ConsentPage() {
   const toggle = (id: ConsentKey) =>
     setConsents(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const toggleExpand = (id: ConsentKey) =>
+    setExpandedId(prev => (prev === id ? null : id));
+
   const handleNext = () => {
     if (!selectedRole) return;
     setConsents({ basicInfo: false, sensitiveInfo: false, caregiverShare: false, marketing: false });
+    setExpandedId(null);
     setStep('consent');
   };
 
@@ -162,25 +302,45 @@ export function ConsentPage() {
             </div>
 
             <div className={styles.items}>
-              {consentItems.map(item => (
-                <label key={item.id} className={styles.item} htmlFor={item.id}>
-                  <input
-                    id={item.id}
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={consents[item.id]}
-                    onChange={() => toggle(item.id)}
-                  />
-                  <div className={styles.itemContent}>
-                    <span className={styles.itemTitle}>
-                      <span className={styles.badge}>{item.required ? '[필수]' : '[선택]'}</span>
-                      {' '}{item.title}
-                    </span>
-                    <span className={styles.itemDesc}>{item.description}</span>
+              {consentItems.map(item => {
+                const isExpanded = expandedId === item.id;
+                return (
+                  <div key={item.id} className={styles.itemWrap}>
+                    <div className={styles.item}>
+                      <input
+                        id={item.id}
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={consents[item.id]}
+                        onChange={() => toggle(item.id)}
+                        aria-label={`${item.required ? '[필수]' : '[선택]'} ${item.title}`}
+                      />
+                      <div className={styles.itemContent}>
+                        <span className={styles.itemTitle}>
+                          <span className={styles.badge}>{item.required ? '[필수]' : '[선택]'}</span>
+                          {' '}{item.title}
+                        </span>
+                        <span className={styles.itemDesc}>{item.description}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.detailToggle}
+                        onClick={() => toggleExpand(item.id)}
+                        aria-expanded={isExpanded}
+                        aria-controls={`detail-${item.id}`}
+                        aria-label={`${item.title} 상세 보기`}
+                      >
+                        <span className={`${styles.chevron} ${isExpanded ? styles.chevronUp : ''}`} aria-hidden="true">›</span>
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div id={`detail-${item.id}`} className={styles.detailPanelWrap}>
+                        <ConsentDetailPanel detail={item.detail} />
+                      </div>
+                    )}
                   </div>
-                  <span className={styles.chevron} aria-hidden="true">›</span>
-                </label>
-              ))}
+                );
+              })}
 
               <button className={styles.termsRow} type="button">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">

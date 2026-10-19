@@ -53,6 +53,14 @@
   margin-bottom: 2rem;
 }
 
+.itemWrap {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
 .item {
   display: flex;
   flex-direction: row;
@@ -60,10 +68,7 @@
   align-items: center;
   gap: 0.75rem;
   background: white;
-  border-radius: 14px;
   padding: 1rem;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .item .checkbox {
@@ -127,6 +132,52 @@
   font-size: 1.25rem;
   line-height: 1;
   flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.chevronUp {
+  transform: rotate(90deg);
+}
+
+.detailToggle {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.detailPanelWrap {
+  background: #f8faf9;
+  border-top: 1px solid #e8f5ee;
+  padding: 0.875rem 1rem;
+}
+
+.detailPanel {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.detailPanel dt {
+  color: #8a9ab0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.detailPanel dd {
+  margin: 0;
+  color: #4a5568;
+}
+
+.pendingPolicy {
+  color: #e07a1a;
+  font-style: italic;
 }
 
 .termsRow {
