@@ -71,6 +71,16 @@
   padding: 1rem;
 }
 
+.itemMain {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
 .item .checkbox {
   appearance: none;
   -webkit-appearance: none;

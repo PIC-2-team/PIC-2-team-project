@@ -307,21 +307,23 @@ export function ConsentPage() {
                 return (
                   <div key={item.id} className={styles.itemWrap}>
                     <div className={styles.item}>
-                      <input
-                        id={item.id}
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={consents[item.id]}
-                        onChange={() => toggle(item.id)}
-                        aria-label={`${item.required ? '[필수]' : '[선택]'} ${item.title}`}
-                      />
-                      <div className={styles.itemContent}>
-                        <span className={styles.itemTitle}>
-                          <span className={styles.badge}>{item.required ? '[필수]' : '[선택]'}</span>
-                          {' '}{item.title}
-                        </span>
-                        <span className={styles.itemDesc}>{item.description}</span>
-                      </div>
+                      <label htmlFor={item.id} className={styles.itemMain}>
+                        <input
+                          id={item.id}
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={consents[item.id]}
+                          onChange={() => toggle(item.id)}
+                          aria-label={`${item.required ? '[필수]' : '[선택]'} ${item.title}`}
+                        />
+                        <div className={styles.itemContent}>
+                          <span className={styles.itemTitle}>
+                            <span className={styles.badge}>{item.required ? '[필수]' : '[선택]'}</span>
+                            {' '}{item.title}
+                          </span>
+                          <span className={styles.itemDesc}>{item.description}</span>
+                        </div>
+                      </label>
                       <button
                         type="button"
                         className={styles.detailToggle}
