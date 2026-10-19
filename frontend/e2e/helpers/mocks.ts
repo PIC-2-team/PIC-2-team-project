@@ -7,6 +7,7 @@ export const TEST_USERS = {
   guardian: { email: 'guardian@test.com', password: 'Test1234!', role: 'GUARDIAN' as const, id: 101, name: '테스트 보호자' },
   worker:   { email: 'worker@test.com',   password: 'Test1234!', role: 'SUPPORT_WORKER' as const, id: 102, name: '테스트 지원사' },
   agency:   { email: 'institution@test.com', password: 'Test1234!', role: 'INSTITUTION' as const, id: 103, name: '테스트 기관' },
+  admin:    { email: 'admin@test.com',       password: 'Test1234!', role: 'ADMIN' as const,       id: 104, name: '테스트 관리자' },
 } as const;
 
 type TestUser = typeof TEST_USERS[keyof typeof TEST_USERS];
