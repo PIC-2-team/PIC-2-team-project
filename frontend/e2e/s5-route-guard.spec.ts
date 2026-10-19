@@ -48,6 +48,21 @@ test.describe('S5 — 역할별 라우트 보호', () => {
     await expect(page).toHaveURL('/agency');
   });
 
+  test('ADMIN은 /home 접근 시 /admin으로 리다이렉트된다', async ({ page }) => {
+    const user = TEST_USERS.admin;
+    await mockLogin(page, user);
+
+    await page.goto('/login');
+    await page.fill('input[type="email"]', user.email);
+    await page.fill('input[type="password"]', user.password);
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL('/admin');
+
+    // auth 상태를 유지하며 SPA 내비게이션으로 /home 접근 시도
+    await spaNavigate(page, '/home');
+    await expect(page).toHaveURL('/admin');
+  });
+
   test('로그인 후 원래 접근하려던 페이지로 돌아간다 (?redirect 파라미터)', async ({ page }) => {
     // 미인증 상태에서 /home 접근 → /login?redirect=/home 으로 이동
     await page.goto('/home');

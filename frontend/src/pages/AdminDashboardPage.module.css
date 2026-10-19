@@ -1,0 +1,253 @@
+.headerCard {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.adminTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.adminSubtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  font-size: 13px;
+  color: var(--muted);
+  background: #f8faf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.logoutButton:hover {
+  background: #f0f3f2;
+  color: var(--ink);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* 통계 카드 그리드 (모바일 2열) */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.statCard {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.1s ease;
+}
+
+.statCard.highlight {
+  border-color: #c9e8dc;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--green);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* 사용자 목록 섹션 */
+.filterSelect {
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.userCard {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.userCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.userName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.roleBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.roleBadgeAdmin {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.roleBadgeInstitution {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.roleBadgeWorker {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.roleBadgeGuardian {
+  background: var(--soft);
+  color: var(--green);
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.userEmail {
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.userMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.userCode {
+  font-family: monospace;
+  background: #f1f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* 페이지네이션 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.pageButton {
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pageButton:disabled {
+  color: #b0bec5;
+  cursor: not-allowed;
+  background: #f8faf9;
+}
+
+.pageInfo {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.emptyBox {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  background: white;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+.errorBanner {
+  background: #fff0eb;
+  color: #91372d;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  border: 1px solid #fed7cc;
+}
