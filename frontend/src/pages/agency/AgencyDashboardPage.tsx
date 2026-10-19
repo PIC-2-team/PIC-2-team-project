@@ -2,33 +2,76 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppShell } from '../../components/AppShell';
 import TabBar from '../../components/TabBar/TabBar';
-import { getMyOrganization, getMembers, getAssignments } from '../../api/organizations';
+import { getMyOrganization, getMembers, getAssignments, createOrganization } from '../../api/organizations';
+import { ApiError } from '../../api/client';
 import type { Organization, OrganizationMember, CareAssignment } from '../../types/agency';
 
 type PageState =
   | { status: 'loading' }
+  | { status: 'not_found' }
   | { status: 'error'; message: string }
   | { status: 'ok'; org: Organization; members: OrganizationMember[]; assignments: CareAssignment[] };
 
 export function AgencyDashboardPage() {
   const { user } = useAuth();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const [orgName, setOrgName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
+  const fetchDashboardData = async () => {
+    try {
+      const [org, members, assignments] = await Promise.all([
+        getMyOrganization(),
+        getMembers(),
+        getAssignments(),
+      ]);
+      setPage({ status: 'ok', org, members, assignments });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 404 || e.code === 'ORGANIZATION_NOT_FOUND')) {
+        setPage({ status: 'not_found' });
+      } else {
+        setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
+      }
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
+    let active = true;
+    void (async () => {
       try {
         const [org, members, assignments] = await Promise.all([
           getMyOrganization(),
           getMembers(),
           getAssignments(),
         ]);
-        setPage({ status: 'ok', org, members, assignments });
+        if (active) setPage({ status: 'ok', org, members, assignments });
       } catch (e) {
-        setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
+        if (!active) return;
+        if (e instanceof ApiError && (e.status === 404 || e.code === 'ORGANIZATION_NOT_FOUND')) {
+          setPage({ status: 'not_found' });
+        } else {
+          setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
+        }
       }
-    };
-    void load();
+    })();
+    return () => { active = false; };
   }, []);
+
+  const handleRegisterOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orgName.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    setRegisterError(null);
+    try {
+      await createOrganization({ name: orgName.trim() });
+      await fetchDashboardData();
+    } catch (err) {
+      setRegisterError(err instanceof Error ? err.message : '기관 등록에 실패했어요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AppShell role={user?.role} footer={<TabBar />}>
@@ -40,6 +83,30 @@ export function AgencyDashboardPage() {
 
         {page.status === 'loading' && <p className="empty-state" role="status">불러오는 중…</p>}
         {page.status === 'error' && <p className="error" role="alert">{page.message}</p>}
+
+        {page.status === 'not_found' && (
+          <section className="demo-card">
+            <h2>소속 기관을 등록해 주세요</h2>
+            <p className="muted">기관 대시보드를 이용하려면 먼저 소속 기관 정보를 등록해야 합니다.</p>
+            <form className="demo-form" onSubmit={(e) => { void handleRegisterOrg(e); }}>
+              <label>
+                기관 이름
+                <input
+                  type="text"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="예: 삶결 복지센터"
+                  required
+                  maxLength={100}
+                />
+              </label>
+              {registerError && <p className="error" role="alert">{registerError}</p>}
+              <button className="btn" type="submit" disabled={!orgName.trim() || isSubmitting}>
+                {isSubmitting ? '등록 중…' : '기관 등록'}
+              </button>
+            </form>
+          </section>
+        )}
 
         {page.status === 'ok' && (
           <>
