@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useInRouterContext } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareInfoOverview } from '../api/careInfo';
 import type { CareInfoCategory, CareInfoOverview } from '../types/careInfo';
@@ -128,8 +128,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
-  const inRouter = useInRouterContext();
-  const navigate = inRouter ? useNavigate() : null;
+  const navigate = useNavigate();
   const [active, setActive] = useState<CareInfoCategory>('COMMUNICATION');
   const [overview, setOverview] = useState<CareInfoOverview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,9 +154,7 @@ export function CareInfoPage() {
 
   const handleCategoryClick = (catId: CareInfoCategory) => {
     setActive(catId);
-    if (navigate) {
-      navigate(`/care-info/${catId}`);
-    }
+    navigate(`/care-info/${catId}`);
   };
 
   return (
@@ -170,17 +167,10 @@ export function CareInfoPage() {
           <ul className={styles.recordList}>
             {pinnedRecords.map(record => (
               <li key={record.id}>
-                {inRouter ? (
-                  <Link to={`/records/${record.id}`} className={styles.recordCard}>
-                    <p>{record.content}</p>
-                    <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
-                  </Link>
-                ) : (
-                  <div className={styles.recordCard}>
-                    <p>{record.content}</p>
-                    <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
-                  </div>
-                )}
+                <Link to={`/records/${record.id}`} className={styles.recordCard}>
+                  <p>{record.content}</p>
+                  <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
+                </Link>
               </li>
             ))}
           </ul>
