@@ -47,9 +47,20 @@ npm run dev
 
 ### BE
 
+기본 (H2 인메모리):
 ```bash
 cd backend
 ./gradlew bootRun
+```
+
+MySQL 로컬 환경 (prod와 동일한 DB 드라이버로 테스트할 때):
+```bash
+# 1. MySQL 컨테이너 실행
+docker compose up -d
+
+# 2. local 프로파일로 기동
+cd backend
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
 ---
@@ -61,6 +72,20 @@ cd backend
 | 돌봄 보호자 (GUARDIAN) | guardian@test.com | Test1234! |
 | 활동지원사 (SUPPORT_WORKER) | worker@test.com | Test1234! |
 | 기관 담당자 (INSTITUTION) | institution@test.com | Test1234! |
+
+---
+
+## 슈퍼 어드민 계정 (Production)
+
+| 항목 | 값 |
+|------|----|
+| 이메일 | admin@samgyeol.com |
+| 역할 | ADMIN |
+| 비밀번호 | 팀 내부 채널로 별도 공유 |
+
+계정은 DB에 직접 삽입해야 합니다. `backend/src/main/resources/admin-insert.sql`을 prod DB에 실행하세요.
+
+로그인 후 `/admin` 경로로 이동하면 대시보드에 접근할 수 있습니다.
 
 ---
 

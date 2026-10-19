@@ -16,6 +16,7 @@ const ROLES: { value: Role; label: string; desc: string }[] = [
 type LocationState = {
   pendingGoogle?: { pendingToken: string; email: string; name: string };
   consentTicket?: string;
+  role?: Role;
 } | null;
 
 export function GoogleRegisterPage() {
@@ -23,7 +24,8 @@ export function GoogleRegisterPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const preselectedRole = state?.role ?? null;
+  const [selectedRole, setSelectedRole] = useState<Role | null>(preselectedRole);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,19 +60,32 @@ export function GoogleRegisterPage() {
     }
   };
 
+  const roleLabel = ROLES.find(r => r.value === selectedRole)?.label;
+
   return (
     <AppShell>
       <main className="demo-page">
-        <div className="page-heading"><h1>역할 선택</h1></div>
-        <p className="hint"><strong>{pending.name}</strong>({pending.email})으로 가입합니다. 역할을 선택해주세요.</p>
-        <div className="demo-form">
-          {ROLES.map(({ value, label, desc }) => (
-            <label key={value} className="choice">
-              <input type="radio" name="role" value={value} checked={selectedRole === value} onChange={() => setSelectedRole(value)} />
-              <span><strong>{label}</strong><small>{desc}</small></span>
-            </label>
-          ))}
-        </div>
+        <div className="page-heading"><h1>가입 확인</h1></div>
+        <p className="hint">
+          <strong>{pending.name}</strong>({pending.email})으로 가입합니다.
+        </p>
+
+        {preselectedRole ? (
+          <div className="demo-card accent">
+            <p className="muted" style={{ margin: 0, fontSize: '0.8125rem' }}>선택한 역할</p>
+            <p style={{ margin: 0, fontWeight: 700 }}>{roleLabel}</p>
+          </div>
+        ) : (
+          <div className="demo-form">
+            {ROLES.map(({ value, label, desc }) => (
+              <label key={value} className="choice">
+                <input type="radio" name="role" value={value} checked={selectedRole === value} onChange={() => setSelectedRole(value)} />
+                <span><strong>{label}</strong><small>{desc}</small></span>
+              </label>
+            ))}
+          </div>
+        )}
+
         {error && <p role="alert" className="error">{error}</p>}
         <button className="btn" type="button" onClick={() => { void handleSubmit(); }} disabled={!selectedRole || isLoading}>
           {isLoading ? '가입 중…' : '가입하기'}

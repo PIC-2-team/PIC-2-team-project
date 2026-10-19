@@ -9,13 +9,13 @@ import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@Profile("dev")
+@ConditionalOnProperty(name = "app.seed-test-accounts", havingValue = "true")
 @RequiredArgsConstructor
 public class DevDataInitializer implements CommandLineRunner {
 
@@ -36,6 +36,11 @@ public class DevDataInitializer implements CommandLineRunner {
     }
 
     private void createTestUser(String email, String name, String phone, UserRole role) {
+        if (userRepository.findByEmail(email).isPresent()) {
+            log.info("[Seed] 이미 존재하는 계정 건너뜀: {}", email);
+            return;
+        }
+
         User user = userRepository.save(User.builder()
                 .email(email)
                 .name(name)

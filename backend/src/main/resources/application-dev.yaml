@@ -26,3 +26,6 @@ logging:
   level:
     com.project.backend: DEBUG
     org.hibernate.SQL: DEBUG
+
+app:
+  seed-test-accounts: true

@@ -36,6 +36,7 @@ public class RecordAccessService {
             case INSTITUTION -> organizations.findByOwnerId(userId)
                     .map(org -> links.existsByOrganizationIdAndCareRecipientIdAndStatus(
                             org.getId(), recipientId, LinkStatus.ACCEPTED)).orElse(false);
+            case ADMIN -> true;
         };
         require(allowed);
     }

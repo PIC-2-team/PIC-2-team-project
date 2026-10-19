@@ -23,3 +23,12 @@ export type ConsentRequest = {
 export type ConsentResponse = {
   consentTicket: string;
 };
+
+export type RegisterRequest = {
+  consentTicket: string;
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  role: 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
+};
