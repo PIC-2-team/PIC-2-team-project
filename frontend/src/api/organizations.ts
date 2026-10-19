@@ -31,3 +31,26 @@ export function getAssignments(): Promise<CareAssignment[]> {
 export function getLinkRequests(): Promise<LinkRequest[]> {
   return apiRequest('/api/organizations/me/link-requests');
 }
+
+export function assignSupportWorker(payload: {
+  careRecipientId: number;
+  supportWorkerId: number;
+  startDate: string;
+  endDate?: string | null;
+  idempotencyKey?: string;
+}): Promise<CareAssignment> {
+  const body = {
+    ...payload,
+    idempotencyKey: payload.idempotencyKey || `assign-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+  };
+  return apiRequest('/api/organizations/me/assignments', {
+    method: 'POST',
+    body,
+  });
+}
+
+export function endAssignment(assignmentId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/assignments/${assignmentId}/end`, {
+    method: 'PATCH',
+  });
+}
