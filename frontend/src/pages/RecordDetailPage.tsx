@@ -30,6 +30,7 @@ export function RecordDetailPage() {
   const [suggestionText, setSuggestionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [suggestionDone, setSuggestionDone] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedRecipientId || !id) {
@@ -45,12 +46,13 @@ export function RecordDetailPage() {
   const submitSuggestion = async () => {
     if (!selectedRecipientId || !id || !suggestionText.trim()) return;
     setSubmitting(true);
+    setSuggestionError(null);
     try {
       await createSuggestion(selectedRecipientId, Number(id), suggestionText.trim());
       setSuggestionDone(true);
       setShowSuggestion(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '제안 제출 중 오류가 발생했어요.');
+      setSuggestionError(e instanceof Error ? e.message : '제안 제출 중 오류가 발생했어요.');
     } finally {
       setSubmitting(false);
     }
@@ -107,6 +109,7 @@ export function RecordDetailPage() {
                         {submitting ? '제출 중…' : '제안하기'}
                       </button>
                     </div>
+                    {suggestionError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{suggestionError}</p>}
                   </div>
                 ) : (
                   <button type="button" className="btn secondary" onClick={() => setShowSuggestion(true)}>수정 제안</button>
