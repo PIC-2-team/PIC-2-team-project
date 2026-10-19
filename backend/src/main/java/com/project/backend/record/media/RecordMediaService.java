@@ -179,7 +179,7 @@ public class RecordMediaService {
             var details = awsException.awsErrorDetails();
             log.warn("S3 storage request failed: exceptionType={}, errorCode={}, statusCode={}, requestId={}, extendedRequestId={}",
                     cause.getClass().getSimpleName(), details == null ? null : details.errorCode(),
-                    awsException.statusCode(), awsException.requestId(), awsException.extendedRequestId(), cause);
+                    awsException.statusCode(), awsException.requestId(), awsException.extendedRequestId());
         } else {
             log.warn("S3 storage request failed: exceptionType={}, message={}", cause.getClass().getSimpleName(), cause.getMessage(), cause);
         }
