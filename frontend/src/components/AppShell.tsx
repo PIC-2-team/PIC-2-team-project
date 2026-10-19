@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { UserRole } from '../types/user';
 import '../styles/design-system.css';
 
-const ROLE_LABEL = { GUARDIAN: '돌봄 보호자', SUPPORT_WORKER: '활동지원사', INSTITUTION: '기관 담당자' };
+const ROLE_LABEL = { GUARDIAN: '돌봄 보호자', SUPPORT_WORKER: '활동지원사', INSTITUTION: '기관 담당자', ADMIN: '관리자' };
 
 export function AppShell({ children, footer, role, homeDisabled = false }: { children: ReactNode; footer?: ReactNode; role?: UserRole; homeDisabled?: boolean }) {
   const [largeText, setLargeText] = useState(false);
