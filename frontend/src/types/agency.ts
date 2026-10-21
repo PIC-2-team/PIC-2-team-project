@@ -38,3 +38,16 @@ export type LinkRequest = {
   requestedAt: string;
   decidedAt: string | null;
 };
+
+export type OrganizationCareRecipient = {
+  id: number;
+  careRecipientNumber: string;
+  name: string;
+  birthDate: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  disabilityTypes?: string[];
+  disabilityGrade?: number | null;
+  otherDisabilityType?: string | null;
+  latestRecordAt?: string | null;
+  createdAt?: string;
+};

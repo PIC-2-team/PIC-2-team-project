@@ -1,4 +1,4 @@
-import type { Organization, OrganizationMember, CareAssignment, LinkRequest } from '../types/agency';
+import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient } from '../types/agency';
 import { apiRequest } from './client';
 
 export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
@@ -22,6 +22,70 @@ export function getMyOrganization(): Promise<Organization> {
 
 export function getMembers(): Promise<OrganizationMember[]> {
   return apiRequest('/api/organizations/me/members');
+}
+
+export function addMember(userId: number): Promise<OrganizationMember> {
+  return apiRequest('/api/organizations/me/members', {
+    method: 'POST',
+    body: { userId },
+  });
+}
+
+export function updateMemberStatus(memberId: number, active: boolean): Promise<OrganizationMember> {
+  return apiRequest(`/api/organizations/me/members/${memberId}`, {
+    method: 'PATCH',
+    body: { active },
+  });
+}
+
+export function removeMember(memberId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/members/${memberId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getOrganizationRecipients(): Promise<OrganizationCareRecipient[]> {
+  return apiRequest('/api/organizations/me/recipients');
+}
+
+export function createOrganizationRecipient(payload: {
+  name: string;
+  birthDate: string;
+  gender: string;
+  disabilityTypes?: string[];
+  disabilityGrade?: number | null;
+  otherDisabilityType?: string | null;
+}): Promise<OrganizationCareRecipient> {
+  return apiRequest('/api/organizations/me/recipients', {
+    method: 'POST',
+    body: {
+      ...payload,
+      disabilityTypes: payload.disabilityTypes && payload.disabilityTypes.length > 0 ? payload.disabilityTypes : ['INTELLECTUAL'],
+    },
+  });
+}
+
+export function updateOrganizationRecipient(
+  recipientId: number,
+  payload: Partial<{
+    name: string;
+    birthDate: string;
+    gender: string;
+    disabilityTypes?: string[];
+    disabilityGrade?: number | null;
+    otherDisabilityType?: string | null;
+  }>
+): Promise<OrganizationCareRecipient> {
+  return apiRequest(`/api/organizations/me/recipients/${recipientId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function deleteOrganizationRecipient(recipientId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/recipients/${recipientId}`, {
+    method: 'DELETE',
+  });
 }
 
 export function getAssignments(): Promise<CareAssignment[]> {
