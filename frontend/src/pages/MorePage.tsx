@@ -53,6 +53,7 @@ export function MorePage() {
     sections.push({
       title: '돌봄 관리',
       items: [
+        { label: '세컨드 보호자 관리', to: '/secondary-guardian' },
         { label: '돌봄 관계 관리', to: '/care-relations' },
       ],
     });
