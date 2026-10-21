@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient } from '../api/careRecipients';
@@ -40,6 +40,42 @@ const BASE_MENU_SECTIONS: MenuSection[] = [
   },
 ];
 
+
+function LogoutConfirmDialog({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (ref.current?.showModal) {
+      ref.current.showModal();
+    }
+    const el = ref.current;
+    return () => {
+      if (el?.close) {
+        el.close();
+      }
+    };
+  }, []);
+  return (
+    <dialog ref={ref} onCancel={onCancel} aria-labelledby="logout-title">
+      <h2 id="logout-title">로그아웃할까요?</h2>
+      <p>로그아웃 후 다시 로그인해야 합니다.</p>
+      <div className="actions">
+        <button className="btn secondary" onClick={onCancel}>
+          취소
+        </button>
+        <button className="btn danger" onClick={onConfirm}>
+          로그아웃
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function MorePage() {
   const { user, logout, selectedRecipientId } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +83,7 @@ export function MorePage() {
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
   const [recipientError, setRecipientError] = useState<string | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
     if (showRecipientModal && selectedRecipientId) {
@@ -61,8 +98,7 @@ export function MorePage() {
     }
   }, [showRecipientModal, selectedRecipientId]);
 
-  const handleLogout = () => {
-    if (!window.confirm('로그아웃할까요?')) return;
+  const handleLogoutConfirm = () => {
     logout();
     navigate('/login', { replace: true });
   };
@@ -231,10 +267,17 @@ export function MorePage() {
         type="button"
         className="btn secondary"
         style={{ color: '#e05555', borderColor: '#f5c6c4' }}
-        onClick={handleLogout}
+        onClick={() => setShowLogoutDialog(true)}
       >
         로그아웃
       </button>
+
+      {showLogoutDialog && (
+        <LogoutConfirmDialog
+          onConfirm={handleLogoutConfirm}
+          onCancel={() => setShowLogoutDialog(false)}
+        />
+      )}
     </div>
   );
 }
