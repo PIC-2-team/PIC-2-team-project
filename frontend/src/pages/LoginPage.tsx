@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
+import { findEmail, resetPassword } from '../api/auth';
 import styles from './LoginPage.module.css';
 
 declare global {
@@ -27,6 +28,84 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  // Account modal states
+  const [modalTab, setModalTab] = useState<'email' | 'password' | null>(null);
+
+  // Find email state
+  const [findName, setFindName] = useState('');
+  const [findPhone, setFindPhone] = useState('');
+  const [foundEmail, setFoundEmail] = useState<string | null>(null);
+  const [findError, setFindError] = useState<string | null>(null);
+  const [findLoading, setFindLoading] = useState(false);
+
+  // Reset password state
+  const [resetName, setResetName] = useState('');
+  const [resetPhone, setResetPhone] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const openModal = (tab: 'email' | 'password') => {
+    setModalTab(tab);
+    setFindError(null);
+    setResetError(null);
+    setFoundEmail(null);
+    setResetSuccess(false);
+  };
+
+  const closeModal = () => {
+    setModalTab(null);
+  };
+
+  const handleFindEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFindLoading(true);
+    setFindError(null);
+    try {
+      const res = await findEmail({ name: findName, phone: findPhone });
+      setFoundEmail(res.email);
+    } catch {
+      setFindError('일치하는 회원 정보를 찾을 수 없어요. 이름과 전화번호를 확인해 주세요.');
+    } finally {
+      setFindLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError('새 비밀번호가 일치하지 않아요.');
+      return;
+    }
+    if (resetNewPassword.length < 8) {
+      setResetError('비밀번호는 최소 8자 이상이어야 해요.');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await resetPassword({
+        name: resetName,
+        phone: resetPhone,
+        email: resetEmail,
+        newPassword: resetNewPassword,
+      });
+      setResetSuccess(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'GOOGLE_ACCOUNT') {
+        setResetError('Google 소셜 로그인으로 가입된 계정이에요. Google 로그인을 이용해 주세요.');
+      } else {
+        setResetError('회원 정보를 찾을 수 없거나 일치하지 않아요.');
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleGoogleCredential = async (idToken: string) => {
     setIsLoading(true);
@@ -141,6 +220,15 @@ export function LoginPage() {
               {isLoading ? '로그인 중…' : '로그인'}
             </button>
           </form>
+          <div className={styles.findAccountLinks}>
+            <button type="button" className={styles.textBtn} onClick={() => openModal('email')}>
+              이메일 찾기
+            </button>
+            <span className={styles.linkDivider} aria-hidden="true">|</span>
+            <button type="button" className={styles.textBtn} onClick={() => openModal('password')}>
+              비밀번호 찾기
+            </button>
+          </div>
           <div className={styles.divider}>또는</div>
           <div ref={googleBtnRef} className={styles.googleButton} />
           <p className={styles.signup}>
@@ -148,6 +236,170 @@ export function LoginPage() {
             <Link to="/consent" style={{ color: '#3CAB7E', fontWeight: 600 }}>회원가입</Link>
           </p>
         </div>
+
+        {modalTab && (
+          <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label="계정 찾기">
+            <div className={styles.modalContent}>
+              <div className={styles.modalHeader}>
+                <h2 className={styles.modalTitle}>
+                  {modalTab === 'email' ? '이메일 찾기' : '비밀번호 재설정'}
+                </h2>
+                <button type="button" className={styles.closeBtn} onClick={closeModal} aria-label="닫기">
+                  ✕
+                </button>
+              </div>
+              <div className={styles.modalTabs}>
+                <button
+                  type="button"
+                  className={`${styles.tabBtn} ${modalTab === 'email' ? styles.activeTab : ''}`}
+                  onClick={() => openModal('email')}
+                >
+                  이메일 찾기
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.tabBtn} ${modalTab === 'password' ? styles.activeTab : ''}`}
+                  onClick={() => openModal('password')}
+                >
+                  비밀번호 재설정
+                </button>
+              </div>
+
+              <div className={styles.modalBody}>
+                {modalTab === 'email' && (
+                  <>
+                    {foundEmail ? (
+                      <div className={styles.successBox}>
+                        <p>가입된 계정의 이메일입니다.</p>
+                        <strong className={styles.foundEmail}>{foundEmail}</strong>
+                        <button
+                          type="button"
+                          className={styles.submit}
+                          style={{ marginTop: '16px', width: '100%' }}
+                          onClick={() => {
+                            closeModal();
+                          }}
+                        >
+                          로그인하러 가기
+                        </button>
+                      </div>
+                    ) : (
+                      <form className={styles.form} onSubmit={(e) => { void handleFindEmail(e); }}>
+                        <label>
+                          이름
+                          <input
+                            type="text"
+                            value={findName}
+                            onChange={(e) => setFindName(e.target.value)}
+                            placeholder="가입 시 등록한 이름"
+                            required
+                          />
+                        </label>
+                        <label>
+                          전화번호
+                          <input
+                            type="tel"
+                            value={findPhone}
+                            onChange={(e) => setFindPhone(e.target.value)}
+                            placeholder="010-0000-0000"
+                            required
+                          />
+                        </label>
+                        {findError && <p role="alert" className={styles.error}>{findError}</p>}
+                        <button className={styles.submit} type="submit" disabled={findLoading}>
+                          {findLoading ? '조회 중…' : '이메일 조회'}
+                        </button>
+                      </form>
+                    )}
+                  </>
+                )}
+
+                {modalTab === 'password' && (
+                  <>
+                    {resetSuccess ? (
+                      <div className={styles.successBox}>
+                        <p>비밀번호가 성공적으로 변경되었습니다.</p>
+                        <p style={{ marginTop: '4px', fontSize: '13px', color: 'var(--muted)' }}>
+                          새로운 비밀번호로 로그인해 주세요.
+                        </p>
+                        <button
+                          type="button"
+                          className={styles.submit}
+                          style={{ marginTop: '16px', width: '100%' }}
+                          onClick={() => {
+                            setEmail(resetEmail);
+                            closeModal();
+                          }}
+                        >
+                          로그인하러 가기
+                        </button>
+                      </div>
+                    ) : (
+                      <form className={styles.form} onSubmit={(e) => { void handleResetPassword(e); }}>
+                        <label>
+                          이름
+                          <input
+                            type="text"
+                            value={resetName}
+                            onChange={(e) => setResetName(e.target.value)}
+                            placeholder="가입 시 등록한 이름"
+                            required
+                          />
+                        </label>
+                        <label>
+                          전화번호
+                          <input
+                            type="tel"
+                            value={resetPhone}
+                            onChange={(e) => setResetPhone(e.target.value)}
+                            placeholder="010-0000-0000"
+                            required
+                          />
+                        </label>
+                        <label>
+                          이메일
+                          <input
+                            type="email"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            placeholder="example@samgyeol.com"
+                            required
+                          />
+                        </label>
+                        <label>
+                          새 비밀번호
+                          <input
+                            type="password"
+                            value={resetNewPassword}
+                            onChange={(e) => setResetNewPassword(e.target.value)}
+                            placeholder="8자 이상 입력"
+                            autoComplete="new-password"
+                            required
+                          />
+                        </label>
+                        <label>
+                          새 비밀번호 확인
+                          <input
+                            type="password"
+                            value={resetConfirmPassword}
+                            onChange={(e) => setResetConfirmPassword(e.target.value)}
+                            placeholder="새 비밀번호 다시 입력"
+                            autoComplete="new-password"
+                            required
+                          />
+                        </label>
+                        {resetError && <p role="alert" className={styles.error}>{resetError}</p>}
+                        <button className={styles.submit} type="submit" disabled={resetLoading}>
+                          {resetLoading ? '변경 중…' : '비밀번호 변경'}
+                        </button>
+                      </form>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </AppShell>
   );

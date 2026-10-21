@@ -6,14 +6,30 @@ import { MemoryRouter } from 'react-router-dom';
 import { SecondaryGuardianPage } from './SecondaryGuardianPage';
 import * as careRecipientsApi from '../api/careRecipients';
 
+let mockUser: { id: number; name: string; email: string; role: string; publicCode?: string } | null = {
+  id: 42,
+  name: '김보호',
+  email: 'guardian@test.com',
+  role: 'GUARDIAN',
+  publicCode: 'P-TEST1234',
+};
+
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ selectedRecipientId: 42 }),
+  useAuth: () => ({ selectedRecipientId: 42, user: mockUser }),
 }));
 
 describe('SecondaryGuardianPage', () => {
   beforeEach(() => {
+    mockUser = {
+      id: 42,
+      name: '김보호',
+      email: 'guardian@test.com',
+      role: 'GUARDIAN',
+      publicCode: 'P-TEST1234',
+    };
     vi.clearAllMocks();
   });
+
 
   afterEach(() => {
     cleanup();
@@ -128,4 +144,51 @@ describe('SecondaryGuardianPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('사용자를 찾을 수 없습니다.');
   });
+
+  it('초대 대기 중일 때 발급된 초대 코드가 노출되고 초대 코드 복사 버튼이 동작한다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(careRecipientsApi, 'getSecondaryGuardian').mockResolvedValue({
+      id: 3,
+      careRecipientId: 42,
+      guardianId: 201,
+      status: 'PENDING',
+      invitationToken: 'invite-secret-code-777',
+      invitationExpiresAt: '2026-10-22T00:00:00Z',
+      createdAt: '2026-10-21T00:00:00Z',
+    });
+
+    render(
+      <MemoryRouter>
+        <SecondaryGuardianPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('발급된 초대 코드')).toBeInTheDocument();
+    expect(screen.getByText('invite-secret-code-777')).toBeInTheDocument();
+
+    const copyBtn = screen.getByRole('button', { name: '초대 코드 복사' });
+    await user.click(copyBtn);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('초대 코드가 복사되었습니다.');
+  });
+
+  it('사용자에게 등록된 내 보호자 고유 코드가 표시되고 복사할 수 있다', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(careRecipientsApi, 'getSecondaryGuardian').mockResolvedValue(null);
+
+    render(
+      <MemoryRouter>
+        <SecondaryGuardianPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('내 보호자 고유 코드')).toBeInTheDocument();
+    expect(screen.getByText('P-TEST1234')).toBeInTheDocument();
+
+    const copyBtn = screen.getByRole('button', { name: '코드 복사' });
+    await user.click(copyBtn);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('내 보호자 코드가 복사되었습니다.');
+  });
 });
+
