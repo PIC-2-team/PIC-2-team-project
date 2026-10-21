@@ -101,6 +101,19 @@ public class AuthController {
         return ApiResponse.ok(session.data());
     }
 
+    @Operation(summary = "이메일 찾기")
+    @PostMapping("/find-email")
+    public ApiResponse<FindEmailResponse> findEmail(@Valid @RequestBody FindEmailRequest request) {
+        return ApiResponse.ok(authService.findEmail(request));
+    }
+
+    @Operation(summary = "비밀번호 재설정")
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+    }
+
     @Operation(summary = "세컨드 보호자 초대 수락")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/invitations/accept")

@@ -32,3 +32,19 @@ export type RegisterRequest = {
   phone?: string;
   role: 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
 };
+
+export type FindEmailRequest = {
+  name: string;
+  phone: string;
+};
+
+export type FindEmailResponse = {
+  email: string;
+};
+
+export type ResetPasswordRequest = {
+  name: string;
+  phone: string;
+  email: string;
+  newPassword: string;
+};
