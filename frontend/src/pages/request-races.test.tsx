@@ -9,12 +9,22 @@ import * as recordsApi from '../api/records';
 import type { DailyRecord } from '../types/record';
 import type { PaginatedData } from '../types/common';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ selectedRecipientId: 42, user: { role: 'GUARDIAN' } }),
 }));
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 9, 14, 12));
+  mockNavigate.mockClear();
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
@@ -25,7 +35,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-it('카테고리 변경 시 불러온 개요에서 해당 정보를 표시한다', async () => {
+it('카테고리 클릭 시 해당 카테고리 상세 페이지로 이동하며 추가 개요 요청을 발생시키지 않는다', async () => {
   const overview = vi.spyOn(careApi, 'getCareInfoOverview').mockResolvedValue({
     categories: [
       { category: 'COMMUNICATION', content: '기존 의사소통정보', updatedAt: '2026-10-14' },
@@ -34,9 +44,9 @@ it('카테고리 변경 시 불러온 개요에서 해당 정보를 표시한다
     pinnedRecords: [],
   });
   render(<MemoryRouter><CareInfoPage /></MemoryRouter>);
-  await screen.findByText('기존 의사소통정보');
-  fireEvent.click(screen.getByRole('button', { name: '선호·비선호' }));
-  await screen.findByText('최신 선호정보');
+  const prefButton = await screen.findByRole('button', { name: /선호·비선호/ });
+  fireEvent.click(prefButton);
+  expect(mockNavigate).toHaveBeenCalledWith('/care-info/PREFERENCE');
   expect(overview).toHaveBeenCalledTimes(1);
 });
 
