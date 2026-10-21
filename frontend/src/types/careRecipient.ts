@@ -1,5 +1,13 @@
-// TODO: 응답 필드 미정 (API-Spec.md §CareRecipient — 경로만 확정). 최소 필드만.
 export type CareRecipient = {
   id: number;
   name: string;
+  careRecipientNumber?: string;
+  birthDate?: string;
+  gender?: 'MALE' | 'FEMALE';
+  disabilityTypes?: string[];
+  disabilityGrade?: number | null;
+  otherDisabilityType?: string | null;
+  latestRecordAt?: string | null;
+  createdAt?: string;
 };
+

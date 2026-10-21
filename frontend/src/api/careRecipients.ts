@@ -5,6 +5,11 @@ export function listCareRecipients(): Promise<CareRecipient[]> {
   return apiRequest('/api/care-recipients');
 }
 
+export function getCareRecipient(recipientId: number): Promise<CareRecipient> {
+  return apiRequest(`/api/care-recipients/${recipientId}`);
+}
+
+
 export type CreateCareRecipientPayload = {
   name: string;
   birthDate: string;
