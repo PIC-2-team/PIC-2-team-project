@@ -24,3 +24,17 @@ export type CreateRecordPayload = {
   recordedAt: string;
   pinned?: boolean;
 };
+
+export type RecordRequestStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
+
+export type RecordRequestItem = {
+  id: number;
+  organizationId: number;
+  careRecipientId: number;
+  supportWorkerId: number;
+  idempotencyKey: string;
+  message?: string;
+  completedRecordId?: number | null;
+  status: RecordRequestStatus;
+  createdAt: string;
+};

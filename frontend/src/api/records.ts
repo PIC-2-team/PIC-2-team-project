@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, RecordCategory } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -93,5 +93,30 @@ export function createSuggestion(
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/suggestions`, {
     method: 'POST',
     body: { suggestedContent },
+  });
+}
+
+export function createRecordRequest(
+  recipientId: number,
+  message: string,
+  idempotencyKey: string = crypto.randomUUID()
+): Promise<RecordRequestItem> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests`, {
+    method: 'POST',
+    body: { idempotencyKey, message },
+  });
+}
+
+export function getMyRecordRequests(): Promise<RecordRequestItem[]> {
+  return apiRequest('/api/record-requests/mine');
+}
+
+export function getRecipientRecordRequests(recipientId: number): Promise<RecordRequestItem[]> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests`);
+}
+
+export function cancelRecordRequest(recipientId: number, requestId: number): Promise<void> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests/${requestId}/cancel`, {
+    method: 'POST',
   });
 }

@@ -8,7 +8,18 @@ const ROLE_LABEL: Record<string, string> = {
   INSTITUTION: '기관 담당자',
 };
 
-const MENU_SECTIONS = [
+type MenuItem = {
+  label: string;
+  value?: string;
+  to?: string;
+};
+
+type MenuSection = {
+  title: string;
+  items: MenuItem[];
+};
+
+const BASE_MENU_SECTIONS: MenuSection[] = [
   {
     title: '서비스',
     items: [
@@ -36,6 +47,19 @@ export function MorePage() {
     navigate('/login', { replace: true });
   };
 
+  const sections: MenuSection[] = [];
+
+  if (user?.role === 'SUPPORT_WORKER') {
+    sections.push({
+      title: '돌봄 협업',
+      items: [
+        { label: '돌봄 내용 수정 요청', to: '/record-requests/new' },
+      ],
+    });
+  }
+
+  sections.push(...BASE_MENU_SECTIONS);
+
   return (
     <div className="demo-page">
       <h1>더보기</h1>
@@ -54,7 +78,7 @@ export function MorePage() {
         </div>
       </div>
 
-      {MENU_SECTIONS.map(section => (
+      {sections.map(section => (
         <div key={section.title}>
           <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>{section.title}</p>
           <div className="demo-card" style={{ padding: 0, gap: 0 }}>
@@ -64,6 +88,9 @@ export function MorePage() {
                 type="button"
                 className="menu-link"
                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '16px 20px' }}
+                onClick={() => {
+                  if (item.to) navigate(item.to);
+                }}
               >
                 <span>{item.label}</span>
                 {item.value
