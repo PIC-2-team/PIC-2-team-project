@@ -393,19 +393,19 @@ export function Settings() {
           <p>
             직접 입력한 예시 기록과 변경 사항을 지우고 처음 상태로 돌아갑니다.
           </p>
-          <button className="btn secondary" onClick={() => setConfirm(true)}>
+          <button className="btn secondary" disabled={confirm} onClick={() => setConfirm(true)}>
             예시 데이터 초기화
           </button>
         </Card>
         {confirm && (
           <Confirm
-            title="데모 데이터를 초기화할까요?"
+            title="모든 변경 사항이 삭제됩니다. 계속하시겠어요?"
             onCancel={() => setConfirm(false)}
             onConfirm={() => {
               if (reset()) nav('/onboarding');
             }}
           >
-            이 브라우저에서 추가한 데모 데이터는 복구할 수 없습니다.
+            예시 데이터를 처음 상태로 되돌립니다. 이 작업은 취소할 수 없습니다.
           </Confirm>
         )}
       </Page>
