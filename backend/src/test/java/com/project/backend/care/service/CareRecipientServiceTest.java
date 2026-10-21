@@ -40,6 +40,8 @@ class CareRecipientServiceTest {
     @Mock CareRecipientNumberGenerator numberGenerator;
     @Mock CareAccessService careAccessService;
     @Mock UserRepository userRepository;
+    @Mock com.project.backend.organization.repository.OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    @Mock com.project.backend.organization.repository.OrganizationRepository organizationRepository;
 
     @InjectMocks CareRecipientService careRecipientService;
 
@@ -200,6 +202,41 @@ class CareRecipientServiceTest {
         assertThatThrownBy(() -> careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-NONE")))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void getRelations_접근권한_검증_후_기관_및_배정_정보_반환() {
+        Long userId = 1L;
+        Long recipientId = 100L;
+
+        com.project.backend.organization.entity.Organization org = com.project.backend.organization.entity.Organization.builder()
+                .name("행복복지관").organizationCode("KNU001").ownerId(10L).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+
+        com.project.backend.organization.entity.OrganizationRecipientLink link = com.project.backend.organization.entity.OrganizationRecipientLink.builder()
+                .organizationId(10L).careRecipientId(recipientId).requestedById(userId).build();
+        ReflectionTestUtils.setField(link, "id", 1L);
+
+        CareAssignment assignment = CareAssignment.builder()
+                .organizationId(10L).careRecipientId(recipientId).supportWorkerId(2L)
+                .idempotencyKey("k1").startDate(LocalDate.of(2026, 1, 1)).build();
+        ReflectionTestUtils.setField(assignment, "id", 50L);
+
+        User worker = supportWorkerUser(2L);
+
+        given(organizationRecipientLinkRepository.findByCareRecipientId(recipientId)).willReturn(List.of(link));
+        given(organizationRepository.findAllById(List.of(10L))).willReturn(List.of(org));
+        given(careAssignmentRepository.findByCareRecipientIdAndEndedAtIsNull(recipientId)).willReturn(List.of(assignment));
+        given(userRepository.findAllById(List.of(2L))).willReturn(List.of(worker));
+
+        com.project.backend.care.dto.CareRelationsResponse response = careRecipientService.getRelations(userId, recipientId);
+
+        assertThat(response.careRecipientId()).isEqualTo(recipientId);
+        assertThat(response.organizations()).hasSize(1);
+        assertThat(response.organizations().get(0).organizationName()).isEqualTo("행복복지관");
+        assertThat(response.assignments()).hasSize(1);
+        assertThat(response.assignments().get(0).supportWorkerName()).isEqualTo("지원사");
+        verify(careAccessService).verifyAccess(userId, recipientId);
     }
 
     private User guardianUser(Long id) {

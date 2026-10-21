@@ -108,4 +108,11 @@ public class CareRecipientController {
                                         @PathVariable Long id) {
         secondaryGuardianService.revokeSecondaryGuardian(userId, id);
     }
+
+    @Operation(summary = "당사자 돌봄 관계(기관 및 활동지원사) 조회")
+    @GetMapping("/{id}/relations")
+    public ApiResponse<CareRelationsResponse> getRelations(@AuthenticationPrincipal Long userId,
+                                                           @PathVariable Long id) {
+        return ApiResponse.ok(careRecipientService.getRelations(userId, id));
+    }
 }

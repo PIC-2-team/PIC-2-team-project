@@ -15,11 +15,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+let mockRole = 'GUARDIAN';
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ selectedRecipientId: 42, user: { role: 'GUARDIAN' } }),
+  useAuth: () => ({ selectedRecipientId: 42, user: { role: mockRole } }),
 }));
 
 beforeEach(() => {
+  mockRole = 'GUARDIAN';
   vi.clearAllMocks();
 });
 
@@ -101,4 +103,29 @@ it('기록하기 클릭 시 /records/new 경로로 카테고리 state를 넘긴�
   fireEvent.click(addButton);
 
   expect(mockNavigate).toHaveBeenCalledWith('/records/new', { state: { category: 'MEAL', returnToCareInfo: true } });
+});
+
+it('활동지원사는 돌봄 내용 수정 요청 버튼이 표시되고 클릭 시 /record-requests/new로 이동한다', async () => {
+  mockRole = 'SUPPORT_WORKER';
+  vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
+    items: [],
+    pagination: { page: 1, pageSize: 50, totalItems: 0, totalPages: 0 },
+  });
+  vi.spyOn(careInfoApi, 'getCareInfoByCategory').mockRejectedValue(new Error('Not found'));
+
+  render(
+    <MemoryRouter initialEntries={['/care-info/MEAL']}>
+      <Routes>
+        <Route path="/care-info/:categoryId" element={<CareInfoDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  expect(screen.queryByRole('button', { name: /기록하기/ })).not.toBeInTheDocument();
+  const requestButton = await screen.findByRole('button', { name: /돌봄 내용 수정 요청/ });
+  fireEvent.click(requestButton);
+
+  expect(mockNavigate).toHaveBeenCalledWith('/record-requests/new', {
+    state: { category: 'MEAL', categoryLabel: '식사' },
+  });
 });

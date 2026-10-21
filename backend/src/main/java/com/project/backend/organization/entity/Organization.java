@@ -38,4 +38,8 @@ public class Organization {
     public void assignOwner(Long ownerId) {
         this.ownerId = ownerId;
     }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
 }

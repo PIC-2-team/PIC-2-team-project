@@ -1,0 +1,201 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 32px;
+  min-height: 100%;
+  gap: 16px;
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 8px 0;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px 8px 0;
+  display: flex;
+  align-items: center;
+  color: #1a2533;
+  font-size: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.infoBanner {
+  background: #f0f7f3;
+  border: 1px solid #d4ebdd;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #2e7d5a;
+  line-height: 1.5;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.badgeAccepted {
+  background: #e8f5ee;
+  color: #3CAB7E;
+}
+
+.badgePending {
+  background: #fff3e8;
+  color: #f57c00;
+}
+
+.badgeRejected {
+  background: #fef2f2;
+  color: #e05555;
+}
+
+.cardMeta {
+  font-size: 13px;
+  color: #8a9ab0;
+  margin: 0;
+}
+
+.emptyCard {
+  background: white;
+  border-radius: 16px;
+  padding: 24px 16px;
+  text-align: center;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  color: #8a9ab0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.linkForm {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2533;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #1a2533;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3CAB7E;
+}
+
+.inputHint {
+  font-size: 12px;
+  color: #8a9ab0;
+  margin-top: 2px;
+}
+
+.btnPrimary {
+  width: 100%;
+  height: 48px;
+  background: #3CAB7E;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alertError {
+  background: #fff0f0;
+  border: 1px solid #f5c6c4;
+  color: #c53030;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.alertSuccess {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}

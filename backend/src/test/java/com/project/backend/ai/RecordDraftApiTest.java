@@ -101,7 +101,7 @@ class RecordDraftApiTest {
         given(completions.create(any(ChatCompletionCreateParams.class))).willReturn(completion);
         given(completion.choices()).willReturn(List.of(choice));
         given(choice.message()).willReturn(gptMessage);
-        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"아침 식사를 마쳤습니다.\",\"category\":\"MEAL\"}"));
+        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"아침 식사를 마쳤습니다.\"}"));
 
         AudioService audio = mock(AudioService.class);
         transcriptions = mock(TranscriptionService.class);
@@ -223,13 +223,24 @@ class RecordDraftApiTest {
     }
 
     @Test
-    void invalidAiCategoryIsNotReturnedToTheClient() throws Exception {
-        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"기록\",\"category\":\"UNKNOWN\"}"));
+    void invalidAiResponseIsNotReturnedToTheClient() throws Exception {
+        given(gptMessage.content()).willReturn(Optional.of("{\"invalid\":\"format\"}"));
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
                         .content(textRequest("관찰 내용"))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isBadGateway()).andExpect(jsonPath("$.error.code").value("AI_INVALID_RESPONSE"));
         org.assertj.core.api.Assertions.assertThat(records.count()).isZero();
+    }
+
+    @Test
+    void keywordsClassifyCategoryFromDraftAndTranscript() throws Exception {
+        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"처방받은 감기약을 복용하고 체온을 측정했습니다.\"}"));
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("약 먹었습니다."))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value("처방받은 감기약을 복용하고 체온을 측정했습니다."))
+                .andExpect(jsonPath("$.data.category").value("HEALTH"));
     }
 
     @Test

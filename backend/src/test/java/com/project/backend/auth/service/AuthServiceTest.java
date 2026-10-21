@@ -195,6 +195,96 @@ class AuthServiceTest {
                 .extracting("status").isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    // ─── findEmail ────────────────────────────────────────────────────────────
+
+    @Test
+    void findEmail_이름과_전화번호가_일치하면_마스킹된_이메일_반환() {
+        User user = User.builder()
+                .name("홍길동")
+                .email("honggildong@example.com")
+                .phone("010-1234-5678")
+                .publicCode("P-ABCD1234")
+                .role(UserRole.GUARDIAN)
+                .build();
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        given(userRepository.findByName("홍길동")).willReturn(java.util.List.of(user));
+
+        FindEmailResponse res = authService.findEmail(new FindEmailRequest("홍길동", "01012345678"));
+
+        assertThat(res.email()).isEqualTo("hon********@example.com");
+    }
+
+    @Test
+    void findEmail_일치하는_사용자가_없으면_NOT_FOUND_예외() {
+        given(userRepository.findByName("홍길동")).willReturn(java.util.List.of());
+
+        assertThatThrownBy(() -> authService.findEmail(new FindEmailRequest("홍길동", "01012345678")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ─── resetPassword ────────────────────────────────────────────────────────
+
+    @Test
+    void resetPassword_정보가_모두_일치하면_비밀번호_암호화_후_업데이트() {
+        User user = User.builder()
+                .name("홍길동")
+                .email("hong@example.com")
+                .password("oldEncoded")
+                .phone("010-1234-5678")
+                .publicCode("P-ABCD1234")
+                .role(UserRole.GUARDIAN)
+                .build();
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        given(userRepository.findByEmail("hong@example.com")).willReturn(Optional.of(user));
+        given(passwordEncoder.encode("newPassword123")).willReturn("newEncoded");
+
+        authService.resetPassword(new ResetPasswordRequest("홍길동", "01012345678", "hong@example.com", "newPassword123"));
+
+        assertThat(user.getPassword()).isEqualTo("newEncoded");
+    }
+
+    @Test
+    void resetPassword_전화번호가_일치하지_않으면_BAD_REQUEST_예외() {
+        User user = User.builder()
+                .name("홍길동")
+                .email("hong@example.com")
+                .password("oldEncoded")
+                .phone("010-9999-9999")
+                .publicCode("P-ABCD1234")
+                .role(UserRole.GUARDIAN)
+                .build();
+
+        given(userRepository.findByEmail("hong@example.com")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.resetPassword(
+                new ResetPasswordRequest("홍길동", "01012345678", "hong@example.com", "newPassword123")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void resetPassword_소셜로그인_계정인_경우_BAD_REQUEST_예외() {
+        User user = User.builder()
+                .name("홍길동")
+                .email("google@example.com")
+                .password(null)
+                .googleId("google-12345")
+                .phone("010-1234-5678")
+                .publicCode("P-ABCD1234")
+                .role(UserRole.GUARDIAN)
+                .build();
+
+        given(userRepository.findByEmail("google@example.com")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.resetPassword(
+                new ResetPasswordRequest("홍길동", "01012345678", "google@example.com", "newPassword123")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     // ─── helpers ─────────────────────────────────────────────────────────────
 
     private User userWithId(Long id) {

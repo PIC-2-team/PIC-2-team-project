@@ -163,14 +163,26 @@ public class OrganizationService {
                 .map(LinkRequestResponse::from).toList();
     }
 
-    public OrganizationMember addMember(Long ownerId, Long supportWorkerId) {
+    public MemberResponse addMember(Long ownerId, Long supportWorkerId) {
         Organization org = findOrgByOwner(ownerId);
         User worker = findUser(supportWorkerId);
         if (worker.getRole() != UserRole.SUPPORT_WORKER) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "활동지원사 계정만 멤버로 추가할 수 있습니다.");
         }
-        return organizationMemberRepository.save(
-                OrganizationMember.builder().organizationId(org.getId()).userId(supportWorkerId).build());
+        OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndUserId(org.getId(), supportWorkerId)
+                .map(m -> {
+                    m.activate();
+                    return organizationMemberRepository.save(m);
+                })
+                .orElseGet(() -> organizationMemberRepository.save(
+                        OrganizationMember.builder().organizationId(org.getId()).userId(supportWorkerId).build()));
+        return MemberResponse.of(member, worker);
+    }
+
+    public void removeMember(Long ownerId, Long memberId) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        organizationMemberRepository.delete(member);
     }
 
     private Organization findOrgByOwner(Long ownerId) {

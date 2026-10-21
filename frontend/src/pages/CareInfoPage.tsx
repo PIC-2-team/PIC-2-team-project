@@ -129,7 +129,6 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
-  const [active, setActive] = useState<CareInfoCategory>('COMMUNICATION');
   const [overview, setOverview] = useState<CareInfoOverview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,19 +146,14 @@ export function CareInfoPage() {
     return () => { isCurrent = false; };
   }, [selectedRecipientId]);
 
-  const activeMeta = CATEGORIES.find(c => c.id === active);
-  const info = overview?.categories.find(item => item.category === active);
   const pinnedRecords = overview?.pinnedRecords ?? [];
-  const hasInfoContent = info && (typeof info.content === 'string' ? info.content.length > 0 : info.content != null);
-
-  const handleCategoryClick = (catId: CareInfoCategory) => {
-    setActive(catId);
-    navigate(`/care-info/${catId}`);
-  };
 
   return (
     <div className="demo-page">
       <h1>돌봄정보</h1>
+
+      {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+      {error && <p className="error" role="alert">{error}</p>}
 
       {pinnedRecords.length > 0 && (
         <section className="demo-card accent" aria-labelledby="pinned-records-title">
@@ -182,9 +176,8 @@ export function CareInfoPage() {
           <button
             key={cat.id}
             type="button"
-            className={`${styles.card} ${active === cat.id ? styles.cardActive : ''}`}
-            onClick={() => handleCategoryClick(cat.id)}
-            aria-pressed={active === cat.id}
+            className={styles.card}
+            onClick={() => navigate(`/care-info/${cat.id}`)}
           >
             <span className={styles.iconWrap} style={{ background: cat.bg }}>{cat.icon}</span>
             <span className={styles.cardBottom}>
@@ -194,29 +187,6 @@ export function CareInfoPage() {
           </button>
         ))}
       </div>
-
-      <section aria-label={activeMeta?.label}>
-        {isLoading && <p className="muted" role="status">불러오는 중…</p>}
-        {error && <p className="error" role="alert">{error}</p>}
-        {!isLoading && !error && !hasInfoContent && (
-          <div className="empty-state">
-            <p>{activeMeta?.label} 정보가 아직 없어요.</p>
-          </div>
-        )}
-        {hasInfoContent && info && (
-          <div className="demo-card">
-            <h2>{activeMeta?.label}</h2>
-            {/* content 스키마 미확정 — 확정 후 구조화 UI로 교체 */}
-            {typeof info.content === 'string'
-              ? <p>{info.content}</p>
-              : <pre style={{ fontSize: '0.8125rem', overflow: 'auto' }}>{JSON.stringify(info.content, null, 2)}</pre>
-            }
-            {info.updatedAt && <p className="muted">
-              마지막 업데이트: {new Date(info.updatedAt).toLocaleDateString('ko-KR')}
-            </p>}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
