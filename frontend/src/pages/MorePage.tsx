@@ -59,6 +59,15 @@ export function MorePage() {
     });
   }
 
+  if (user?.role === 'SUPPORT_WORKER') {
+    sections.push({
+      title: '돌봄 협업',
+      items: [
+        { label: '돌봄 내용 수정 요청', to: '/record-requests/new' },
+      ],
+    });
+  }
+
   sections.push(...BASE_MENU_SECTIONS);
 
   return (
