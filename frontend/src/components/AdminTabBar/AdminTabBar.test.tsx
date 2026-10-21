@@ -20,6 +20,7 @@ it('하단바 탭 메뉴와 전달된 카운트를 올바르게 렌더링한다'
   expect(screen.getByRole('tab', { name: '대시보드' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('tab', { name: '기관 관리 (5)' })).toHaveAttribute('aria-selected', 'false');
   expect(screen.getByRole('tab', { name: '사용자 목록 (11)' })).toHaveAttribute('aria-selected', 'false');
+  expect(screen.getByRole('tab', { name: '더보기' })).toHaveAttribute('aria-selected', 'false');
 });
 
 it('탭을 클릭하면 onTabChange 콜백이 호출된다', () => {
@@ -38,4 +39,7 @@ it('탭을 클릭하면 onTabChange 콜백이 호출된다', () => {
 
   fireEvent.click(screen.getByRole('tab', { name: '사용자 목록 (8)' }));
   expect(handleTabChange).toHaveBeenCalledWith('users');
+
+  fireEvent.click(screen.getByRole('tab', { name: '더보기' }));
+  expect(handleTabChange).toHaveBeenCalledWith('more');
 });
