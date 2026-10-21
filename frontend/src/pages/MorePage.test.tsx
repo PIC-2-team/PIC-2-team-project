@@ -1,8 +1,20 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MorePage } from './MorePage';
+
+// Mock dialog methods globally
+const originalShowModal = HTMLDialogElement.prototype.showModal;
+const originalClose = HTMLDialogElement.prototype.close;
+
+HTMLDialogElement.prototype.showModal = vi.fn(function() {
+  this.open = true;
+});
+
+HTMLDialogElement.prototype.close = vi.fn(function() {
+  this.open = false;
+});
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -21,11 +33,12 @@ let mockUser: { id: number; name: string; email: string; role: string } | null =
 };
 
 let mockSelectedRecipientId: number | null = null;
+let mockLogout = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
-    logout: vi.fn(),
+    logout: mockLogout,
     selectedRecipientId: mockSelectedRecipientId,
   }),
 }));
@@ -38,6 +51,8 @@ beforeEach(() => {
     role: 'SUPPORT_WORKER',
   };
   mockSelectedRecipientId = null;
+  mockLogout = vi.fn();
+  mockNavigate.mockClear();
   vi.clearAllMocks();
 });
 
@@ -126,3 +141,59 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
+it('로그아웃 버튼을 클릭하면 로그아웃 확인 다이얼로그를 표시한다', async () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  fireEvent.click(logoutBtn);
+
+  expect(await screen.findByText('로그아웃할까요?')).toBeInTheDocument();
+  expect(screen.getByText('로그아웃 후 다시 로그인해야 합니다.')).toBeInTheDocument();
+});
+
+it('다이얼로그 취소 버튼을 클릭하면 로그아웃하지 않는다', async () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  fireEvent.click(logoutBtn);
+
+  await waitFor(() => {
+    expect(screen.getByText('로그아웃할까요?')).toBeInTheDocument();
+  });
+
+  const cancelBtn = screen.getByRole('button', { name: '취소' });
+  fireEvent.click(cancelBtn);
+
+  expect(mockLogout).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다', async () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  fireEvent.click(logoutBtn);
+
+  await waitFor(() => {
+    expect(screen.getByText('로그아웃할까요?')).toBeInTheDocument();
+  });
+
+  // 두 개의 로그아웃 버튼이 있으므로 마지막 것 선택 (다이얼로그의 로그아웃 버튼)
+  const logoutButtons = screen.getAllByRole('button', { name: '로그아웃' });
+  fireEvent.click(logoutButtons[logoutButtons.length - 1]);
+
+  expect(mockLogout).toHaveBeenCalled();
+  expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+});
