@@ -1,0 +1,298 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 32px;
+  min-height: 100%;
+  gap: 16px;
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 8px 0;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px 8px 0;
+  display: flex;
+  align-items: center;
+  color: #1a2533;
+  font-size: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.infoBanner {
+  background: #f0f7f3;
+  border: 1px solid #d4ebdd;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #2e7d5a;
+  line-height: 1.5;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.statusBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.badgeActive {
+  background: #e8f5ee;
+  color: #3CAB7E;
+}
+
+.badgePending {
+  background: #fff3e8;
+  color: #f57c00;
+}
+
+.badgeRevoked {
+  background: #f0f0f0;
+  color: #8a9ab0;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.emptyState {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 20px;
+  text-align: center;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f0f4f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a9ab0;
+}
+
+.emptyText {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.inviteForm {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2533;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #1a2533;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3CAB7E;
+}
+
+.inputHint {
+  font-size: 12px;
+  color: #8a9ab0;
+  margin-top: 2px;
+}
+
+.btnPrimary {
+  width: 100%;
+  height: 48px;
+  background: #3CAB7E;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnDanger {
+  width: 100%;
+  height: 44px;
+  background: white;
+  color: #e05555;
+  border: 1.5px solid #f5c6c4;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alertError {
+  background: #fff0f0;
+  border: 1px solid #f5c6c4;
+  color: #c53030;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.alertSuccess {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 20px;
+  padding: 24px 20px;
+  max-width: 320px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a2533;
+  margin: 0;
+}
+
+.modalDesc {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+}
+
+.modalBtnCancel {
+  flex: 1;
+  height: 44px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.modalBtnConfirm {
+  flex: 1;
+  height: 44px;
+  background: #e05555;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+}
