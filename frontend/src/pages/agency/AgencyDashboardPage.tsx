@@ -206,7 +206,7 @@ export function AgencyDashboardPage() {
                   style={{ fontSize: '0.88rem', padding: '6px 12px' }}
                   onClick={handleOpenAssignModal}
                 >
-                  활동지원사 배정하기
+                  배정하기
                 </button>
               </div>
 
