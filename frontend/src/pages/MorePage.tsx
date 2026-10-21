@@ -61,9 +61,9 @@ function LogoutConfirmDialog({
     };
   }, []);
   return (
-    <dialog ref={ref} onCancel={onCancel} aria-labelledby="logout-title">
+    <dialog ref={ref} onCancel={onCancel} role="alertdialog" aria-labelledby="logout-title" aria-describedby="logout-desc">
       <h2 id="logout-title">로그아웃할까요?</h2>
-      <p>로그아웃 후 다시 로그인해야 합니다.</p>
+      <p id="logout-desc">로그아웃 후 다시 로그인해야 합니다.</p>
       <div className="actions">
         <button className="btn secondary" onClick={onCancel}>
           취소
