@@ -71,6 +71,13 @@ public class User {
         this.phone = phone;
     }
 
+    public void updateByAdmin(String name, String email, String phone, UserRole role) {
+        if (name != null) this.name = name;
+        if (email != null) this.email = email;
+        if (phone != null) this.phone = phone;
+        if (role != null) this.role = role;
+    }
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }

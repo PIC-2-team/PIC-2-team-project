@@ -1,6 +1,6 @@
 import styles from './AdminTabBar.module.css';
 
-export type AdminTabId = 'dashboard' | 'organizations' | 'users';
+export type AdminTabId = 'dashboard' | 'organizations' | 'users' | 'more';
 
 interface AdminTabBarProps {
   activeTab: AdminTabId;
@@ -147,6 +147,17 @@ export function AdminTabBar({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+        </svg>
+      ),
+    },
+    {
+      id: 'more',
+      label: '더보기',
+      icon: (active) => (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
+          <circle cx="12" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
+          <circle cx="19" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
         </svg>
       ),
     },
