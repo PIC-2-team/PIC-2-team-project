@@ -10,7 +10,7 @@ vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientI
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => cleanup());
 
-it('돌봄정보 개요의 고정 생활기록을 카테고리 정보와 별도로 표시한다', async () => {
+it('돌봄정보 개요의 고정 생활기록을 표시하고 하단에 카테고리 상세 내용은 표시하지 않는다', async () => {
   vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({
     categories: [{ category: 'COMMUNICATION', content: '천천히 말해주세요.', updatedAt: '2026-10-16T00:00:00Z' }],
     pinnedRecords: [{
@@ -22,5 +22,6 @@ it('돌봄정보 개요의 고정 생활기록을 카테고리 정보와 별도�
 
   expect(await screen.findByRole('heading', { name: '중요 생활기록' })).toBeInTheDocument();
   expect(screen.getByText('오후에 산책을 했습니다.')).toBeInTheDocument();
-  expect(screen.getByText('천천히 말해주세요.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /의사소통/ })).toBeInTheDocument();
+  expect(screen.queryByText('천천히 말해주세요.')).not.toBeInTheDocument();
 });
