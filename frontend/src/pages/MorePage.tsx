@@ -8,7 +8,18 @@ const ROLE_LABEL: Record<string, string> = {
   INSTITUTION: '기관 담당자',
 };
 
-const MENU_SECTIONS = [
+type MenuItem = {
+  label: string;
+  value?: string;
+  to?: string;
+};
+
+type MenuSection = {
+  title: string;
+  items: MenuItem[];
+};
+
+const BASE_MENU_SECTIONS: MenuSection[] = [
   {
     title: '서비스',
     items: [
@@ -36,6 +47,20 @@ export function MorePage() {
     navigate('/login', { replace: true });
   };
 
+  const sections: MenuSection[] = [];
+
+  if (user?.role === 'GUARDIAN') {
+    sections.push({
+      title: '돌봄 관리',
+      items: [
+        { label: '세컨드 보호자 관리', to: '/secondary-guardian' },
+        { label: '수정 제안 검토', to: '/record-suggestions' },
+      ],
+    });
+  }
+
+  sections.push(...BASE_MENU_SECTIONS);
+
   return (
     <div className="demo-page">
       <h1>더보기</h1>
@@ -54,34 +79,7 @@ export function MorePage() {
         </div>
       </div>
 
-      {user?.role === 'GUARDIAN' && (
-        <div>
-          <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>돌봄 관리</p>
-          <div className="demo-card" style={{ padding: 0, gap: 0 }}>
-            <button
-              type="button"
-              className="menu-link"
-              style={{
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                font: 'inherit',
-                padding: '16px 20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-              onClick={() => navigate('/record-suggestions')}
-            >
-              <span>수정 제안 검토</span>
-              <span style={{ color: 'var(--green)' }} aria-hidden="true">›</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {MENU_SECTIONS.map(section => (
+      {sections.map(section => (
         <div key={section.title}>
           <p className="eyebrow" style={{ marginBottom: '0.5rem' }}>{section.title}</p>
           <div className="demo-card" style={{ padding: 0, gap: 0 }}>
@@ -91,6 +89,9 @@ export function MorePage() {
                 type="button"
                 className="menu-link"
                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '16px 20px' }}
+                onClick={() => {
+                  if (item.to) navigate(item.to);
+                }}
               >
                 <span>{item.label}</span>
                 {item.value
