@@ -33,4 +33,20 @@ class OrganizationControllerTest {
         assertThat(response.data().organizationCode()).isEqualTo("KNU001");
         assertThat(response.data().name()).isEqualTo("행복복지관");
     }
+
+    @Test
+    @DisplayName("기관 배정 종료 API 호출 시 해당 기관의 배정을 종료하고 200 OK를 반환한다")
+    void endAssignment_endpoint() {
+        OrganizationService organizationService = mock(OrganizationService.class);
+        CareAssignmentService careAssignmentService = mock(CareAssignmentService.class);
+        OrganizationController controller = new OrganizationController(organizationService, careAssignmentService);
+
+        OrganizationResponse mockOrg = new OrganizationResponse(1L, "행복복지관", "KNU001", LocalDateTime.now());
+        given(organizationService.getMyOrganization(10L)).willReturn(mockOrg);
+
+        ApiResponse<Void> response = controller.endAssignment(10L, 50L);
+
+        assertThat(response.success()).isTrue();
+        org.mockito.Mockito.verify(careAssignmentService).endAssignment(1L, 50L);
+    }
 }
