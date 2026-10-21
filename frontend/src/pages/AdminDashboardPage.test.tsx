@@ -44,7 +44,7 @@ const MOCK_ORGS = [
   { id: 2, name: '미등록센터', organizationCode: 'NOT999', ownerId: null, ownerName: null, createdAt: '2026-10-19T10:00:00Z' },
 ];
 
-function renderAdminPage() {
+function renderAdminPage(initialEntries = ['/admin']) {
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
     user: { id: 999, name: '최고관리자', email: 'admin@samgyeol.com', role: 'ADMIN' } as User,
     token: 'mock-token',
@@ -57,13 +57,13 @@ function renderAdminPage() {
   });
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <AdminDashboardPage />
     </MemoryRouter>
   );
 }
 
-it('통계 및 사용자 목록을 성공적으로 렌더링한다', async () => {
+it('통계 및 하단바 탭을 렌더링하고, 사용자 목록 탭으로 전환하여 사용자 목록을 확인할 수 있다', async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
     if (url.includes('/api/admin/stats')) {
@@ -82,7 +82,16 @@ it('통계 및 사용자 목록을 성공적으로 렌더링한다', async () =>
 
   expect(await screen.findByText('최고관리자님')).toBeInTheDocument();
   expect(await screen.findByText('142')).toBeInTheDocument();
-  expect(screen.getByText('김보호')).toBeInTheDocument();
+
+  // 하단바 탭 확인
+  const userTab = await screen.findByRole('tab', { name: /사용자 목록/ });
+  expect(userTab).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /기관 관리/ })).toBeInTheDocument();
+
+  // 사용자 목록 탭으로 전환
+  fireEvent.click(userTab);
+
+  expect(await screen.findByText('김보호')).toBeInTheDocument();
   expect(screen.getByText('이지원')).toBeInTheDocument();
   expect(screen.getByText('G-1001')).toBeInTheDocument();
 });
@@ -102,7 +111,7 @@ it('역할 필터를 변경하면 해당 역할을 포함하여 사용자 목록
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
 
-  renderAdminPage();
+  renderAdminPage(['/admin?tab=users']);
 
   await screen.findByText('김보호');
 
@@ -145,7 +154,7 @@ it('기관 관리 섹션에서 기관 목록을 조회하고 새로운 기관을
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
 
-  renderAdminPage();
+  renderAdminPage(['/admin?tab=organizations']);
 
   expect(await screen.findByText('행복복지관')).toBeInTheDocument();
   expect(screen.getByText('KNU001')).toBeInTheDocument();
@@ -163,4 +172,39 @@ it('기관 관리 섹션에서 기관 목록을 조회하고 새로운 기관을
 
   expect(await screen.findByText('새솔복지관')).toBeInTheDocument();
   expect(screen.getByText('NEW003')).toBeInTheDocument();
+});
+
+it('하단바 탭 클릭 시 대시보드, 기관 관리, 사용자 목록 화면이 전환된다', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/admin/stats')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_STATS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/users')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+
+  renderAdminPage();
+
+  // 기본 탭: 대시보드(통계)
+  expect(await screen.findByText('서비스 통계')).toBeInTheDocument();
+  expect(screen.queryByLabelText('신규 기관 이름')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('역할 필터')).not.toBeInTheDocument();
+
+  // 기관 관리 탭 클릭
+  const orgTab = await screen.findByRole('tab', { name: /기관 관리/ });
+  fireEvent.click(orgTab);
+  expect(await screen.findByLabelText('신규 기관 이름')).toBeInTheDocument();
+  expect(screen.queryByText('서비스 통계')).not.toBeInTheDocument();
+
+  // 사용자 목록 탭 클릭
+  const userTab = screen.getByRole('tab', { name: /사용자 목록/ });
+  fireEvent.click(userTab);
+  expect(await screen.findByLabelText('역할 필터')).toBeInTheDocument();
+  expect(screen.queryByLabelText('신규 기관 이름')).not.toBeInTheDocument();
 });

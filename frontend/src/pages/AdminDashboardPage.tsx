@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest } from '../api/client';
 import { getAdminOrganizations, createAdminOrganization, type AdminOrganization } from '../api/admin';
 import { AppShell } from '../components/AppShell';
+import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
 import styles from './AdminDashboardPage.module.css';
 
 type Stats = {
@@ -40,6 +41,13 @@ const ROLE_LABELS: Record<string, string> = {
 export function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTabParam = searchParams.get('tab');
+  const activeTab: AdminTabId =
+    currentTabParam === 'organizations' || currentTabParam === 'users'
+      ? currentTabParam
+      : 'dashboard';
+
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<PaginatedUsers | null>(null);
   const [organizations, setOrganizations] = useState<AdminOrganization[] | null>(null);
@@ -50,6 +58,21 @@ export function AdminDashboardPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleTabChange = (tab: AdminTabId) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === 'dashboard') {
+          next.delete('tab');
+        } else {
+          next.set('tab', tab);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   useEffect(() => {
     void fetchStats();
@@ -130,7 +153,17 @@ export function AdminDashboardPage() {
   };
 
   return (
-    <AppShell role={user?.role}>
+    <AppShell
+      role={user?.role}
+      footer={
+        <AdminTabBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          orgCount={organizations?.length}
+          userCount={users?.pagination.totalItems}
+        />
+      }
+    >
       <main className="demo-page">
         {/* 상단 관리자 프로필 카드 */}
         <section className={styles.headerCard}>
@@ -150,184 +183,190 @@ export function AdminDashboardPage() {
 
         {error && <div className={styles.errorBanner} role="alert">{error}</div>}
 
-        {/* 1. 핵심 지표 통계 */}
-        <section>
-          <div className={styles.sectionHeading}>
-            <h2 className={styles.sectionTitle}>서비스 통계</h2>
-          </div>
-          {stats ? (
-            <div className={styles.statsGrid}>
-              <div className={`${styles.statCard} ${styles.highlight}`}>
-                <p className={styles.statLabel}>전체 사용자</p>
-                <p className={styles.statValue}>{stats.totalUsers.toLocaleString()}</p>
-              </div>
-              <div className={`${styles.statCard} ${styles.highlight}`}>
-                <p className={styles.statLabel}>돌봄 대상자</p>
-                <p className={styles.statValue}>{stats.totalCareRecipients.toLocaleString()}</p>
-              </div>
-              <div className={styles.statCard}>
-                <p className={styles.statLabel}>보호자</p>
-                <p className={styles.statValue}>{stats.guardians.toLocaleString()}</p>
-              </div>
-              <div className={styles.statCard}>
-                <p className={styles.statLabel}>활동지원사</p>
-                <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
-              </div>
-              <div className={styles.statCard}>
-                <p className={styles.statLabel}>기관 담당자</p>
-                <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
-              </div>
-              <div className={styles.statCard}>
-                <p className={styles.statLabel}>등록 기관 수</p>
-                <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
-              </div>
-              <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
-                <p className={styles.statLabel}>총 생활기록</p>
-                <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
-              </div>
+        {/* 1. 핵심 지표 통계 (대시보드 탭) */}
+        {activeTab === 'dashboard' && (
+          <section aria-label="서비스 통계">
+            <div className={styles.sectionHeading}>
+              <h2 className={styles.sectionTitle}>서비스 통계</h2>
             </div>
-          ) : (
-            <div className={styles.emptyBox}>통계를 불러오는 중…</div>
-          )}
-        </section>
+            {stats ? (
+              <div className={styles.statsGrid}>
+                <div className={`${styles.statCard} ${styles.highlight}`}>
+                  <p className={styles.statLabel}>전체 사용자</p>
+                  <p className={styles.statValue}>{stats.totalUsers.toLocaleString()}</p>
+                </div>
+                <div className={`${styles.statCard} ${styles.highlight}`}>
+                  <p className={styles.statLabel}>돌봄 대상자</p>
+                  <p className={styles.statValue}>{stats.totalCareRecipients.toLocaleString()}</p>
+                </div>
+                <div className={styles.statCard}>
+                  <p className={styles.statLabel}>보호자</p>
+                  <p className={styles.statValue}>{stats.guardians.toLocaleString()}</p>
+                </div>
+                <div className={styles.statCard}>
+                  <p className={styles.statLabel}>활동지원사</p>
+                  <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
+                </div>
+                <div className={styles.statCard}>
+                  <p className={styles.statLabel}>기관 담당자</p>
+                  <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
+                </div>
+                <div className={styles.statCard}>
+                  <p className={styles.statLabel}>등록 기관 수</p>
+                  <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
+                </div>
+                <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
+                  <p className={styles.statLabel}>총 생활기록</p>
+                  <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.emptyBox}>통계를 불러오는 중…</div>
+            )}
+          </section>
+        )}
 
-        {/* 2. 기관 관리 */}
-        <section>
-          <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
-            <h2 className={styles.sectionTitle}>
-              기관 관리 {organizations ? `(${organizations.length})` : ''}
-            </h2>
-          </div>
+        {/* 2. 기관 관리 (기관 관리 탭) */}
+        {activeTab === 'organizations' && (
+          <section aria-label="기관 관리">
+            <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
+              <h2 className={styles.sectionTitle}>
+                기관 관리 {organizations ? `(${organizations.length})` : ''}
+              </h2>
+            </div>
 
-          {/* 신규 기관 생성 폼 */}
-          <div className="demo-card" style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: '15px', margin: '0 0 10px', color: 'var(--ink)' }}>신규 기관 등록 및 코드 발급</h3>
-            <form className="demo-form" onSubmit={(e) => { void handleCreateOrg(e); }}>
-              <label>
-                신규 기관 이름
-                <input
-                  type="text"
-                  value={newOrgName}
-                  onChange={(e) => setNewOrgName(e.target.value)}
-                  placeholder="예: 희망 복지관"
-                  required
-                  maxLength={100}
-                />
-              </label>
-              {orgMessage && (
-                <p className="hint" role="status" style={{ margin: '4px 0 0', color: 'var(--green)', fontWeight: 600 }}>
-                  {orgMessage}
-                </p>
-              )}
-              <button className="btn" type="submit" disabled={!newOrgName.trim() || isCreatingOrg}>
-                {isCreatingOrg ? '발급 중…' : '기관 코드 발급'}
-              </button>
-            </form>
-          </div>
+            {/* 신규 기관 생성 폼 */}
+            <div className="demo-card" style={{ marginBottom: 16 }}>
+              <h3 style={{ fontSize: '15px', margin: '0 0 10px', color: 'var(--ink)' }}>신규 기관 등록 및 코드 발급</h3>
+              <form className="demo-form" onSubmit={(e) => { void handleCreateOrg(e); }}>
+                <label>
+                  신규 기관 이름
+                  <input
+                    type="text"
+                    value={newOrgName}
+                    onChange={(e) => setNewOrgName(e.target.value)}
+                    placeholder="예: 희망 복지관"
+                    required
+                    maxLength={100}
+                  />
+                </label>
+                {orgMessage && (
+                  <p className="hint" role="status" style={{ margin: '4px 0 0', color: 'var(--green)', fontWeight: 600 }}>
+                    {orgMessage}
+                  </p>
+                )}
+                <button className="btn" type="submit" disabled={!newOrgName.trim() || isCreatingOrg}>
+                  {isCreatingOrg ? '발급 중…' : '기관 코드 발급'}
+                </button>
+              </form>
+            </div>
 
-          {/* 기관 목록 */}
-          {!organizations ? (
-            <div className={styles.emptyBox}>기관 목록을 불러오는 중…</div>
-          ) : organizations.length === 0 ? (
-            <div className={styles.emptyBox}>등록된 기관이 없어요.</div>
-          ) : (
-            <div className={styles.userList}>
-              {organizations.map((org) => (
-                <div key={org.id} className={styles.userCard}>
-                  <div className={styles.userCardHeader}>
-                    <span className={styles.userName}>{org.name}</span>
-                    <span className={`${styles.roleBadge} ${org.ownerName ? styles.roleBadgeInstitution : ''}`}>
-                      {org.ownerName ? `${org.ownerName}` : '미등록'}
-                    </span>
-                  </div>
-                  <div className={styles.userDetails}>
-                    <div className={styles.userMeta}>
-                      <span>기관 코드 <span className={styles.userCode}>{org.organizationCode}</span></span>
-                      <span>·</span>
-                      <span>{new Date(org.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+            {/* 기관 목록 */}
+            {!organizations ? (
+              <div className={styles.emptyBox}>기관 목록을 불러오는 중…</div>
+            ) : organizations.length === 0 ? (
+              <div className={styles.emptyBox}>등록된 기관이 없어요.</div>
+            ) : (
+              <div className={styles.userList}>
+                {organizations.map((org) => (
+                  <div key={org.id} className={styles.userCard}>
+                    <div className={styles.userCardHeader}>
+                      <span className={styles.userName}>{org.name}</span>
+                      <span className={`${styles.roleBadge} ${org.ownerName ? styles.roleBadgeInstitution : ''}`}>
+                        {org.ownerName ? `${org.ownerName}` : '미등록'}
+                      </span>
+                    </div>
+                    <div className={styles.userDetails}>
+                      <div className={styles.userMeta}>
+                        <span>기관 코드 <span className={styles.userCode}>{org.organizationCode}</span></span>
+                        <span>·</span>
+                        <span>{new Date(org.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 3. 사용자 목록 (사용자 목록 탭) */}
+        {activeTab === 'users' && (
+          <section aria-label="사용자 목록">
+            <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
+              <h2 className={styles.sectionTitle}>
+                사용자 목록 {users ? `(${users.pagination.totalItems})` : ''}
+              </h2>
+              <select
+                className={styles.filterSelect}
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="역할 필터"
+              >
+                <option value="">전체 역할</option>
+                <option value="GUARDIAN">보호자</option>
+                <option value="SUPPORT_WORKER">활동지원사</option>
+                <option value="INSTITUTION">기관</option>
+                <option value="ADMIN">관리자</option>
+              </select>
             </div>
-          )}
-        </section>
 
-        {/* 3. 사용자 목록 */}
-        <section>
-          <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
-            <h2 className={styles.sectionTitle}>
-              사용자 목록 {users ? `(${users.pagination.totalItems})` : ''}
-            </h2>
-            <select
-              className={styles.filterSelect}
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              aria-label="역할 필터"
-            >
-              <option value="">전체 역할</option>
-              <option value="GUARDIAN">보호자</option>
-              <option value="SUPPORT_WORKER">활동지원사</option>
-              <option value="INSTITUTION">기관</option>
-              <option value="ADMIN">관리자</option>
-            </select>
-          </div>
-
-          {loading ? (
-            <div className={styles.emptyBox}>사용자 목록을 불러오는 중…</div>
-          ) : !users || users.items.length === 0 ? (
-            <div className={styles.emptyBox}>등록된 사용자가 없어요.</div>
-          ) : (
-            <div className={styles.userList}>
-              {users.items.map((u) => (
-                <div key={u.id} className={styles.userCard}>
-                  <div className={styles.userCardHeader}>
-                    <span className={styles.userName}>{u.name}</span>
-                    <span className={getRoleBadgeClass(u.role)}>
-                      {ROLE_LABELS[u.role] ?? u.role}
-                    </span>
-                  </div>
-                  <div className={styles.userDetails}>
-                    <span className={styles.userEmail}>{u.email}</span>
-                    <div className={styles.userMeta}>
-                      <span>코드 <span className={styles.userCode}>{u.publicCode}</span></span>
-                      <span>·</span>
-                      <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
+            {loading ? (
+              <div className={styles.emptyBox}>사용자 목록을 불러오는 중…</div>
+            ) : !users || users.items.length === 0 ? (
+              <div className={styles.emptyBox}>등록된 사용자가 없어요.</div>
+            ) : (
+              <div className={styles.userList}>
+                {users.items.map((u) => (
+                  <div key={u.id} className={styles.userCard}>
+                    <div className={styles.userCardHeader}>
+                      <span className={styles.userName}>{u.name}</span>
+                      <span className={getRoleBadgeClass(u.role)}>
+                        {ROLE_LABELS[u.role] ?? u.role}
+                      </span>
+                    </div>
+                    <div className={styles.userDetails}>
+                      <span className={styles.userEmail}>{u.email}</span>
+                      <div className={styles.userMeta}>
+                        <span>코드 <span className={styles.userCode}>{u.publicCode}</span></span>
+                        <span>·</span>
+                        <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {/* 페이지네이션 */}
-          {users && users.pagination.totalPages > 1 && (
-            <div className={styles.pagination}>
-              <button
-                type="button"
-                className={styles.pageButton}
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                이전
-              </button>
-              <span className={styles.pageInfo}>
-                {page} / {users.pagination.totalPages}
-              </span>
-              <button
-                type="button"
-                className={styles.pageButton}
-                disabled={page >= users.pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                다음
-              </button>
-            </div>
-          )}
-        </section>
+            {/* 페이지네이션 */}
+            {users && users.pagination.totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.pageButton}
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  이전
+                </button>
+                <span className={styles.pageInfo}>
+                  {page} / {users.pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  className={styles.pageButton}
+                  disabled={page >= users.pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  다음
+                </button>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </AppShell>
   );

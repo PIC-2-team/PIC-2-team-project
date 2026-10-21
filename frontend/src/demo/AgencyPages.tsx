@@ -201,7 +201,7 @@ export function AgencyHome() {
               <line x1="10" y1="6" x2="10" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round" />
               <line x1="6" y1="10" x2="14" y2="10" stroke="white" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            활동지원사 배정하기
+            배정하기
           </button>
 
           {/* 담당 당사자 목록 */}
