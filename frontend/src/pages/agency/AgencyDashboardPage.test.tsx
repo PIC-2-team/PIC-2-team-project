@@ -189,8 +189,8 @@ it('기관 대시보드에서 활동지원사를 배정하면 배정 목록이 �
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
   expect(screen.getByText(/이용자 #100 · 지원사/)).toBeInTheDocument();
 
-  // '활동지원사 배정하기' 버튼 클릭하여 모달 열기
-  fireEvent.click(screen.getByRole('button', { name: '활동지원사 배정하기' }));
+  // '배정하기' 버튼 클릭하여 모달 열기
+  fireEvent.click(screen.getByRole('button', { name: '배정하기' }));
 
   // 당사자 ID 및 지원사 선택, 배정 시작일 입력
   fireEvent.change(screen.getByLabelText('돌봄 대상자 번호'), { target: { value: '200' } });
