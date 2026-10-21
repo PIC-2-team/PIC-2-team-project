@@ -24,3 +24,35 @@ export function claimCareRecipient(careRecipientNumber: string): Promise<CareRec
     body: { careRecipientNumber },
   });
 }
+
+export type GuardianStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
+
+export type SecondaryGuardianResponse = {
+  id: number;
+  careRecipientId: number;
+  guardianId: number;
+  status: GuardianStatus;
+  invitationToken: string | null;
+  invitationExpiresAt: string | null;
+  createdAt: string;
+};
+
+export function getSecondaryGuardian(recipientId: number): Promise<SecondaryGuardianResponse | null> {
+  return apiRequest(`/api/care-recipients/${recipientId}/secondary-guardian`);
+}
+
+export function inviteSecondaryGuardian(
+  recipientId: number,
+  inviteePublicCode: string,
+): Promise<SecondaryGuardianResponse> {
+  return apiRequest(`/api/care-recipients/${recipientId}/secondary-guardian`, {
+    method: 'PUT',
+    body: { inviteePublicCode },
+  });
+}
+
+export function revokeSecondaryGuardian(recipientId: number): Promise<void> {
+  return apiRequest(`/api/care-recipients/${recipientId}/secondary-guardian`, {
+    method: 'DELETE',
+  });
+}

@@ -81,4 +81,13 @@ public class OrganizationController {
         OrganizationResponse org = organizationService.getMyOrganization(userId);
         return ApiResponse.ok(careAssignmentService.assign(org.id(), userId, request));
     }
+
+    @Operation(summary = "지원사 배정 종료")
+    @PatchMapping("/me/assignments/{assignmentId}/end")
+    public ApiResponse<Void> endAssignment(@AuthenticationPrincipal Long userId,
+                                            @PathVariable Long assignmentId) {
+        OrganizationResponse org = organizationService.getMyOrganization(userId);
+        careAssignmentService.endAssignment(org.id(), assignmentId);
+        return ApiResponse.ok(null);
+    }
 }
