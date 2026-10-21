@@ -54,6 +54,7 @@ export function MorePage() {
       title: '돌봄 관리',
       items: [
         { label: '세컨드 보호자 관리', to: '/secondary-guardian' },
+        { label: '수정 제안 검토', to: '/record-suggestions' },
       ],
     });
   }
