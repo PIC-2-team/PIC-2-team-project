@@ -25,12 +25,12 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final CareAssignmentService careAssignmentService;
 
-    @Operation(summary = "기관 생성")
+    @Operation(summary = "기관 등록 (6자리 코드)")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<OrganizationResponse> create(@AuthenticationPrincipal Long userId,
-                                                     @Valid @RequestBody CreateOrganizationRequest request) {
-        return ApiResponse.ok(organizationService.create(userId, request));
+    public ApiResponse<OrganizationResponse> register(@AuthenticationPrincipal Long userId,
+                                                       @Valid @RequestBody RegisterOrganizationRequest request) {
+        return ApiResponse.ok(organizationService.register(userId, request));
     }
 
     @Operation(summary = "내 기관 조회")
@@ -80,5 +80,14 @@ public class OrganizationController {
                                                        @Valid @RequestBody AssignSupportWorkerRequest request) {
         OrganizationResponse org = organizationService.getMyOrganization(userId);
         return ApiResponse.ok(careAssignmentService.assign(org.id(), userId, request));
+    }
+
+    @Operation(summary = "지원사 배정 종료")
+    @PatchMapping("/me/assignments/{assignmentId}/end")
+    public ApiResponse<Void> endAssignment(@AuthenticationPrincipal Long userId,
+                                            @PathVariable Long assignmentId) {
+        OrganizationResponse org = organizationService.getMyOrganization(userId);
+        careAssignmentService.endAssignment(org.id(), assignmentId);
+        return ApiResponse.ok(null);
     }
 }

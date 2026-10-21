@@ -1,6 +1,8 @@
 package com.project.backend.admin.controller;
 
+import com.project.backend.admin.dto.AdminOrganizationResponse;
 import com.project.backend.admin.dto.AdminStatsResponse;
+import com.project.backend.admin.dto.CreateAdminOrganizationRequest;
 import com.project.backend.admin.dto.UserSummaryResponse;
 import com.project.backend.admin.service.AdminService;
 import com.project.backend.common.response.ApiResponse;
@@ -9,11 +11,15 @@ import com.project.backend.user.entity.UserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Admin")
 @RestController
@@ -42,5 +48,19 @@ public class AdminController {
         return ApiResponse.ok(new PaginatedData<>(
                 result.getContent(),
                 new PaginatedData.Pagination(page, size, result.getTotalElements(), result.getTotalPages())));
+    }
+
+    @Operation(summary = "기관 생성 (6자리 코드 발급)")
+    @PostMapping("/organizations")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<AdminOrganizationResponse> createOrganization(
+            @Valid @RequestBody CreateAdminOrganizationRequest request) {
+        return ApiResponse.ok(adminService.createOrganization(request));
+    }
+
+    @Operation(summary = "기관 목록 조회")
+    @GetMapping("/organizations")
+    public ApiResponse<List<AdminOrganizationResponse>> getOrganizations() {
+        return ApiResponse.ok(adminService.getOrganizations());
     }
 }

@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, RecordCategory } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -79,10 +79,28 @@ export function deleteRecordMedia(recipientId: number, mediaId: number): Promise
   return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }
 
+export type RecordSuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export type RecordSuggestion = {
   id: number;
-  suggestedContent: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  recordId?: number;
+  original?: {
+    content: string;
+    category?: RecordCategory;
+  };
+  proposed?: {
+    content: string;
+    category?: RecordCategory;
+  };
+  reason?: string | null;
+  suggestedBy?: {
+    id: number;
+    name: string;
+    role: string;
+  };
+  status: RecordSuggestionStatus;
+  createdAt?: string;
+  suggestedContent?: string;
 };
 
 export function createSuggestion(
@@ -94,4 +112,54 @@ export function createSuggestion(
     method: 'POST',
     body: { suggestedContent },
   });
+}
+
+export function createRecordRequest(
+  recipientId: number,
+  message: string,
+  idempotencyKey: string = crypto.randomUUID()
+): Promise<RecordRequestItem> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests`, {
+    method: 'POST',
+    body: { idempotencyKey, message },
+  });
+}
+
+export function getMyRecordRequests(): Promise<RecordRequestItem[]> {
+  return apiRequest('/api/record-requests/mine');
+}
+
+export function getRecipientRecordRequests(recipientId: number): Promise<RecordRequestItem[]> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests`);
+}
+
+export function cancelRecordRequest(recipientId: number, requestId: number): Promise<void> {
+  return apiRequest(`/api/care-recipients/${recipientId}/record-requests/${requestId}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export function getRecordSuggestions(
+  recipientId: number,
+  status: RecordSuggestionStatus = 'PENDING',
+  page = 1,
+  pageSize = 20
+): Promise<PaginatedData<RecordSuggestion>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/record-suggestions?status=${status}&page=${page}&pageSize=${pageSize}`
+  );
+}
+
+export function decideRecordSuggestion(
+  recipientId: number,
+  suggestionId: number,
+  decision: 'APPROVE' | 'REJECT'
+): Promise<RecordSuggestion> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/record-suggestions/${suggestionId}/decision`,
+    {
+      method: 'POST',
+      body: { decision },
+    }
+  );
 }

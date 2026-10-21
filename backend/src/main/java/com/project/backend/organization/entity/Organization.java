@@ -15,7 +15,7 @@ public class Organization {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long ownerId;
 
     @Column(nullable = false, length = 100)
@@ -33,5 +33,9 @@ public class Organization {
         this.name = name;
         this.organizationCode = organizationCode;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void assignOwner(Long ownerId) {
+        this.ownerId = ownerId;
     }
 }

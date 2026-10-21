@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest } from '../api/client';
+import { getAdminOrganizations, createAdminOrganization, type AdminOrganization } from '../api/admin';
 import { AppShell } from '../components/AppShell';
 import styles from './AdminDashboardPage.module.css';
 
@@ -41,6 +42,10 @@ export function AdminDashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<PaginatedUsers | null>(null);
+  const [organizations, setOrganizations] = useState<AdminOrganization[] | null>(null);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -48,6 +53,7 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     void fetchStats();
+    void fetchOrganizations();
   }, []);
 
   useEffect(() => {
@@ -60,6 +66,32 @@ export function AdminDashboardPage() {
       setStats(data);
     } catch {
       setError('통계를 불러오지 못했어요.');
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const data = await getAdminOrganizations();
+      setOrganizations(data);
+    } catch {
+      // 기관 목록 오류는 필요 시 표시
+    }
+  };
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim() || isCreatingOrg) return;
+    setIsCreatingOrg(true);
+    setOrgMessage(null);
+    try {
+      const created = await createAdminOrganization({ name: newOrgName.trim() });
+      setNewOrgName('');
+      setOrgMessage(`'${created.name}' 기관 등록 완료 (기관 코드: ${created.organizationCode})`);
+      await Promise.all([fetchOrganizations(), fetchStats()]);
+    } catch (err) {
+      setOrgMessage(err instanceof Error ? err.message : '기관 등록에 실패했어요.');
+    } finally {
+      setIsCreatingOrg(false);
     }
   };
 
@@ -159,7 +191,69 @@ export function AdminDashboardPage() {
           )}
         </section>
 
-        {/* 2. 사용자 목록 */}
+        {/* 2. 기관 관리 */}
+        <section>
+          <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
+            <h2 className={styles.sectionTitle}>
+              기관 관리 {organizations ? `(${organizations.length})` : ''}
+            </h2>
+          </div>
+
+          {/* 신규 기관 생성 폼 */}
+          <div className="demo-card" style={{ marginBottom: 16 }}>
+            <h3 style={{ fontSize: '15px', margin: '0 0 10px', color: 'var(--ink)' }}>신규 기관 등록 및 코드 발급</h3>
+            <form className="demo-form" onSubmit={(e) => { void handleCreateOrg(e); }}>
+              <label>
+                신규 기관 이름
+                <input
+                  type="text"
+                  value={newOrgName}
+                  onChange={(e) => setNewOrgName(e.target.value)}
+                  placeholder="예: 희망 복지관"
+                  required
+                  maxLength={100}
+                />
+              </label>
+              {orgMessage && (
+                <p className="hint" role="status" style={{ margin: '4px 0 0', color: 'var(--green)', fontWeight: 600 }}>
+                  {orgMessage}
+                </p>
+              )}
+              <button className="btn" type="submit" disabled={!newOrgName.trim() || isCreatingOrg}>
+                {isCreatingOrg ? '발급 중…' : '기관 코드 발급'}
+              </button>
+            </form>
+          </div>
+
+          {/* 기관 목록 */}
+          {!organizations ? (
+            <div className={styles.emptyBox}>기관 목록을 불러오는 중…</div>
+          ) : organizations.length === 0 ? (
+            <div className={styles.emptyBox}>등록된 기관이 없어요.</div>
+          ) : (
+            <div className={styles.userList}>
+              {organizations.map((org) => (
+                <div key={org.id} className={styles.userCard}>
+                  <div className={styles.userCardHeader}>
+                    <span className={styles.userName}>{org.name}</span>
+                    <span className={`${styles.roleBadge} ${org.ownerName ? styles.roleBadgeInstitution : ''}`}>
+                      {org.ownerName ? `${org.ownerName}` : '미등록'}
+                    </span>
+                  </div>
+                  <div className={styles.userDetails}>
+                    <div className={styles.userMeta}>
+                      <span>기관 코드 <span className={styles.userCode}>{org.organizationCode}</span></span>
+                      <span>·</span>
+                      <span>{new Date(org.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 3. 사용자 목록 */}
         <section>
           <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
             <h2 className={styles.sectionTitle}>
