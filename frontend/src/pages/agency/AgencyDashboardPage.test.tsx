@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -135,4 +135,137 @@ it('기관 등록 요청이 실패하면 온보딩 폼 내에 에러 메시지�
 
   expect(await screen.findByRole('alert')).toHaveTextContent('이미 등록된 기관 코드입니다.');
   expect(screen.getByText('소속 기관을 등록해 주세요')).toBeInTheDocument();
+});
+
+it('기관 대시보드에서 활동지원사를 배정하면 배정 목록이 갱신된다', async () => {
+  let assignmentsList = [
+    { id: 10, organizationId: 1, careRecipientId: 100, supportWorkerId: 2, startDate: '2026-10-01', endDate: null, endedAt: null },
+  ];
+
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 2, name: '이지원', email: 'worker@test.com', status: 'ACTIVE' }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/link-requests')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 5, careRecipientId: 200, requestedById: 3, status: 'ACCEPTED', createdAt: '2026-10-15T00:00:00Z' }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/assignments') && method === 'POST') {
+      const newAssign = {
+        id: 11,
+        organizationId: 1,
+        careRecipientId: 200,
+        supportWorkerId: 2,
+        startDate: '2026-10-20',
+        endDate: null,
+        endedAt: null,
+      };
+      assignmentsList = [...assignmentsList, newAssign];
+      return new Response(JSON.stringify({ success: true, data: newAssign }), { status: 201 });
+    }
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({ success: true, data: assignmentsList }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' },
+      }), { status: 200 });
+    }
+
+    return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+  });
+
+  renderWithProviders();
+
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  expect(screen.getByText(/이용자 #100 · 지원사/)).toBeInTheDocument();
+
+  // '활동지원사 배정하기' 버튼 클릭하여 모달 열기
+  fireEvent.click(screen.getByRole('button', { name: '활동지원사 배정하기' }));
+
+  // 당사자 ID 및 지원사 선택, 배정 시작일 입력
+  fireEvent.change(screen.getByLabelText('돌봄 대상자 번호'), { target: { value: '200' } });
+  fireEvent.change(screen.getByLabelText('활동지원사'), { target: { value: '2' } });
+  fireEvent.change(screen.getByLabelText('배정 시작일'), { target: { value: '2026-10-20' } });
+
+  // 배정 제출
+  fireEvent.click(screen.getByRole('button', { name: '배정 등록' }));
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/assignments', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"careRecipientId":200'),
+    }));
+  });
+
+  expect(await screen.findByText(/이용자 #200 · 지원사 이지원 \(#2\)/)).toBeInTheDocument();
+});
+
+it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 종료한다', async () => {
+  let ended = false;
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+
+    if (url.includes('/api/organizations/me/assignments/10/end') && method === 'PATCH') {
+      ended = true;
+      return new Response(JSON.stringify({ success: true, data: null }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [
+          {
+            id: 10,
+            organizationId: 1,
+            careRecipientId: 100,
+            supportWorkerId: 2,
+            startDate: '2026-10-01',
+            endDate: null,
+            endedAt: ended ? '2026-10-20T12:00:00Z' : null,
+          },
+        ],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/link-requests')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' },
+      }), { status: 200 });
+    }
+
+    return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+  });
+
+  renderWithProviders();
+
+  await screen.findByText(/이용자 #100 · 지원사/);
+
+  const endBtn = screen.getByRole('button', { name: '배정 종료' });
+  fireEvent.click(endBtn);
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/assignments/10/end', expect.objectContaining({
+      method: 'PATCH',
+    }));
+  });
+
+  expect(await screen.findByText('종료됨')).toBeInTheDocument();
 });

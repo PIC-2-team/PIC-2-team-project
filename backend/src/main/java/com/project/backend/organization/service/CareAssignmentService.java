@@ -60,6 +60,18 @@ public class CareAssignmentService {
         careAssignmentRepository.save(assignment);
     }
 
+    public void endAssignment(Long organizationId, Long assignmentId) {
+        CareAssignment assignment = careAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ASSIGNMENT_NOT_FOUND", "배정을 찾을 수 없습니다."));
+
+        if (!assignment.getOrganizationId().equals(organizationId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN_ASSIGNMENT", "해당 기관의 배정이 아닙니다.");
+        }
+
+        assignment.end();
+        careAssignmentRepository.save(assignment);
+    }
+
     private boolean isOrganizationOwner(Long organizationId, Long userId) {
         // 실제 구현은 OrganizationRepository 의존 필요 — 현재 단순화
         return false;

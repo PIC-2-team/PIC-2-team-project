@@ -19,6 +19,7 @@ import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
+import { RecordSuggestionsPage } from './pages/RecordSuggestionsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
             { path: '/records/new', element: <RecordFormPage /> },
             { path: '/secondary-guardian', element: <SecondaryGuardianPage /> },
             { path: '/care-relations', element: <CareRelationsPage /> },
+            { path: '/record-suggestions', element: <RecordSuggestionsPage /> },
           ],
         }],
       },
