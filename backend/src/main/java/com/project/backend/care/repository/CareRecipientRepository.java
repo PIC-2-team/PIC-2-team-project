@@ -14,4 +14,11 @@ public interface CareRecipientRepository extends JpaRepository<CareRecipient, Lo
     Optional<CareRecipient> findForUpdate(Long id);
 
     boolean existsByCareRecipientNumber(String careRecipientNumber);
+
+    Optional<CareRecipient> findByCareRecipientNumber(String careRecipientNumber);
+
+    java.util.List<CareRecipient> findAllByOrderByCreatedAtDesc();
+
+    java.util.List<CareRecipient> findByNameContainingIgnoreCaseOrCareRecipientNumberContainingIgnoreCaseOrderByCreatedAtDesc(
+            String name, String careRecipientNumber);
 }

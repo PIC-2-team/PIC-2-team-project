@@ -1,12 +1,16 @@
 package com.project.backend.admin.controller;
 
+import com.project.backend.admin.dto.AdminCareRecipientResponse;
 import com.project.backend.admin.dto.AdminOrganizationResponse;
+import com.project.backend.admin.dto.CreateAdminCareRecipientRequest;
 import com.project.backend.admin.dto.CreateAdminOrganizationRequest;
 import com.project.backend.admin.service.AdminService;
+import com.project.backend.care.entity.Gender;
 import com.project.backend.common.response.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,5 +51,46 @@ class AdminControllerTest {
         assertThat(response.success()).isTrue();
         assertThat(response.data()).hasSize(1);
         assertThat(response.data().get(0).ownerName()).isEqualTo("홍길동");
+    }
+
+    @Test
+    @DisplayName("슈퍼 어드민 당사자 고유 코드 발급 API 호출 시 생성된 당사자 정보를 반환한다")
+    void createCareRecipient_endpoint() {
+        AdminService adminService = mock(AdminService.class);
+        AdminController controller = new AdminController(adminService);
+
+        CreateAdminCareRecipientRequest request = new CreateAdminCareRecipientRequest(
+                "김철수", LocalDate.of(2005, 5, 5), Gender.MALE, List.of(), null, null
+        );
+        AdminCareRecipientResponse mockResponse = new AdminCareRecipientResponse(
+                1L, "R-12345678", "김철수", LocalDate.of(2005, 5, 5), Gender.MALE,
+                List.of(), null, null, null, null, null, LocalDateTime.now()
+        );
+        given(adminService.createCareRecipient(request)).willReturn(mockResponse);
+
+        ApiResponse<AdminCareRecipientResponse> response = controller.createCareRecipient(request);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().careRecipientNumber()).isEqualTo("R-12345678");
+        assertThat(response.data().name()).isEqualTo("김철수");
+    }
+
+    @Test
+    @DisplayName("슈퍼 어드민 당사자 목록 조회 API 호출 시 검색 파라미터를 넘겨 목록을 반환받는다")
+    void getCareRecipients_endpoint() {
+        AdminService adminService = mock(AdminService.class);
+        AdminController controller = new AdminController(adminService);
+
+        AdminCareRecipientResponse item = new AdminCareRecipientResponse(
+                1L, "R-12345678", "김철수", LocalDate.of(2005, 5, 5), Gender.MALE,
+                List.of(), null, null, "보호자", "guard@test.com", "행복복지관", LocalDateTime.now()
+        );
+        given(adminService.getCareRecipients("김철수")).willReturn(List.of(item));
+
+        ApiResponse<List<AdminCareRecipientResponse>> response = controller.getCareRecipients("김철수");
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).hasSize(1);
+        assertThat(response.data().get(0).organizationName()).isEqualTo("행복복지관");
     }
 }

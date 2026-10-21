@@ -1,9 +1,6 @@
 package com.project.backend.admin.controller;
 
-import com.project.backend.admin.dto.AdminOrganizationResponse;
-import com.project.backend.admin.dto.AdminStatsResponse;
-import com.project.backend.admin.dto.CreateAdminOrganizationRequest;
-import com.project.backend.admin.dto.UserSummaryResponse;
+import com.project.backend.admin.dto.*;
 import com.project.backend.admin.service.AdminService;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.common.response.PaginatedData;
@@ -62,5 +59,20 @@ public class AdminController {
     @GetMapping("/organizations")
     public ApiResponse<List<AdminOrganizationResponse>> getOrganizations() {
         return ApiResponse.ok(adminService.getOrganizations());
+    }
+
+    @Operation(summary = "당사자 등록 (고유 코드 발급)")
+    @PostMapping("/care-recipients")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<AdminCareRecipientResponse> createCareRecipient(
+            @Valid @RequestBody CreateAdminCareRecipientRequest request) {
+        return ApiResponse.ok(adminService.createCareRecipient(request));
+    }
+
+    @Operation(summary = "당사자 목록 및 고유 코드 조회")
+    @GetMapping("/care-recipients")
+    public ApiResponse<List<AdminCareRecipientResponse>> getCareRecipients(
+            @RequestParam(required = false) String search) {
+        return ApiResponse.ok(adminService.getCareRecipients(search));
     }
 }

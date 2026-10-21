@@ -251,3 +251,115 @@
   font-size: 14px;
   border: 1px solid #fed7cc;
 }
+
+/* 성별 선택 그룹 */
+.genderGroup {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.genderLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* 장애 유형 체크박스 그룹 */
+.checkboxGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* 고유 코드 복사 버튼 */
+.copyButton {
+  font-size: 11px;
+  color: var(--green);
+  background: var(--soft);
+  border: 1px solid #c9e8dc;
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+  margin-left: 6px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.copyButton:hover {
+  background: #def0e7;
+}
+
+/* 보호자 연결 상태 뱃지 */
+.statusBadgeLinked {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1f6b45;
+  background: #d8f1e5;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statusBadgeUnlinked {
+  font-size: 11px;
+  font-weight: 600;
+  color: #934c00;
+  background: #fff0d6;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 태그 및 검색 */
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tag {
+  font-size: 11px;
+  background: #f0f3f6;
+  color: #485767;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.searchInput {
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  font-family: inherit;
+  width: 100%;
+  max-width: 220px;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--green);
+}
+

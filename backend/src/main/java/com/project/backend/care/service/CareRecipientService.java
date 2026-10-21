@@ -1,6 +1,7 @@
 package com.project.backend.care.service;
 
 import com.project.backend.care.dto.CareRecipientResponse;
+import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.entity.*;
@@ -94,6 +95,37 @@ public class CareRecipientService {
 
         List<DisabilityType> disabilities = disabilityRepository
                 .findByCareRecipientId(recipientId).stream()
+                .map(CareRecipientDisability::getDisabilityType).toList();
+
+        return CareRecipientResponse.of(recipient, disabilities);
+    }
+
+    public CareRecipientResponse claim(Long guardianUserId, ClaimCareRecipientRequest request) {
+        User user = findUser(guardianUserId);
+        if (user.getRole() != UserRole.GUARDIAN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 당사자를 등록할 수 있습니다.");
+        }
+
+        CareRecipient recipient = careRecipientRepository.findByCareRecipientNumber(request.careRecipientNumber().trim())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CARE_RECIPIENT_NOT_FOUND", "해당 고유 코드의 당사자를 찾을 수 없습니다."));
+
+        boolean alreadyClaimed = careGuardianRepository.findByCareRecipientIdAndTypeAndStatus(
+                recipient.getId(), GuardianType.PRIMARY, GuardianStatus.ACTIVE
+        ).isPresent();
+
+        if (alreadyClaimed) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_CLAIMED", "이미 보호자가 등록된 당사자입니다.");
+        }
+
+        careGuardianRepository.save(CareGuardian.builder()
+                .careRecipientId(recipient.getId())
+                .guardianId(guardianUserId)
+                .type(GuardianType.PRIMARY)
+                .status(GuardianStatus.ACTIVE)
+                .build());
+
+        List<DisabilityType> disabilities = disabilityRepository
+                .findByCareRecipientId(recipient.getId()).stream()
                 .map(CareRecipientDisability::getDisabilityType).toList();
 
         return CareRecipientResponse.of(recipient, disabilities);
