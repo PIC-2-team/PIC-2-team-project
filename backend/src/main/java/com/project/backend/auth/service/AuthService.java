@@ -140,6 +140,58 @@ public class AuthService {
         });
     }
 
+    @Transactional(readOnly = true)
+    public FindEmailResponse findEmail(FindEmailRequest request) {
+        String cleanInputPhone = normalizePhone(request.phone());
+        java.util.List<User> users = userRepository.findByName(request.name().trim());
+        User matchedUser = users.stream()
+                .filter(u -> u.getPhone() != null && normalizePhone(u.getPhone()).equals(cleanInputPhone))
+                .findFirst()
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다."));
+
+        return new FindEmailResponse(maskEmail(matchedUser.getEmail()));
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        String cleanInputPhone = normalizePhone(request.phone());
+        User user = userRepository.findByEmail(request.email().trim())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다."));
+
+        if (!user.getName().trim().equals(request.name().trim()) ||
+                user.getPhone() == null ||
+                !normalizePhone(user.getPhone()).equals(cleanInputPhone)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CREDENTIALS", "회원 정보가 일치하지 않습니다.");
+        }
+
+        if (user.getPassword() == null && user.getGoogleId() != null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "GOOGLE_ACCOUNT", "Google 소셜 로그인으로 가입된 계정입니다. Google 로그인을 이용해 주세요.");
+        }
+
+        user.updatePassword(passwordEncoder.encode(request.newPassword()));
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return email;
+        }
+        String[] parts = email.split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+
+        if (local.length() <= 2) {
+            return local.charAt(0) + "*".repeat(Math.max(1, local.length() - 1)) + "@" + domain;
+        } else if (local.length() <= 4) {
+            return local.substring(0, 2) + "*".repeat(local.length() - 2) + "@" + domain;
+        } else {
+            return local.substring(0, 3) + "*".repeat(local.length() - 3) + "@" + domain;
+        }
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) return "";
+        return phone.replaceAll("[^0-9]", "");
+    }
+
     private String saveRefreshToken(Long userId) {
         String raw = jwtProvider.generateRefreshTokenValue();
         String hash = jwtProvider.hashRefreshToken(raw);
