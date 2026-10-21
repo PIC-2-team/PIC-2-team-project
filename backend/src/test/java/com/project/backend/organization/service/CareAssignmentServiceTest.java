@@ -113,4 +113,30 @@ class CareAssignmentServiceTest {
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void endAssignment_organization_일치하면_성공() {
+        CareAssignment assignment = CareAssignment.builder()
+                .organizationId(1L).careRecipientId(20L).supportWorkerId(30L)
+                .idempotencyKey("k").startDate(LocalDate.now()).build();
+        given(careAssignmentRepository.findById(99L)).willReturn(Optional.of(assignment));
+        given(careAssignmentRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        careAssignmentService.endAssignment(1L, 99L);
+
+        assertThat(assignment.isActive()).isFalse();
+        assertThat(assignment.getEndedAt()).isNotNull();
+    }
+
+    @Test
+    void endAssignment_organization_불일치하면_FORBIDDEN_예외() {
+        CareAssignment assignment = CareAssignment.builder()
+                .organizationId(1L).careRecipientId(20L).supportWorkerId(30L)
+                .idempotencyKey("k").startDate(LocalDate.now()).build();
+        given(careAssignmentRepository.findById(99L)).willReturn(Optional.of(assignment));
+
+        assertThatThrownBy(() -> careAssignmentService.endAssignment(2L, 99L))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
 }
