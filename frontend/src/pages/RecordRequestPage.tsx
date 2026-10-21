@@ -26,12 +26,17 @@ export function RecordRequestPage() {
 
   useEffect(() => {
     if (!selectedRecipientId) return;
+    let isMounted = true;
     listCareRecipients()
       .then(list => {
+        if (!isMounted) return;
         const found = list.find(r => r.id === selectedRecipientId);
         if (found) setRecipientName(found.name);
       })
       .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
   }, [selectedRecipientId]);
 
   useEffect(() => {
