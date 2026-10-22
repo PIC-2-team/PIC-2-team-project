@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRequestItem, RecordRevision } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -180,5 +180,16 @@ export function decideRecordSuggestion(
       method: 'POST',
       body: { decision },
     }
+  );
+}
+
+export function getRecordRevisions(
+  recipientId: number,
+  recordId: number,
+  page = 1,
+  pageSize = 20
+): Promise<PaginatedData<RecordRevision>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/records/${recordId}/revisions?page=${page}&pageSize=${pageSize}`
   );
 }

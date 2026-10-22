@@ -45,3 +45,16 @@ export type RecordRequestItem = {
   status: RecordRequestStatus;
   createdAt: string;
 };
+
+export type RecordRevision = {
+  revision: number;
+  changedBy: {
+    id: number;
+    name: string;
+    role: string;
+  };
+  changedAt: string;
+  content: string;
+  category: RecordCategory;
+  recordedAt: string;
+};

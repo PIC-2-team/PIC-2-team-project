@@ -2,8 +2,16 @@ import { AppShell } from '../components/AppShell';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getRecord, updateRecord, deleteRecord, createSuggestion } from '../api/records';
-import type { DailyRecord, RecordCategory } from '../types/record';
+import {
+  getRecord,
+  updateRecord,
+  deleteRecord,
+  createSuggestion,
+  getRecordRevisions,
+  getRecordSuggestions,
+  type RecordSuggestion,
+} from '../api/records';
+import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
 
 const CATEGORY_LABEL: Record<string, string> = {
   COMMUNICATION: '의사소통',
@@ -46,23 +54,47 @@ export function RecordDetailPage() {
   // 기록 삭제 상태
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 수정 제안 상태
+  // 수정 제안 상태 (활동지원사용)
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [suggestionDone, setSuggestionDone] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
+  // 수정 이력 상태 (보호자/열람자용)
+  const [revisions, setRevisions] = useState<RecordRevision[]>([]);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [showRevisions, setShowRevisions] = useState(false);
+
+  // 해당 기록에 대한 대기 중인 활동지원사 수정 제안 목록
+  const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
+
   useEffect(() => {
     if (!selectedRecipientId || !id) {
       setIsLoading(false);
       return;
     }
-    getRecord(selectedRecipientId, Number(id))
+    const recordId = Number(id);
+    getRecord(selectedRecipientId, recordId)
       .then(setRecord)
       .catch(e => setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'))
       .finally(() => setIsLoading(false));
-  }, [id, selectedRecipientId]);
+
+    setRevisionsLoading(true);
+    getRecordRevisions(selectedRecipientId, recordId)
+      .then(res => setRevisions(res?.items ?? []))
+      .catch(() => setRevisions([]))
+      .finally(() => setRevisionsLoading(false));
+
+    if (user?.role === 'GUARDIAN') {
+      getRecordSuggestions(selectedRecipientId, 'PENDING')
+        .then(res => {
+          const matches = (res?.items ?? []).filter(item => item.recordId === recordId);
+          setPendingSuggestions(matches);
+        })
+        .catch(() => setPendingSuggestions([]));
+    }
+  }, [id, selectedRecipientId, user?.role]);
 
   const startEditing = () => {
     if (!record) return;
@@ -104,6 +136,9 @@ export function RecordDetailPage() {
       setRecord(updated);
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
+      getRecordRevisions(selectedRecipientId, Number(id))
+        .then(res => setRevisions(res?.items ?? []))
+        .catch(() => {});
     } catch (e) {
       setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
     } finally {
@@ -216,6 +251,53 @@ export function RecordDetailPage() {
               </>
             ) : (
               <>
+                {user?.role === 'GUARDIAN' && pendingSuggestions.length > 0 && (
+                  <aside
+                    aria-label="활동지원사 수정 제안"
+                    style={{
+                      background: '#fffbeb',
+                      border: '1.5px solid #f59e0b',
+                      borderRadius: '12px',
+                      padding: '1rem',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>
+                        📢 활동지원사의 수정 제안이 {pendingSuggestions.length}건 있어요
+                      </strong>
+                      <Link
+                        to="/record-suggestions"
+                        className="btn secondary"
+                        style={{ fontSize: '0.8rem', padding: '4px 10px', textDecoration: 'none' }}
+                      >
+                        검토하기
+                      </Link>
+                    </div>
+                    {pendingSuggestions.map(sug => (
+                      <div
+                        key={sug.id}
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '0.625rem',
+                          background: '#ffffff',
+                          borderRadius: '8px',
+                          border: '1px solid #fde68a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#4b5563' }}>
+                          {sug.suggestedBy?.name ?? '활동지원사'} 님의 제안
+                          {sug.reason && <span style={{ fontWeight: 400, color: '#6b7280' }}> · 사유: {sug.reason}</span>}
+                        </p>
+                        <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
+                          {sug.proposed?.content ?? sug.suggestedContent}
+                        </p>
+                      </div>
+                    ))}
+                  </aside>
+                )}
+
                 <article className="demo-card">
                   <time className="record-meta" dateTime={record.recordedAt}>
                     {new Date(record.recordedAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -268,6 +350,104 @@ export function RecordDetailPage() {
                     )}
                   </>
                 )}
+
+                <section style={{ marginTop: '1.5rem' }} aria-labelledby="revisions-heading">
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.625rem 1rem',
+                      fontSize: '0.9rem',
+                    }}
+                    onClick={() => setShowRevisions(!showRevisions)}
+                    aria-expanded={showRevisions}
+                    aria-controls="revisions-list"
+                  >
+                    <span id="revisions-heading">
+                      수정 내역 및 이력 {revisions.length > 0 ? `(${revisions.length}건)` : ''}
+                    </span>
+                    <span aria-hidden="true">{showRevisions ? '▲ 접기' : '▼ 펼치기'}</span>
+                  </button>
+
+                  {showRevisions && (
+                    <div
+                      id="revisions-list"
+                      style={{
+                        marginTop: '0.75rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.625rem',
+                      }}
+                    >
+                      {revisionsLoading ? (
+                        <p className="hint">수정 이력을 불러오는 중입니다...</p>
+                      ) : revisions.length === 0 ? (
+                        <p className="hint">기록된 수정 내역이 없습니다.</p>
+                      ) : (
+                        revisions.map((rev) => (
+                          <article
+                            key={rev.revision}
+                            style={{
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              padding: '0.75rem',
+                              background: '#f9fafb',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                fontSize: '0.75rem',
+                                color: '#6b7280',
+                                marginBottom: '0.375rem',
+                              }}
+                            >
+                              <span style={{ fontWeight: 600 }}>
+                                #{rev.revision}차 수정 · {rev.changedBy.name} ({
+                                  rev.changedBy.role === 'SUPPORT_WORKER'
+                                    ? '활동지원사'
+                                    : rev.changedBy.role === 'GUARDIAN'
+                                    ? '돌봄 보호자'
+                                    : rev.changedBy.role
+                                })
+                              </span>
+                              <time dateTime={rev.changedAt}>
+                                {new Date(rev.changedAt).toLocaleString('ko-KR', {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </time>
+                            </div>
+                            <span
+                              className="tag"
+                              style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px' }}
+                            >
+                              {CATEGORY_LABEL[rev.category] ?? rev.category}
+                            </span>
+                            <p
+                              style={{
+                                marginTop: '0.5rem',
+                                marginBottom: 0,
+                                fontSize: '0.875rem',
+                                whiteSpace: 'pre-wrap',
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {rev.content}
+                            </p>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </section>
               </>
             )}
           </>
