@@ -266,7 +266,7 @@ export function RecordFormPage() {
                 <section className={styles.voicePanel}>
                   <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
                   <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
-                  <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 유형을 분류해요.'}</p>
+                  <p className={styles.voiceGuide}>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 유형을 분류해요.'}</p>
                   <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
                     {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? 'AI가 정리하고 있어요…' : '녹음 시작하기'}
                   </button>
@@ -294,7 +294,7 @@ export function RecordFormPage() {
                     <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
                     <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="오늘 있었던 일을 기록해주세요 (예: 아침 식사 후 산책을 다녀왔어요.)" value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
                     <div className={styles.textMeta}>
-                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
+                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? '정리하고 있어요…' : '정리하기'}</button>
                       <span className={styles.charCount}>{text.length} / 3,000</span>
                     </div>
                   </section>

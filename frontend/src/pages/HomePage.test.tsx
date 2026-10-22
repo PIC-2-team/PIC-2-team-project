@@ -73,3 +73,37 @@ it('보호자 사용자는 오늘의 기록과 중요 생활기록을 함께 확
   expect(screen.getByRole('heading', { name: /오늘의 기록/ })).toBeInTheDocument();
   expect(screen.getByText('오늘 점심 잘 먹음')).toBeInTheDocument();
 });
+
+it('보호자 사용자에게 대기 중인 활동지원사 수정 제안이 있을 경우 상단 알림 배너가 표시된다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 42, name: '홍길동', createdAt: '2026-10-10' } as any,
+  ]);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({
+    categories: [],
+    pinnedRecords: [],
+  });
+  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({
+    items: [
+      {
+        id: 1,
+        recordId: 10,
+        original: { content: '기존', category: 'MEAL' },
+        proposed: { content: '수정', category: 'MEAL' },
+        suggestedBy: { id: 5, name: '이활동', role: 'SUPPORT_WORKER' },
+        status: 'PENDING',
+        createdAt: '2026-10-22T10:00:00Z',
+      },
+    ],
+    pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+  });
+
+  renderHomePage({ id: 3, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  expect(await screen.findByText(/새로운 수정 제안이 1건 있어요/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /새로운 수정 제안이 1건 있어요/ })).toHaveAttribute(
+    'href',
+    '/record-suggestions'
+  );
+});
+

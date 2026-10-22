@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
-import { getTodayRecords } from '../api/records';
+import { getTodayRecords, getRecordSuggestions } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
@@ -19,6 +19,7 @@ export function HomePage() {
   const { user, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -38,10 +39,16 @@ export function HomePage() {
           return;
         }
         setSelectedRecipient(first.id);
-        const [records, overview] = await Promise.all([
+        const [records, overview, suggestionsRes] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+          user?.role === 'GUARDIAN'
+            ? getRecordSuggestions(first.id, 'PENDING').catch(() => null)
+            : Promise.resolve(null),
         ]);
+        if (suggestionsRes?.items) {
+          setPendingSuggestionCount(suggestionsRes.items.length);
+        }
         setPage({
           status: 'ok',
           recipient: first,
@@ -92,6 +99,50 @@ export function HomePage() {
       </div>
 
       <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
+
+      {canWrite && pendingSuggestionCount > 0 && (
+        <section className={styles.section} aria-label="수정 제안 알림">
+          <Link
+            to="/record-suggestions"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1rem',
+              background: '#fffbeb',
+              border: '1.5px solid #f59e0b',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              color: '#1f2937',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    background: '#f59e0b',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  수정 제안
+                </span>
+                <strong style={{ fontSize: '0.95rem', color: '#92400e' }}>
+                  새로운 수정 제안이 {pendingSuggestionCount}건 있어요
+                </strong>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+                활동지원사가 제안한 생활기록 내용을 확인하고 승인해 주세요.
+              </p>
+            </div>
+            <span style={{ fontSize: '1.25rem', color: '#b45309', fontWeight: 'bold' }}>›</span>
+          </Link>
+        </section>
+      )}
 
       {pinnedRecords.length > 0 && (
         <section className={styles.section} aria-labelledby="pinned-records-title">
