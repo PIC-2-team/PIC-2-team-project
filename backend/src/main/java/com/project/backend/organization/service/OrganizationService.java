@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -366,6 +367,26 @@ public class OrganizationService {
         OrganizationGuardianLink link = organizationGuardianLinkRepository
                 .findByOrganizationIdAndGuardianId(org.getId(), guardianId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "LINK_NOT_FOUND", "등록된 돌봄 보호자를 찾을 수 없습니다."));
+
+        Set<Long> recipientIds = careGuardianRepository.findByGuardianId(guardianId).stream()
+                .map(CareGuardian::getCareRecipientId).collect(Collectors.toSet());
+        List<Long> remainingGuardianIds = organizationGuardianLinkRepository.findByOrganizationId(org.getId()).stream()
+                .map(OrganizationGuardianLink::getGuardianId)
+                .filter(id -> !id.equals(guardianId)).toList();
+        Set<Long> retainedRecipientIds = careGuardianRepository
+                .findByGuardianIdInAndStatus(remainingGuardianIds, GuardianStatus.ACTIVE).stream()
+                .map(CareGuardian::getCareRecipientId).collect(Collectors.toSet());
+        recipientIds.removeAll(retainedRecipientIds);
+
+        for (Long recipientId : recipientIds) {
+            organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(org.getId(), recipientId)
+                    .ifPresent(organizationRecipientLinkRepository::delete);
+        }
+        for (CareAssignment assignment : careAssignmentRepository.findByOrganizationId(org.getId())) {
+            if (assignment.isActive() && recipientIds.contains(assignment.getCareRecipientId())) {
+                assignment.end();
+            }
+        }
         organizationGuardianLinkRepository.delete(link);
     }
 
