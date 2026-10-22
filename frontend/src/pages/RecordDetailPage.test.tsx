@@ -169,3 +169,67 @@ it('보호자가 삭제 버튼을 누르고 확인하면 deleteRecord 호출 후
     expect(mockNavigate).toHaveBeenCalledWith('/records', { replace: true });
   });
 });
+
+it('보호자 화면에서 활동지원사가 보낸 대기 중인 수정 제안이 있으면 안내 배너와 내용을 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({
+    items: [
+      {
+        id: 7,
+        recordId: 101,
+        original: { content: '기존 내용', category: 'MEAL' },
+        proposed: { content: '점심 식사 시 반찬을 골고루 드셨습니다.', category: 'MEAL' },
+        reason: '내용 보충',
+        suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
+        status: 'PENDING',
+        createdAt: '2026-10-22T12:30:00Z',
+      },
+    ],
+    pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+  });
+
+  render(
+    <MemoryRouter initialEntries={['/records/101']}>
+      <Routes>
+        <Route path="/records/:id" element={<RecordDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByText(/활동지원사의 수정 제안이 1건 있어요/)).toBeInTheDocument();
+  expect(screen.getByText(/이활동 님의 제안/)).toBeInTheDocument();
+  expect(screen.getByText('점심 식사 시 반찬을 골고루 드셨습니다.')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '검토하기' })).toHaveAttribute('href', '/record-suggestions');
+});
+
+it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 내역이 표시된다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  vi.spyOn(recordsApi, 'getRecordRevisions').mockResolvedValue({
+    items: [
+      {
+        revision: 1,
+        changedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
+        changedAt: '2026-10-22T12:15:00Z',
+        content: '식사 1차 변경 기록',
+        category: 'MEAL',
+        recordedAt: '2026-10-22T12:00:00Z',
+      },
+    ],
+    pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+  });
+
+  render(
+    <MemoryRouter initialEntries={['/records/101']}>
+      <Routes>
+        <Route path="/records/:id" element={<RecordDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  const toggleBtn = await screen.findByRole('button', { name: /수정 내역 및 이력/ });
+  fireEvent.click(toggleBtn);
+
+  expect(await screen.findByText(/#1차 수정 · 이활동 \(활동지원사\)/)).toBeInTheDocument();
+  expect(screen.getByText('식사 1차 변경 기록')).toBeInTheDocument();
+});
+
