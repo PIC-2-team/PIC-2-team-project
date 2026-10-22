@@ -8,9 +8,20 @@ on:
     branches: [develop]
     paths: ['frontend/**', '.github/workflows/ci-e2e.yml']
 
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
     defaults:
       run:
         working-directory: frontend
@@ -27,8 +38,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Check Playwright image version
+        run: |
+          node <<'NODE'
+          const { version } = require('@playwright/test/package.json');
+          if (version !== '1.64.1') {
+            throw new Error(`Update the Playwright container image to match ${version}`);
+          }
+          NODE
+
+      - name: Type check
+        run: npx tsc -b
 
       - name: Run E2E tests
         run: npm run test:e2e
@@ -36,8 +56,10 @@ jobs:
           CI: 'true'
 
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: ${{ !cancelled() }}
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
           retention-days: 7

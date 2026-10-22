@@ -140,20 +140,3 @@ export function endAssignment(assignmentId: number): Promise<void> {
     method: 'PATCH',
   });
 }
-
-export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
-  return apiRequest('/api/organizations/me/guardians');
-}
-
-export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
-  return apiRequest('/api/organizations/me/guardians', {
-    method: 'POST',
-    body: payload,
-  });
-}
-
-export function removeOrganizationGuardian(guardianId: number): Promise<void> {
-  return apiRequest(`/api/organizations/me/guardians/${guardianId}`, {
-    method: 'DELETE',
-  });
-}
