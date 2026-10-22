@@ -5,14 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { MorePage } from './MorePage';
 
 // Mock dialog methods globally
-const originalShowModal = HTMLDialogElement.prototype.showModal;
-const originalClose = HTMLDialogElement.prototype.close;
-
-HTMLDialogElement.prototype.showModal = vi.fn(function() {
+HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) {
   this.open = true;
 });
 
-HTMLDialogElement.prototype.close = vi.fn(function() {
+HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) {
   this.open = false;
 });
 
