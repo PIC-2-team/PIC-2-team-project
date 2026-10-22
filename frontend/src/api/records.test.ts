@@ -7,6 +7,7 @@ import {
   getMyRecordRequests,
   cancelRecordRequest,
   getRecordRevisions,
+  getRecordSuggestions,
 } from './records';
 import { setTokenProvider } from './client';
 
@@ -123,5 +124,18 @@ it('특정 기록의 수정 이력을 조회한다', async () => {
     expect.objectContaining({
       headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
     })
+  );
+});
+
+it('수정 제안 목록을 기록 ID로 필터링해 요청한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true, data: { items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } },
+  })));
+
+  await getRecordSuggestions(42, 'PENDING', 1, 20, 101);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/care-recipients/42/record-suggestions?status=PENDING&page=1&pageSize=20&recordId=101',
+    expect.any(Object),
   );
 });

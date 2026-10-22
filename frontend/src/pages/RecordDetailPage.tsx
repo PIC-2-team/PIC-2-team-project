@@ -68,6 +68,7 @@ export function RecordDetailPage() {
 
   // 해당 기록에 대한 대기 중인 활동지원사 수정 제안 목록
   const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
+  const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   useEffect(() => {
     if (!selectedRecipientId || !id) {
@@ -87,12 +88,15 @@ export function RecordDetailPage() {
       .finally(() => setRevisionsLoading(false));
 
     if (user?.role === 'GUARDIAN') {
-      getRecordSuggestions(selectedRecipientId, 'PENDING')
+      getRecordSuggestions(selectedRecipientId, 'PENDING', 1, 20, recordId)
         .then(res => {
-          const matches = (res?.items ?? []).filter(item => item.recordId === recordId);
-          setPendingSuggestions(matches);
+          setPendingSuggestions(res?.items ?? []);
+          setPendingSuggestionCount(res?.pagination.totalItems ?? 0);
         })
-        .catch(() => setPendingSuggestions([]));
+        .catch(() => {
+          setPendingSuggestions([]);
+          setPendingSuggestionCount(0);
+        });
     }
   }, [id, selectedRecipientId, user?.role]);
 
@@ -251,7 +255,7 @@ export function RecordDetailPage() {
               </>
             ) : (
               <>
-                {user?.role === 'GUARDIAN' && pendingSuggestions.length > 0 && (
+                {user?.role === 'GUARDIAN' && pendingSuggestionCount > 0 && (
                   <aside
                     aria-label="활동지원사 수정 제안"
                     style={{
@@ -264,7 +268,7 @@ export function RecordDetailPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>
-                        📢 활동지원사의 수정 제안이 {pendingSuggestions.length}건 있어요
+                        📢 활동지원사의 수정 제안이 {pendingSuggestionCount}건 있어요
                       </strong>
                       <Link
                         to="/record-suggestions"

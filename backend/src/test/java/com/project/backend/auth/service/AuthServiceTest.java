@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -223,7 +224,7 @@ class AuthServiceTest {
                 .build();
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(user));
+        given(userRepository.findByName("홍길동")).willReturn(List.of(user));
 
         FindEmailResponse res = authService.findEmail(new FindEmailRequest("홍길동", "01012345678"));
 
@@ -232,15 +233,7 @@ class AuthServiceTest {
 
     @Test
     void findEmail_전화번호는_일치하지만_이름이_다르면_NOT_FOUND_예외() {
-        User user = User.builder()
-                .name("이몽룡")
-                .email("lee@example.com")
-                .phone("010-1234-5678")
-                .publicCode("P-ABCD1234")
-                .role(UserRole.GUARDIAN)
-                .build();
-
-        given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(user));
+        given(userRepository.findByName("홍길동")).willReturn(List.of());
 
         assertThatThrownBy(() -> authService.findEmail(new FindEmailRequest("홍길동", "01012345678")))
                 .isInstanceOf(ApiException.class)
@@ -249,7 +242,7 @@ class AuthServiceTest {
 
     @Test
     void findEmail_일치하는_사용자가_없으면_NOT_FOUND_예외() {
-        given(userRepository.findByPhone(anyString())).willReturn(Optional.empty());
+        given(userRepository.findByName(anyString())).willReturn(List.of());
 
         assertThatThrownBy(() -> authService.findEmail(new FindEmailRequest("홍길동", "01012345678")))
                 .isInstanceOf(ApiException.class)

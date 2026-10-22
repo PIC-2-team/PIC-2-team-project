@@ -234,6 +234,42 @@ it('보호자가 기록 수정을 저장하면 수정 이력을 즉시 재조회
   expect(revisionsSpy).toHaveBeenNthCalledWith(2, 42, 101);
 });
 
+it('다른 기록의 제안이 20건 있어도 현재 기록의 제안을 조회해 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  const suggestion = {
+    id: 21, recordId: 101,
+    proposed: { content: '현재 기록의 이전 제안', category: 'MEAL' as const },
+    suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
+    status: 'PENDING' as const, createdAt: '2026-10-22T10:00:00Z',
+  };
+  vi.spyOn(recordsApi, 'getRecordSuggestions').mockImplementation(async (_recipientId, _status, _page, _pageSize, recordId) => ({
+    items: recordId === 101 ? [suggestion] : Array.from({ length: 20 }, (_, i) => ({ ...suggestion, id: i + 1, recordId: 999 })),
+    pagination: { page: 1, pageSize: 20, totalItems: recordId === 101 ? 1 : 21, totalPages: recordId === 101 ? 1 : 2 },
+  }));
+
+  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
+    <Route path="/records/:id" element={<RecordDetailPage />} />
+  </Routes></MemoryRouter>);
+
+  expect(await screen.findByText('현재 기록의 이전 제안')).toBeInTheDocument();
+  expect(screen.getByText(/활동지원사의 수정 제안이 1건 있어요/)).toBeInTheDocument();
+});
+
+it('현재 기록의 제안이 한 페이지를 넘으면 전체 대기 건수를 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({
+    items: [{ id: 1, recordId: 101, proposed: { content: '수정 제안', category: 'MEAL' },
+      suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' }, status: 'PENDING', createdAt: '2026-10-22T10:00:00Z' }],
+    pagination: { page: 1, pageSize: 20, totalItems: 21, totalPages: 2 },
+  });
+
+  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
+    <Route path="/records/:id" element={<RecordDetailPage />} />
+  </Routes></MemoryRouter>);
+
+  expect(await screen.findByText(/활동지원사의 수정 제안이 21건 있어요/)).toBeInTheDocument();
+});
+
 it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 내역이 표시된다', async () => {
   vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
   vi.spyOn(recordsApi, 'getRecordRevisions').mockResolvedValue({

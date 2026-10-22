@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface RecordSuggestionRepository extends JpaRepository<RecordSuggestion, Long> {
     Page<RecordSuggestion> findByCareRecipientIdAndStatus(Long careRecipientId, RecordSuggestionStatus status,
                                                             Pageable pageable);
+    Page<RecordSuggestion> findByCareRecipientIdAndRecordIdAndStatus(Long careRecipientId, Long recordId,
+                                                                  RecordSuggestionStatus status, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from RecordSuggestion s where s.id = :id and s.careRecipientId = :careRecipientId")

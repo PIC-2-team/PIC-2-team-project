@@ -38,8 +38,9 @@ public class RecordSuggestionController {
     public ApiResponse<PaginatedData<RecordSuggestionResponse>> list(@AuthenticationPrincipal Long userId,
             @PathVariable Long careRecipientId,
             @RequestParam(defaultValue = "PENDING") RecordSuggestionStatus status,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
-        return ApiResponse.ok(service.list(userId, careRecipientId, status, page, pageSize));
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) Long recordId) {
+        return ApiResponse.ok(service.list(userId, careRecipientId, status, page, pageSize, recordId));
     }
 
     @Operation(summary = "생활기록 수정 제안 승인 또는 거절")
