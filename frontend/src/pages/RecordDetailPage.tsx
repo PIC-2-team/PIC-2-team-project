@@ -136,6 +136,9 @@ export function RecordDetailPage() {
       setRecord(updated);
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
+      getRecordRevisions(selectedRecipientId, Number(id))
+        .then(res => setRevisions(res?.items ?? []))
+        .catch(() => {});
     } catch (e) {
       setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
     } finally {

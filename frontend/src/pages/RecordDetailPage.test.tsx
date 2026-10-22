@@ -202,6 +202,38 @@ it('보호자 화면에서 활동지원사가 보낸 대기 중인 수정 제안
   expect(screen.getByRole('link', { name: '검토하기' })).toHaveAttribute('href', '/record-suggestions');
 });
 
+it('보호자가 기록 수정을 저장하면 수정 이력을 즉시 재조회한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  vi.spyOn(recordsApi, 'updateRecord').mockResolvedValue({
+    ...sampleRecord,
+    content: '수정된 기록 내용입니다.',
+  });
+  const revisionsSpy = vi.spyOn(recordsApi, 'getRecordRevisions').mockResolvedValue({
+    items: [],
+    pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+  });
+
+  render(
+    <MemoryRouter initialEntries={['/records/101']}>
+      <Routes>
+        <Route path="/records/:id" element={<RecordDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  const editBtn = await screen.findByRole('button', { name: '수정' });
+  fireEvent.click(editBtn);
+
+  const saveBtn = screen.getByRole('button', { name: '저장' });
+  fireEvent.click(saveBtn);
+
+  // 마운트 시 1회 + submitEdit 성공 후 1회 = 총 2회
+  await waitFor(() => {
+    expect(revisionsSpy).toHaveBeenCalledTimes(2);
+  });
+  expect(revisionsSpy).toHaveBeenNthCalledWith(2, 42, 101);
+});
+
 it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 내역이 표시된다', async () => {
   vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
   vi.spyOn(recordsApi, 'getRecordRevisions').mockResolvedValue({
