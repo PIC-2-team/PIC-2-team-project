@@ -200,39 +200,6 @@ export function LoginPage() {
             </div>
           </section>
 
-          {/* 핵심 가치 카드 섹션 (가로 3열 그리드) */}
-          <section className={styles.featuresSection} aria-label="주요 특징">
-            <div className={styles.featureCard}>
-              <div className={styles.featureIconWrap} style={{ background: '#e8f5ee', color: '#2b825b' }}>
-                🎙️
-              </div>
-              <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>쉬운 기록</h3>
-                <p className={styles.featureDesc}>음성·텍스트</p>
-              </div>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIconWrap} style={{ background: '#e8f0fb', color: '#2e5cb8' }}>
-                🤝
-              </div>
-              <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>안심 연결</h3>
-                <p className={styles.featureDesc}>보호자·기관</p>
-              </div>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIconWrap} style={{ background: '#fef3e6', color: '#b25e00' }}>
-                🛡️
-              </div>
-              <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>철저 보안</h3>
-                <p className={styles.featureDesc}>암호화 코드</p>
-              </div>
-            </div>
-          </section>
-
           {/* 로그인 카드 섹션 */}
           <section className={styles.loginCard}>
             <div className={styles.heading}>
