@@ -21,8 +21,8 @@
   height: 100%;
   overflow: hidden;
   justify-content: space-between;
-  padding: 8px 16px 12px;
-  gap: 8px;
+  padding: 12px 18px 16px;
+  gap: 12px;
 }
 
 /* 브랜드 히어로 섹션 */
@@ -34,26 +34,26 @@
   justify-content: center;
   flex: 1;
   min-height: 0;
-  gap: 8px;
-  padding: 2px 0;
+  gap: 10px;
+  padding: 6px 0;
 }
 
 .heroLogoCircle {
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: #e8f5ee;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(60, 171, 126, 0.15);
+  box-shadow: 0 2px 10px rgba(60, 171, 126, 0.16);
 }
 
 .heroBadge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 12px;
+  padding: 4px 14px;
   background: white;
   border: 1px solid #cde2d3;
   border-radius: 20px;

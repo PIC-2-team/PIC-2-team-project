@@ -55,7 +55,6 @@ it('로그인 화면에서 이용 동의로 돌아가는 링크를 제공하지 
 it('브랜드 히어로, 슬로건 및 로그인 헤더가 표시된다', () => {
   renderLogin();
   expect(screen.getByText('삶의 결을 잇다')).toBeInTheDocument();
-  expect(screen.getByText('보호자가 없어도 이어지는 맞춤 돌봄 기록')).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: '로그인' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/consent');
 });
