@@ -191,27 +191,33 @@ export function LoginPage() {
         <div className={styles.content}>
           {/* 브랜드 히어로 섹션 */}
           <section className={styles.heroSection}>
-            <div className={styles.heroBadge}>
-              <svg className={styles.heroBadgeIcon} width="22" height="22" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-                <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
-                <path d="M20 6c4 0 7 5 7 14" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.6" />
-                <circle cx="20" cy="20" r="5" fill="#16a34a" />
+            <div className={styles.heroLogoCircle} aria-hidden="true">
+              <svg width="44" height="44" viewBox="0 0 40 40" fill="none">
+                <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#3CAB7E" strokeWidth="3" strokeLinecap="round" fill="none" />
+                <path d="M20 6c4 0 7 5 7 14" stroke="#3CAB7E" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.5" />
+                <circle cx="20" cy="20" r="4" fill="#3CAB7E" />
               </svg>
+            </div>
+            <div className={styles.heroBadge}>
               <span className={styles.brandName}>삶결</span>
               <span className={styles.badgeDivider} aria-hidden="true">·</span>
               <span className={styles.brandSlogan}>삶의 결을 잇다</span>
             </div>
+            <h1 className={styles.heroTitle}>보호자가 없어도 이어지는 맞춤 돌봄 기록</h1>
+            <p className={styles.heroDescription}>
+              발달장애인 당사자의 일상과 특성을 안전하게 기록하고, 새로운 돌봄 제공자에게 따뜻하게 전달합니다.
+            </p>
           </section>
 
-          {/* 핵심 가치 카드 섹션 (가로 3열 그리드) */}
+          {/* 핵심 가치 3포인트 카드 */}
           <section className={styles.featuresSection} aria-label="주요 특징">
             <div className={styles.featureCard}>
               <div className={styles.featureIconWrap} style={{ background: '#e8f5ee', color: '#2b825b' }}>
                 🎙️
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>쉬운 기록</h3>
-                <p className={styles.featureDesc}>음성·텍스트</p>
+                <h3 className={styles.featureTitle}>쉬운 일상 기록</h3>
+                <p className={styles.featureDesc}>음성과 텍스트로 언제 어디서나 간편하게 남기는 생활 기록</p>
               </div>
             </div>
 
@@ -220,8 +226,8 @@ export function LoginPage() {
                 🤝
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>안심 연결</h3>
-                <p className={styles.featureDesc}>보호자·기관</p>
+                <h3 className={styles.featureTitle}>믿을 수 있는 연결</h3>
+                <p className={styles.featureDesc}>보호자·활동지원사·기관의 빈틈없는 인수인계와 소통</p>
               </div>
             </div>
 
@@ -230,8 +236,8 @@ export function LoginPage() {
                 🛡️
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>철저 보안</h3>
-                <p className={styles.featureDesc}>암호화 코드</p>
+                <h3 className={styles.featureTitle}>철저한 개인정보 보호</h3>
+                <p className={styles.featureDesc}>주민번호 대신 전용 고유 코드로 민감정보 암호화 보관</p>
               </div>
             </div>
           </section>
@@ -241,6 +247,12 @@ export function LoginPage() {
             <div className={styles.heading}>
               <h2>로그인</h2>
               <p className={styles.subheading}>서비스 이용을 위해 로그인해 주세요</p>
+            </div>
+
+            <div className={styles.noticeCard}>
+              <p className={styles.noticeText}>
+                보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.
+              </p>
             </div>
 
             <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>

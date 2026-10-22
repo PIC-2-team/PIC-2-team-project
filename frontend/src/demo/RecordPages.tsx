@@ -476,9 +476,9 @@ export function RecordForm() {
                 />
               </div>
 
-              {/* 카테고리 표시 (AI 자동 설정) */}
+              {/* 카테고리 표시 (키워드 자동 설정) */}
               <div style={{ padding: '12px 20px', borderBottom: '1px solid #f0f2f5', background: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#8a9ab0' }}>AI 분류:</span>
+                <span style={{ fontSize: 12, color: '#8a9ab0' }}>자동 분류:</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#3CAB7E', background: '#f0f7f3', padding: '3px 10px', borderRadius: 20 }}>{categories[category]}</span>
               </div>
 

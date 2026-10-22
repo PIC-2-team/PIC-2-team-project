@@ -1,28 +1,22 @@
 .page {
-  --muted: #64748b;
+  --muted: #596775;
   width: 100%;
   max-width: 390px;
-  height: 100%;
+  min-height: 100%;
   margin: 0 auto;
-  background: #f8fafc;
+  background: #f5f6f7;
   color: var(--ink);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.6;
   box-sizing: border-box;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .content {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+  padding: 24px 18px 40px;
   box-sizing: border-box;
-  height: 100%;
-  overflow: hidden;
-  justify-content: flex-start;
-  padding: 6px 16px 20px;
-  gap: 10px;
 }
 
 /* 브랜드 히어로 섹션 */
@@ -31,145 +25,161 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  padding: 12px 6px 4px;
+  gap: 12px;
+}
+
+.heroLogoCircle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #e8f5ee;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  padding: 0;
+  box-shadow: 0 4px 12px rgba(60, 171, 126, 0.12);
+  margin-bottom: 2px;
 }
 
 .heroBadge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 18px;
-  background: #f0fdf4;
-  border: 1.5px solid #bbf7d0;
-  border-radius: 24px;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
-}
-
-.heroBadgeIcon {
-  flex-shrink: 0;
+  gap: 6px;
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #cde2d3;
+  border-radius: 20px;
 }
 
 .brandName {
-  font-size: 16px;
-  font-weight: 850;
-  color: #16a34a;
-  letter-spacing: -0.4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -0.3px;
 }
 
 .badgeDivider {
-  color: #86efac;
-  font-size: 13px;
+  color: #bdccc1;
+  font-size: 12px;
 }
 
 .brandSlogan {
-  font-size: 14.5px;
-  color: #15803d;
-  font-weight: 700;
-  letter-spacing: -0.2px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
-/* 핵심 가치 카드 섹션 (가로 3열 그리드) */
+.heroTitle {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  word-break: keep-all;
+}
+
+.heroDescription {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  word-break: keep-all;
+}
+
+/* 핵심 가치 3포인트 카드 */
 .featuresSection {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .featureCard {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-  padding: 10px 6px 9px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 13px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
 }
 
 .featureIconWrap {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
 .featureText {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
-  width: 100%;
 }
 
 .featureTitle {
   margin: 0;
-  font-size: 12.5px;
-  font-weight: 750;
-  color: #1e293b;
-  line-height: 1.25;
-  letter-spacing: -0.3px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
 }
 
 .featureDesc {
   margin: 0;
-  font-size: 10.5px;
-  color: #64748b;
-  line-height: 1.2;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  word-break: keep-all;
 }
 
 /* 로그인 카드 섹션 */
 .loginCard {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px 18px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+  gap: 16px;
+  padding: 22px 20px 24px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
-  width: 100%;
 }
 
 .heading {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .heading h2 {
   margin: 0;
-  font-size: 21px;
-  font-weight: 850;
-  line-height: 1.25;
-  letter-spacing: -0.5px;
-  color: #0f172a;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  color: var(--ink);
 }
 
 .subheading {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--muted);
 }
 
 /* 컴팩트 안내 카드 */
 .noticeCard {
-  padding: 8px 10px;
+  padding: 11px 13px;
   border: 1px solid #cde2d3;
   border-left: 3px solid var(--green);
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--soft);
   box-sizing: border-box;
 }
@@ -178,7 +188,7 @@
   margin: 0;
   font-size: 12px;
   color: #2b5742;
-  line-height: 1.4;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
@@ -186,48 +196,46 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 15px;
 }
 
 .form label {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #1e293b;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
 }
 
 .form input {
   width: 100%;
   min-width: 0;
   min-height: 48px;
-  padding: 12px 15px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #0f172a;
+  padding: 12px 14px;
+  border: 1.5px solid #d0d7de;
+  border-radius: 10px;
+  background: white;
+  color: var(--ink);
   font: inherit;
-  font-size: 15.5px;
+  font-size: 15px;
   box-sizing: border-box;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form input::placeholder {
-  color: #94a3b8;
+  color: #9aa5b1;
   font-size: 14px;
 }
 
 .form input:hover {
-  border-color: #94a3b8;
-  background: #ffffff;
+  border-color: #adb5bd;
 }
 
 .form input:focus {
   outline: none;
-  background: #ffffff;
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(60, 171, 126, 0.2);
+  box-shadow: 0 0 0 3px rgba(60, 171, 126, 0.18);
 }
 
 /* 에러 경고 카드 */
@@ -235,52 +243,49 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  padding: 11px 13px;
+  background: #fdf2f2;
+  border: 1px solid #f8b4b4;
   border-radius: 9px;
-  color: #991b1b;
+  color: #9b1c1c;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.4;
   box-sizing: border-box;
 }
 
 .alertIcon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  color: #dc2626;
+  color: #e02424;
 }
 
 /* 사각형 규격 CTA 버튼 */
 .submit {
   min-height: 50px;
-  padding: 12px 18px;
+  padding: 12px 20px;
   border: 0;
   border-radius: 12px;
   background: var(--green);
   color: #ffffff;
   font: inherit;
-  font-size: 16.5px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(60, 171, 126, 0.28);
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, filter 0.15s ease;
 }
 
 .submit:not(:disabled):hover {
   filter: brightness(0.92);
-  box-shadow: 0 6px 16px rgba(60, 171, 126, 0.35);
 }
 
 .submit:disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
-  box-shadow: none;
+  background: #e1e6e2;
+  color: #748278;
   cursor: not-allowed;
 }
 
@@ -315,25 +320,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 13px;
-  color: #64748b;
-  margin-top: 1px;
-}
-
-.linkDivider {
-  color: #cbd5e1;
-  font-size: 11px;
+  color: var(--muted);
 }
 
 .textBtn {
   background: none;
   border: none;
-  min-height: 28px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
-  padding: 0 4px;
-  color: #64748b;
+  padding: 0 8px;
+  color: var(--muted);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -341,16 +340,21 @@
 }
 
 .textBtn:hover {
-  color: #0f172a;
+  color: var(--ink);
+}
+
+.linkDivider {
+  color: var(--line);
+  user-select: none;
 }
 
 .divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #94a3b8;
-  font-size: 11.5px;
-  margin: 1px 0;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0;
 }
 
 .divider::before,
@@ -358,36 +362,36 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #e2e8f0;
+  background: var(--line);
 }
 
 .googleButton {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   min-width: 0;
 }
 
 .signupWrap {
   display: flex;
   justify-content: center;
-  padding-top: 6px;
-  border-top: 1px solid #f1f5f9;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
 }
 
 .signup {
   margin: 0;
-  color: #64748b;
-  font-size: 13.5px;
+  color: var(--muted);
+  font-size: 14px;
   text-align: center;
 }
 
 .signupLink {
   color: var(--green);
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: underline;
-  min-height: 30px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   padding: 0 4px;
