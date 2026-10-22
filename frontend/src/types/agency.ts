@@ -11,6 +11,7 @@ export type OrganizationMember = {
   id: number;
   userId: number;
   name: string;
+  phone?: string | null;
   publicCode: string;
   status: MemberStatus;
   joinedAt: string;
@@ -50,4 +51,22 @@ export type OrganizationCareRecipient = {
   otherDisabilityType?: string | null;
   latestRecordAt?: string | null;
   createdAt?: string;
+  guardianName?: string | null;
+  guardianPhone?: string | null;
+};
+
+export type OrganizationGuardian = {
+  id: number;
+  guardianId: number;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  publicCode?: string | null;
+  createdAt: string;
+  careRecipients: {
+    id: number;
+    name: string;
+    careRecipientNumber?: string | null;
+    birthDate?: string | null;
+  }[];
 };

@@ -351,6 +351,28 @@ class RecordApiTest {
     }
 
     @Test
+    void recordSuggestionsAreFilteredBeforePagination() throws Exception {
+        long target = create(worker, "확인할 기록", "2026-10-14T03:00:00Z");
+        long other = create(worker, "다른 기록", "2026-10-14T03:00:00Z");
+        perform(post(base + "/records/" + target + "/suggestions")
+                .content("{\"content\":\"확인할 제안\"}"), worker).andExpect(status().isCreated());
+        for (int i = 0; i < 20; i++) {
+            perform(post(base + "/records/" + other + "/suggestions")
+                    .content("{\"content\":\"다른 제안\"}"), worker).andExpect(status().isCreated());
+        }
+
+        perform(get(base + "/record-suggestions"), guardian)
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(21));
+        perform(get(base + "/record-suggestions").param("recordId", String.valueOf(target)), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].recordId").value(target))
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(1));
+        perform(get(base + "/record-suggestions").param("recordId", String.valueOf(target)), worker)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void supportWorkerCanSuggestAndGuardianApprovalUpdatesRecordWithRevision() throws Exception {
         long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
         String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")

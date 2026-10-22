@@ -16,14 +16,14 @@ afterEach(() => {
 });
 
 describe('useAuth', () => {
-  it('기존 localStorage 자격 증명을 복원하지 않고 삭제한다', () => {
-    localStorage.setItem('sam_token', 'legacy-token');
+  it('기존 localStorage 자격 증명을 복원하여 로그인 상태를 유지한다', () => {
+    localStorage.setItem('sam_token', 'saved-token');
     localStorage.setItem('sam_user', JSON.stringify(mockUser));
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
-    expect(result.current.user).toBeNull();
-    expect(result.current.token).toBeNull();
-    expect(localStorage.getItem('sam_token')).toBeNull();
-    expect(localStorage.getItem('sam_user')).toBeNull();
+    expect(result.current.user?.name).toBe('김OO');
+    expect(result.current.token).toBe('saved-token');
+    expect(localStorage.getItem('sam_token')).toBe('saved-token');
+    expect(localStorage.getItem('sam_user')).toBe(JSON.stringify(mockUser));
   });
 
   it('login() 성공 시 User를 반환하고 상태가 갱신된다', async () => {
@@ -41,14 +41,14 @@ describe('useAuth', () => {
     expect(result.current.token).toBe('tok');
   });
 
-  it('login() 성공 시 토큰과 유저를 localStorage에 저장하지 않는다', async () => {
+  it('login() 성공 시 토큰과 유저를 localStorage에 저장한다', async () => {
     vi.spyOn(authApi, 'login').mockResolvedValue({ accessToken: 'tok', user: mockUser });
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
     await act(async () => {
       await result.current.login('a@b.com', 'pw');
     });
-    expect(localStorage.getItem('sam_token')).toBeNull();
-    expect(localStorage.getItem('sam_user')).toBeNull();
+    expect(localStorage.getItem('sam_token')).toBe('tok');
+    expect(localStorage.getItem('sam_user')).toBe(JSON.stringify(mockUser));
   });
 
   it('logout() 후 user null + localStorage 정리', async () => {

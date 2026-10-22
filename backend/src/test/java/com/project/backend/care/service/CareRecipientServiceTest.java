@@ -41,6 +41,7 @@ class CareRecipientServiceTest {
     @Mock CareAccessService careAccessService;
     @Mock UserRepository userRepository;
     @Mock com.project.backend.organization.repository.OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    @Mock com.project.backend.organization.repository.OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     @Mock com.project.backend.organization.repository.OrganizationRepository organizationRepository;
 
     @InjectMocks CareRecipientService careRecipientService;

@@ -225,9 +225,6 @@ export function Home() {
               style={{ marginTop: 'auto', gap: '0.5rem' }}
               onClick={() => nav('/records/new')}
             >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M14 2.5l3.5 3.5L6 17.5H2.5V14L14 2.5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
               기록하기
             </button>
           </>

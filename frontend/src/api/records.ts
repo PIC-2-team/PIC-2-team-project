@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRequestItem, RecordRevision } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -38,9 +38,28 @@ export function pinRecord(
   });
 }
 
-// TODO: GET /records/{recordId} — 경로 초안, 미구현 (API-Spec.md §상세·수정·삭제)
 export function getRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
+}
+
+export function updateRecord(
+  recipientId: number,
+  recordId: number,
+  payload: UpdateRecordPayload
+): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function deleteRecord(
+  recipientId: number,
+  recordId: number
+): Promise<{ deletedAt: string; restoreUntil: string }> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, {
+    method: 'DELETE',
+  });
 }
 
 export function createRecord(
@@ -143,10 +162,11 @@ export function getRecordSuggestions(
   recipientId: number,
   status: RecordSuggestionStatus = 'PENDING',
   page = 1,
-  pageSize = 20
+  pageSize = 20,
+  recordId?: number
 ): Promise<PaginatedData<RecordSuggestion>> {
   return apiRequest(
-    `/api/care-recipients/${recipientId}/record-suggestions?status=${status}&page=${page}&pageSize=${pageSize}`
+    `/api/care-recipients/${recipientId}/record-suggestions?status=${status}&page=${page}&pageSize=${pageSize}${recordId === undefined ? '' : `&recordId=${recordId}`}`
   );
 }
 
@@ -161,5 +181,16 @@ export function decideRecordSuggestion(
       method: 'POST',
       body: { decision },
     }
+  );
+}
+
+export function getRecordRevisions(
+  recipientId: number,
+  recordId: number,
+  page = 1,
+  pageSize = 20
+): Promise<PaginatedData<RecordRevision>> {
+  return apiRequest(
+    `/api/care-recipients/${recipientId}/records/${recordId}/revisions?page=${page}&pageSize=${pageSize}`
   );
 }

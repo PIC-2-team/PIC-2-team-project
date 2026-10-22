@@ -413,7 +413,7 @@ it('당사자 고유 코드 목록을 조회하고 신규 당사자 코드를 �
   expect(await screen.findByText('김당사')).toBeInTheDocument();
   expect(screen.getByText('R-KNU12345')).toBeInTheDocument();
   expect(screen.getByText('보호자: 김보호')).toBeInTheDocument();
-  expect(screen.getByText('소속: 행복복지관')).toBeInTheDocument();
+  expect(screen.getByText('행복복지관')).toBeInTheDocument();
 
   expect(screen.getByText('이신규')).toBeInTheDocument();
   expect(screen.getByText('R-NEW99999')).toBeInTheDocument();

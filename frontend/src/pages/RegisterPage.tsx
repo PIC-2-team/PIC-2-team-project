@@ -37,8 +37,10 @@ export function RegisterPage() {
 
   const { consentTicket, role } = state;
 
+  const PHONE_REGEX = /^01[016789]-?\d{3,4}-?\d{4}$/;
+  const isPhoneValid = PHONE_REGEX.test(phone.trim());
   const passwordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
-  const canSubmit = name.trim().length > 0 && email.length > 0 && password.length >= 8 && password === passwordConfirm;
+  const canSubmit = name.trim().length > 0 && email.length > 0 && password.length >= 8 && password === passwordConfirm && isPhoneValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +53,7 @@ export function RegisterPage() {
         name: name.trim(),
         email,
         password,
-        phone: phone.trim() || undefined,
+        phone: phone.trim(),
         role,
       });
       setAuth(data);
@@ -59,7 +61,11 @@ export function RegisterPage() {
       navigate(home, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setError('이미 사용 중인 이메일이에요. 다른 이메일을 입력해주세요.');
+        if (err.code === 'PHONE_ALREADY_EXISTS') {
+          setError('이미 가입된 전화번호예요. 다른 번호를 입력하거나 아이디/비밀번호 찾기를 이용해 주세요.');
+        } else {
+          setError('이미 사용 중인 이메일이에요. 다른 이메일을 입력해주세요.');
+        }
       } else {
         setError('회원가입 중 오류가 발생했어요. 다시 시도해주세요.');
       }
@@ -133,14 +139,18 @@ export function RegisterPage() {
             )}
           </label>
           <label>
-            전화번호 <span className="muted" style={{ fontWeight: 400 }}>(선택)</span>
+            전화번호
             <input
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="010-0000-0000"
               autoComplete="tel"
+              required
             />
+            {phone.length > 0 && !isPhoneValid && (
+              <span style={{ fontSize: '12px', color: '#a23d38' }}>올바른 전화번호 형식(010-0000-0000)을 입력해 주세요.</span>
+            )}
           </label>
 
           {error && <p role="alert" className="error" style={{ borderRadius: '10px', margin: 0 }}>{error}</p>}

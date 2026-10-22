@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiError } from '../api/client';
 import { findEmail, resetPassword } from '../api/auth';
+import logoImg from '../assets/logo.png';
 import styles from './LoginPage.module.css';
 
 declare global {
@@ -20,9 +21,17 @@ declare global {
 }
 
 export function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { user, login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (user) {
+      const redirect = searchParams.get('redirect');
+      const home = user.role === 'ADMIN' ? '/admin' : user.role === 'INSTITUTION' ? '/agency' : '/home';
+      navigate(redirect ?? home, { replace: true });
+    }
+  }, [user, navigate, searchParams]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -189,52 +198,92 @@ export function LoginPage() {
     <AppShell>
       <main className={styles.page}>
         <div className={styles.content}>
-          <div className={styles.heading}>
-            <p className={styles.eyebrow}>돌봄을 잇는 기록</p>
-            <h1>로그인</h1>
-          </div>
-          <p className={styles.notice}>보안을 위해 로그인 상태는 이 브라우저에 저장되지 않습니다. 새로고침 후 다시 로그인해 주세요.</p>
-          <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>
-            <label>
-              이메일
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
-            </label>
-            <label>
-              비밀번호
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-            </label>
-            {error && <p role="alert" className={styles.error}>{error}</p>}
-            <button className={styles.submit} type="submit" disabled={isLoading}>
-              {isLoading ? '로그인 중…' : '로그인'}
-            </button>
-          </form>
-          <div className={styles.findAccountLinks}>
-            <button type="button" className={styles.textBtn} onClick={() => openModal('email')}>
-              이메일 찾기
-            </button>
-            <span className={styles.linkDivider} aria-hidden="true">|</span>
-            <button type="button" className={styles.textBtn} onClick={() => openModal('password')}>
-              비밀번호 찾기
-            </button>
-          </div>
-          <div className={styles.divider}>또는</div>
-          <div ref={googleBtnRef} className={styles.googleButton} />
-          <p className={styles.signup}>
-            계정이 없으신가요?{' '}
-            <Link to="/consent" style={{ color: '#3CAB7E', fontWeight: 600 }}>회원가입</Link>
-          </p>
+          {/* 브랜드 히어로 섹션 */}
+          <section className={styles.heroSection}>
+            <img src={logoImg} alt="삶결 로고" className={styles.heroMainLogo} />
+            <div className={styles.brandTitleRow}>
+              <span className={styles.brandName}>삶결</span>
+              <span className={styles.badgeDivider} aria-hidden="true">·</span>
+              <span className={styles.brandSlogan}>삶의 결을 잇다</span>
+            </div>
+          </section>
+
+          {/* 로그인 카드 섹션 */}
+          <section className={styles.loginCard}>
+            <div className={styles.heading}>
+              <h2>로그인</h2>
+              <p className={styles.subheading}>서비스 이용을 위해 로그인해 주세요</p>
+            </div>
+
+            <form className={styles.form} onSubmit={(e) => { void handleSubmit(e); }}>
+              <label>
+                이메일
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoComplete="email"
+                  placeholder="example@samgyeol.com"
+                  required
+                />
+              </label>
+              <label>
+                비밀번호
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="비밀번호 입력"
+                  required
+                />
+              </label>
+              {error && (
+                <div role="alert" className={styles.errorAlert}>
+                  <svg className={styles.alertIcon} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
+              <button
+                className={styles.submit}
+                type="submit"
+                disabled={isLoading}
+                aria-busy={isLoading}
+              >
+                {isLoading ? (
+                  <span className={styles.loadingWrap}>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span>로그인 중…</span>
+                  </span>
+                ) : (
+                  '로그인'
+                )}
+              </button>
+            </form>
+
+            <div className={styles.findAccountLinks}>
+              <button type="button" className={styles.textBtn} onClick={() => openModal('email')}>
+                이메일 찾기
+              </button>
+              <span className={styles.linkDivider} aria-hidden="true">|</span>
+              <button type="button" className={styles.textBtn} onClick={() => openModal('password')}>
+                비밀번호 찾기
+              </button>
+            </div>
+
+            <div className={styles.divider}>또는</div>
+
+            <div ref={googleBtnRef} className={styles.googleButton} />
+
+            <div className={styles.signupWrap}>
+              <p className={styles.signup}>
+                계정이 없으신가요?{' '}
+                <Link to="/consent" className={styles.signupLink}>회원가입</Link>
+              </p>
+            </div>
+          </section>
         </div>
 
         {modalTab && (

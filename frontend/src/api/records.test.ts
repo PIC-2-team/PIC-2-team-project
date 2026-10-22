@@ -6,6 +6,8 @@ import {
   createRecordRequest,
   getMyRecordRequests,
   cancelRecordRequest,
+  getRecordRevisions,
+  getRecordSuggestions,
 } from './records';
 import { setTokenProvider } from './client';
 
@@ -93,4 +95,47 @@ it('본인이 생성한 기록 요청 목록을 조회하고 취소한다', asyn
   expect(fetchMock).toHaveBeenLastCalledWith('/api/care-recipients/42/record-requests/1/cancel', expect.objectContaining({
     method: 'POST',
   }));
+});
+
+it('특정 기록의 수정 이력을 조회한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true,
+    data: {
+      items: [
+        {
+          revision: 1,
+          changedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
+          changedAt: '2026-10-22T10:00:00Z',
+          content: '점심 식사 시간 30분으로 수정',
+          category: 'MEAL',
+          recordedAt: '2026-10-22T09:00:00Z',
+        },
+      ],
+      pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+    },
+  })));
+  setTokenProvider(() => 'test-token');
+
+  const res = await getRecordRevisions(42, 100);
+  expect(res.items).toHaveLength(1);
+  expect(res.items[0].changedBy.name).toBe('이활동');
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/care-recipients/42/records/100/revisions?page=1&pageSize=20',
+    expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+    })
+  );
+});
+
+it('수정 제안 목록을 기록 ID로 필터링해 요청한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true, data: { items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } },
+  })));
+
+  await getRecordSuggestions(42, 'PENDING', 1, 20, 101);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/care-recipients/42/record-suggestions?status=PENDING&page=1&pageSize=20&recordId=101',
+    expect.any(Object),
+  );
 });
