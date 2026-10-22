@@ -168,8 +168,8 @@ export function CareInfoPage() {
   }, [selectedRecipientId]);
 
   return (
-    <div className="demo-page">
-      <h1>돌봄정보</h1>
+    <div className={styles.page}>
+      <h1 className={styles.title}>돌봄정보</h1>
 
       {isLoading && <p className="muted" role="status">불러오는 중…</p>}
       {error && <p className="error" role="alert">{error}</p>}

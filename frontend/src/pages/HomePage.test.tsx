@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
@@ -69,7 +69,9 @@ it('보호자 사용자는 오늘의 기록과 중요 생활기록을 함께 확
   renderHomePage({ id: 3, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
 
   expect(await screen.findByRole('heading', { name: /중요 생활기록/ })).toBeInTheDocument();
-  expect(screen.getByText('중요: 특정 약 복용 주의')).toBeInTheDocument();
+  expect(screen.getAllByText('중요: 특정 약 복용 주의')[0]).toBeInTheDocument();
+  expect(screen.getByText('✨ 중요 돌봄 정보 요약')).toBeInTheDocument();
+  expect(screen.getByText('돌봄 당사자')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /오늘의 기록/ })).toBeInTheDocument();
   expect(screen.getByText('오늘 점심 잘 먹음')).toBeInTheDocument();
 });
@@ -107,3 +109,56 @@ it('보호자 사용자에게 대기 중인 활동지원사 수정 제안이 있
   );
 });
 
+it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고 프로필 모달을 열 수 있다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    {
+      id: 42,
+      name: '김삼결',
+      careRecipientNumber: 'KR-2026-0042',
+      birthDate: '2000-01-01',
+      gender: 'MALE',
+      disabilityTypes: ['AUTISM'],
+      disabilityGrade: 1,
+      guardianName: '김보호',
+      guardianPhone: '010-1234-5678',
+    } as any,
+  ]);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({
+    categories: [],
+    pinnedRecords: [],
+  });
+
+  renderHomePage({
+    id: 99,
+    name: '김지원',
+    email: 'worker@test.com',
+    publicCode: 'SW-9999',
+    role: 'SUPPORT_WORKER',
+  });
+
+  expect(await screen.findByText('담당 이용자')).toBeInTheDocument();
+  expect(screen.getByText('등록코드: KR-2026-0042')).toBeInTheDocument();
+  expect(screen.getByText(/김삼결 님/)).toBeInTheDocument();
+  expect(screen.getByText(/자폐성 장애/)).toBeInTheDocument();
+  expect(screen.getByText(/김보호/)).toBeInTheDocument();
+
+  // 활동지원사 프로필 모달 테스트
+  const profileBtn = screen.getByRole('button', { name: '내 프로필 정보 보기' });
+  fireEvent.click(profileBtn);
+
+  expect(await screen.findByRole('heading', { name: '활동지원사 정보' })).toBeInTheDocument();
+  expect(screen.getByText('SW-9999')).toBeInTheDocument();
+  expect(screen.getByText('worker@test.com')).toBeInTheDocument();
+
+  // 모달 닫기
+  fireEvent.click(screen.getByRole('button', { name: '확인' }));
+  expect(screen.queryByRole('heading', { name: '활동지원사 정보' })).not.toBeInTheDocument();
+
+  // 담당 이용자 상세 설명 모달 테스트
+  const detailBtn = screen.getByRole('button', { name: /상세 설명 보기/ });
+  fireEvent.click(detailBtn);
+
+  expect(await screen.findByRole('heading', { name: '담당 이용자 상세 프로필' })).toBeInTheDocument();
+  expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
+});

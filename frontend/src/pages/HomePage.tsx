@@ -7,7 +7,53 @@ import { getCareInfoOverview } from '../api/careInfo';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
 import { toSeoulDateKey } from '../utils/date';
+import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './HomePage.module.css';
+
+
+const ROLE_LABEL: Record<string, string> = {
+  GUARDIAN: '돌봄 보호자',
+  SUPPORT_WORKER: '활동지원사',
+  INSTITUTION: '기관 담당자',
+  ADMIN: '관리자',
+};
+
+const DISABILITY_MAP: Record<string, string> = {
+  INTELLECTUAL: '지적장애',
+  AUTISM: '자폐성 장애',
+  BRAIN_LESION: '뇌병변장애',
+  DEVELOPMENTAL: '발달장애',
+  OTHER: '기타',
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  COMMUNICATION: '의사소통',
+  LIFESTYLE: '생활습관',
+  MEAL: '식사',
+  PREFERENCE: '선호·비선호',
+  CHALLENGING_BEHAVIOR: '도전행동',
+  HEALTH: '건강·복약',
+  EMERGENCY: '위기대처',
+  OTHER: '기타',
+};
+
+function formatDisability(type: string): string {
+  return DISABILITY_MAP[type] ?? type;
+}
+
+function getAgeAndGender(birthDate?: string, gender?: 'MALE' | 'FEMALE'): string {
+  const parts: string[] = [];
+  if (birthDate) {
+    const birthYear = parseInt(birthDate.slice(0, 4), 10);
+    if (!isNaN(birthYear)) {
+      const currentYear = new Date().getFullYear();
+      parts.push(`${currentYear - birthYear}세`);
+    }
+  }
+  if (gender === 'MALE') parts.push('남');
+  else if (gender === 'FEMALE') parts.push('여');
+  return parts.join(' · ');
+}
 
 type PageState =
   | { status: 'loading' }
@@ -19,6 +65,8 @@ export function HomePage() {
   const { user, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   useEffect(() => {
@@ -88,17 +136,113 @@ export function HomePage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.profile}>
+      <button
+        type="button"
+        className={styles.profileButton}
+        onClick={() => setShowUserModal(true)}
+        aria-label="내 프로필 정보 보기"
+      >
         <div className={styles.avatar} aria-hidden="true">
           {Array.from(user?.name ?? '?')[0]}
         </div>
-        <div>
-          <h1 className={styles.name}>안녕하세요, {user?.name}님!</h1>
-          <p className={styles.greeting}>오늘도 좋은 하루 보내세요!</p>
+        <div className={styles.profileInfo}>
+          <div className={styles.nameRow}>
+            <h1 className={styles.name}>안녕하세요, {user?.name}님!</h1>
+            {user?.role && <span className={styles.roleTag}>{ROLE_LABEL[user.role]}</span>}
+          </div>
+          <p className={styles.greeting}>오늘도 좋은 하루 보내세요! (프로필 보기 ›)</p>
         </div>
-      </div>
+      </button>
 
-      <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
+      <section className={styles.recipientCard} aria-labelledby="assigned-recipient-title">
+        <div className={styles.recipientHeader}>
+          <span className={styles.assignedBadge}>
+            {user?.role === 'SUPPORT_WORKER' ? '담당 이용자' : '돌봄 당사자'}
+          </span>
+          {recipient.careRecipientNumber && (
+            <span className={styles.recipientNumber}>등록코드: {recipient.careRecipientNumber}</span>
+          )}
+        </div>
+
+        <div className={styles.recipientMain}>
+          <h2 id="assigned-recipient-title" className={styles.recipientName}>
+            {recipient.name} 님
+            {getAgeAndGender(recipient.birthDate, recipient.gender) && (
+              <span className={styles.recipientSub}>
+                ({getAgeAndGender(recipient.birthDate, recipient.gender)})
+              </span>
+            )}
+          </h2>
+        </div>
+
+        <div className={styles.recipientDetails}>
+          {recipient.disabilityTypes && recipient.disabilityTypes.length > 0 && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>장애 유형</span>
+              <span className={styles.detailValue}>
+                {recipient.disabilityTypes.map(formatDisability).join(', ')}
+                {recipient.disabilityGrade ? ` (${recipient.disabilityGrade}급)` : ''}
+              </span>
+            </div>
+          )}
+          {recipient.birthDate && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>생년월일</span>
+              <span className={styles.detailValue}>{recipient.birthDate}</span>
+            </div>
+          )}
+          {user?.role === 'SUPPORT_WORKER' && recipient.guardianName && (
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>보호자</span>
+              <span className={styles.detailValue}>
+                {recipient.guardianName}
+                {recipient.guardianPhone ? ` (${recipient.guardianPhone})` : ''}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.careInfoSummarySection}>
+          <div className={styles.careInfoSummaryHeader}>
+            <span className={styles.careInfoSummaryTitle}>✨ 중요 돌봄 정보 요약</span>
+          </div>
+          {pinnedRecords.length > 0 ? (
+            <div className={styles.careInfoChips}>
+              {pinnedRecords.slice(0, 3).map((rec) => (
+                <div key={rec.id} className={styles.careInfoChip}>
+                  <span className={styles.careInfoChipCategory}>
+                    {CATEGORY_LABEL[rec.category] ?? rec.category}
+                  </span>
+                  <span className={styles.careInfoChipContent}>
+                    {rec.content}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.emptyCareInfoHint}>
+              등록된 중요 돌봄 정보가 아직 없어요.
+            </p>
+          )}
+        </div>
+
+        <div className={styles.recipientActions}>
+          <button
+            type="button"
+            className={styles.recipientActionBtn}
+            onClick={() => setShowRecipientModal(true)}
+          >
+            📋 상세 설명 보기
+          </button>
+          <button
+            type="button"
+            className={`${styles.recipientActionBtn} ${styles.primaryActionBtn}`}
+            onClick={() => navigate('/care-info')}
+          >
+            🌿 돌봄정보 확인
+          </button>
+        </div>
+      </section>
 
       {canWrite && pendingSuggestionCount > 0 && (
         <section className={styles.section} aria-label="수정 제안 알림">
@@ -201,6 +345,97 @@ export function HomePage() {
         >
           기록하기
         </button>
+      )}
+      {showUserModal && (
+        <UserProfileModal user={user} onClose={() => setShowUserModal(false)} />
+      )}
+
+      {showRecipientModal && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="assigned-recipient-modal-title"
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowRecipientModal(false);
+          }}
+        >
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2 id="assigned-recipient-modal-title" className={styles.modalTitle}>
+                담당 이용자 상세 프로필
+              </h2>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setShowRecipientModal(false)}
+                aria-label="프로필 닫기"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.recipientModalBody}>
+              <div className={styles.modalAvatarCircle} aria-hidden="true">
+                {Array.from(recipient.name ?? '?')[0]}
+              </div>
+              <h3 className={styles.modalRecipientName}>{recipient.name} 님</h3>
+              {getAgeAndGender(recipient.birthDate, recipient.gender) && (
+                <p className={styles.modalSub}>{getAgeAndGender(recipient.birthDate, recipient.gender)}</p>
+              )}
+
+              <div className={styles.infoList}>
+                {recipient.careRecipientNumber && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>등록 번호</span>
+                    <span className={styles.infoValue}>{recipient.careRecipientNumber}</span>
+                  </div>
+                )}
+                {recipient.birthDate && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>생년월일</span>
+                    <span className={styles.infoValue}>{recipient.birthDate}</span>
+                  </div>
+                )}
+                {recipient.disabilityTypes && recipient.disabilityTypes.length > 0 && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>장애 유형</span>
+                    <span className={styles.infoValue}>
+                      {recipient.disabilityTypes.map(formatDisability).join(', ')}
+                    </span>
+                  </div>
+                )}
+                {recipient.disabilityGrade && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>장애 정도</span>
+                    <span className={styles.infoValue}>{recipient.disabilityGrade}급</span>
+                  </div>
+                )}
+                {recipient.guardianName && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>보호자</span>
+                    <span className={styles.infoValue}>{recipient.guardianName}</span>
+                  </div>
+                )}
+                {recipient.guardianPhone && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>보호자 연락처</span>
+                    <span className={styles.infoValue}>{recipient.guardianPhone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setShowRecipientModal(false)}
+              style={{ width: '100%' }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
