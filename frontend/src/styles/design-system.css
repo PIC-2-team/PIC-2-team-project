@@ -562,7 +562,7 @@
 }
 .calendar-grid > span {
   font-size: 0.75rem;
-  color: #8a9ab0;
+  color: var(--muted);
   font-weight: 500;
   padding: 0.25rem 0;
 }
