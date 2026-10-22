@@ -113,6 +113,8 @@ it('API 오류 발생 시 에러 메시지를 표시한다', async () => {
 });
 
 it('보낸 요청 내역 탭에서 과거 요청 목록을 조회하고 대기 요청을 취소할 수 있다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
   vi.spyOn(recordsApi, 'getMyRecordRequests').mockResolvedValue([
     {
       id: 99,
@@ -136,7 +138,6 @@ it('보낸 요청 내역 탭에서 과거 요청 목록을 조회하고 대기 �
     },
   ]);
   const cancelSpy = vi.spyOn(recordsApi, 'cancelRecordRequest').mockResolvedValue();
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
 
   render(
     <MemoryRouter>
@@ -154,7 +155,42 @@ it('보낸 요청 내역 탭에서 과거 요청 목록을 조회하고 대기 �
   const cancelBtn = screen.getByRole('button', { name: '요청 취소' });
   fireEvent.click(cancelBtn);
 
+  // ConfirmDialog 확인 버튼 클릭
+  fireEvent.click(await screen.findByRole('button', { name: '확인' }));
+
   await waitFor(() => {
     expect(cancelSpy).toHaveBeenCalledWith(42, 99);
   });
+});
+
+it('취소 버튼 클릭 시 window.confirm이 호출되지 않고 인앱 다이얼로그가 표시된다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  vi.spyOn(recordsApi, 'getMyRecordRequests').mockResolvedValue([
+    { id: 99, organizationId: 10, careRecipientId: 42, supportWorkerId: 10, idempotencyKey: 'k', message: '요청', status: 'PENDING', createdAt: '2026-10-21T10:00:00' },
+  ]);
+  render(<MemoryRouter><RecordRequestPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '보낸 요청 내역' }));
+  await screen.findByText('요청');
+  fireEvent.click(screen.getByRole('button', { name: '요청 취소' }));
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+});
+
+it('취소 API 실패 시 alert 없이 인라인 에러 메시지가 표시된다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const alertSpy = vi.spyOn(window, 'alert');
+  vi.spyOn(recordsApi, 'getMyRecordRequests').mockResolvedValue([
+    { id: 99, organizationId: 10, careRecipientId: 42, supportWorkerId: 10, idempotencyKey: 'k', message: '요청', status: 'PENDING', createdAt: '2026-10-21T10:00:00' },
+  ]);
+  vi.spyOn(recordsApi, 'cancelRecordRequest').mockRejectedValue(new Error('취소 실패'));
+  render(<MemoryRouter><RecordRequestPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '보낸 요청 내역' }));
+  await screen.findByText('요청');
+  fireEvent.click(screen.getByRole('button', { name: '요청 취소' }));
+  fireEvent.click(await screen.findByRole('button', { name: '확인' }));
+  expect(alertSpy).not.toHaveBeenCalled();
+  expect(await screen.findByRole('alert')).toBeInTheDocument();
 });
