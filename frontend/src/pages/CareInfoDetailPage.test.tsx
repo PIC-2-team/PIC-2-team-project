@@ -29,7 +29,7 @@ afterEach(() => {
   cleanup();
 });
 
-it('식사(MEAL) 카테고리 진입 시 중요 기록과 전체 기록을 분류하여 표시한다', async () => {
+it('식사(MEAL) 카테고리 진입 시 중요 정보만 표시하고 전체 기록 개수를 배너에 표시한다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
     items: [
       { id: 1, content: '점심 식사로 된장국을 잘 먹었습니다.', category: 'MEAL', recordedAt: '2026-10-19T03:00:00Z', pinned: true } as any,
@@ -54,15 +54,15 @@ it('식사(MEAL) 카테고리 진입 시 중요 기록과 전체 기록을 분�
   expect(await screen.findByRole('heading', { name: '식사', level: 1 })).toBeInTheDocument();
   expect(screen.getByText('식사 전 손 씻기를 좋아합니다.')).toBeInTheDocument();
   expect(screen.getByText('점심 식사로 된장국을 잘 먹었습니다.')).toBeInTheDocument();
-  expect(screen.getByText('아침 식사 후 간식을 섭취했습니다.')).toBeInTheDocument();
+  expect(screen.queryByText('아침 식사 후 간식을 섭취했습니다.')).not.toBeInTheDocument();
   expect(screen.getByText('📌 중요 정보')).toBeInTheDocument();
-  expect(screen.getByText('전체 기록 (2)')).toBeInTheDocument();
+  expect(screen.getByText('전체 기록 2개')).toBeInTheDocument();
 });
 
 it('보호자가 핀 토글 클릭 시 pinRecord API를 호출하고 고정 상태를 반영한다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
     items: [
-      { id: 10, content: '식사 기록 내용', category: 'MEAL', recordedAt: '2026-10-19T03:00:00Z', pinned: false } as any,
+      { id: 10, content: '식사 기록 내용', category: 'MEAL', recordedAt: '2026-10-19T03:00:00Z', pinned: true } as any,
     ],
     pagination: { page: 1, pageSize: 50, totalItems: 1, totalPages: 1 },
   });
@@ -78,10 +78,10 @@ it('보호자가 핀 토글 클릭 시 pinRecord API를 호출하고 고정 상�
   );
 
   await screen.findByText('식사 기록 내용');
-  const pinButton = screen.getByRole('button', { name: '중요 정보로 고정' });
+  const pinButton = screen.getByRole('button', { name: '핀 해제' });
   fireEvent.click(pinButton);
 
-  expect(pinSpy).toHaveBeenCalledWith(42, 10, true);
+  expect(pinSpy).toHaveBeenCalledWith(42, 10, false);
 });
 
 it('기록하기 클릭 시 /records/new 경로로 카테고리 state를 넘긴다', async () => {

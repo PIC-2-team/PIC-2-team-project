@@ -18,12 +18,12 @@ interface CareInfoItem {
 const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; color: string; normalizedCategory: RecordCategory; icon: React.ReactNode }> = {
   COMMUNICATION: {
     label: '의사소통',
-    desc: '의사소통 방식 및 표현 특징',
+    desc: '의사소통 방식',
     bg: '#e8f5ee',
     color: '#3CAB7E',
     normalizedCategory: 'COMMUNICATION',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <circle cx="13" cy="15" r="8" fill="#3CAB7E" />
         <circle cx="23" cy="19" r="8" fill="#2d9468" />
         <circle cx="10" cy="13" r="3" fill="white" opacity="0.6" />
@@ -35,12 +35,12 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
   },
   LIFESTYLE: {
     label: '생활습관',
-    desc: '일과 루틴 및 생활 보조 정보',
+    desc: '일과 및 생활 습관',
     bg: '#fff3e8',
     color: '#f57c00',
     normalizedCategory: 'LIFESTYLE',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M6 16L18 6l12 10v14H6V16z" fill="#f57c00" />
         <rect x="14" y="22" width="8" height="8" rx="1" fill="white" opacity="0.8" />
       </svg>
@@ -48,12 +48,12 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
   },
   MEAL: {
     label: '식사',
-    desc: '식습관, 선호 음식 및 식사 보조 정보',
+    desc: '식습관 및 식사 정보',
     bg: '#fff0f6',
     color: '#c2185b',
     normalizedCategory: 'MEAL',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <ellipse cx="18" cy="20" rx="11" ry="8" fill="#c2185b" opacity="0.15" />
         <ellipse cx="18" cy="20" rx="11" ry="8" stroke="#c2185b" strokeWidth="2" />
         <line x1="10" y1="8" x2="10" y2="16" stroke="#c2185b" strokeWidth="2" strokeLinecap="round" />
@@ -64,24 +64,24 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
   },
   PREFERENCE: {
     label: '선호/비선호',
-    desc: '좋아하는 것과 싫어하는 것',
+    desc: '선호 · 비선호',
     bg: '#fdedf0',
     color: '#e05555',
     normalizedCategory: 'PREFERENCE',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M18 29s-13-8.5-13-16a8 8 0 0116 0 8 8 0 0116 0c0 7.5-13 16-19 16z" fill="#e05555" />
       </svg>
     ),
   },
   CHALLENGING_BEHAVIOR: {
     label: '도전행동 · 주의사항',
-    desc: '주의해야 할 행동과 사전 대처방법',
+    desc: '주의 행동 및 대처법',
     bg: '#fef3e2',
     color: '#e65100',
     normalizedCategory: 'CHALLENGING_BEHAVIOR',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M18 6 L30 28 H6 Z" fill="#e65100" opacity="0.15" />
         <path d="M18 6 L30 28 H6 Z" stroke="#e65100" strokeWidth="2" strokeLinejoin="round" />
         <rect x="16.5" y="14" width="3" height="7" rx="1.5" fill="#e65100" />
@@ -91,48 +91,48 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
   },
   PRECAUTION: {
     label: '주의사항',
-    desc: '주의해야 할 행동과 사전 대처방법',
+    desc: '주의 행동 및 대처법',
     bg: '#fff8e1',
     color: '#f9a825',
     normalizedCategory: 'CHALLENGING_BEHAVIOR',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M18 6 L30 28 H6 Z" fill="#f9a825" stroke="#f9a825" strokeWidth="2" strokeLinejoin="round" />
       </svg>
     ),
   },
   HEALTH: {
     label: '건강·복약',
-    desc: '복약 시간, 알레르기 및 건강 상태',
+    desc: '복약 및 건강 상태',
     bg: '#e8f0fb',
     color: '#5b8dee',
     normalizedCategory: 'HEALTH',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <rect x="8" y="14" width="20" height="9" rx="4.5" fill="#5b8dee" transform="rotate(-45 18 18)" />
       </svg>
     ),
   },
   HEALTH_MEDICATION: {
     label: '건강·복약',
-    desc: '복약 시간, 알레르기 및 건강 상태',
+    desc: '복약 및 건강 상태',
     bg: '#e8f0fb',
     color: '#5b8dee',
     normalizedCategory: 'HEALTH',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <rect x="8" y="14" width="20" height="9" rx="4.5" fill="#5b8dee" transform="rotate(-45 18 18)" />
       </svg>
     ),
   },
   EMERGENCY: {
     label: '위기대응',
-    desc: '위기 상황 발생 시 대처 및 비상 연락망',
+    desc: '위기 대처 및 비상 연락망',
     bg: '#fdedf0',
     color: '#e05555',
     normalizedCategory: 'EMERGENCY',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <rect x="10" y="18" width="16" height="10" rx="2" fill="#e05555" />
         <path d="M13 18V14a5 5 0 0110 0v4" stroke="#e05555" strokeWidth="2.5" fill="none" />
       </svg>
@@ -140,12 +140,12 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
   },
   OTHER: {
     label: '기타',
-    desc: '기타 돌봄 참고 사항',
+    desc: '기타 참고 사항',
     bg: '#f5f5f5',
     color: '#757575',
     normalizedCategory: 'OTHER',
     icon: (
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <circle cx="18" cy="18" r="12" fill="#9e9e9e" opacity="0.15" />
       </svg>
     ),
@@ -174,6 +174,7 @@ export default function CareInfoDetailPage() {
   const meta = CATEGORY_META[categoryId];
 
   const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [careInfo, setCareInfo] = useState<CareInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +192,7 @@ export default function CareInfoDetailPage() {
       if (!isCurrent) return;
       if (recResult.status === 'fulfilled') {
         setRecords(recResult.value.items ?? []);
+        setTotalCount(recResult.value.pagination?.totalItems ?? recResult.value.items?.length ?? 0);
       } else {
         setError(recResult.reason instanceof Error ? recResult.reason.message : '기록을 불러오지 못했어요.');
       }
@@ -239,7 +241,6 @@ export default function CareInfoDetailPage() {
   };
 
   const pinned = records.filter(r => r.pinned);
-  const unpinned = records.filter(r => !r.pinned);
   const hasCareInfoContent = careInfo && (typeof careInfo.content === 'string' ? careInfo.content.length > 0 : careInfo.content != null);
 
   return (
@@ -263,7 +264,12 @@ export default function CareInfoDetailPage() {
         <div className={styles.bannerCard} style={{ background: meta.bg }}>
           <div className={styles.bannerIcon}>{meta.icon}</div>
           <div className={styles.bannerText}>
-            <h2 className={styles.bannerTitle}>{meta.label}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 className={styles.bannerTitle}>{meta.label}</h2>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: meta.color, background: 'white', padding: '2px 8px', borderRadius: '12px' }}>
+                전체 기록 {totalCount}개
+              </span>
+            </div>
             <p className={styles.bannerDesc}>{meta.desc}</p>
           </div>
         </div>
@@ -286,9 +292,15 @@ export default function CareInfoDetailPage() {
           </section>
         )}
 
-        {pinned.length > 0 && (
-          <section className={styles.pinnedSection}>
-            <p className={styles.sectionLabel}>📌 중요 정보</p>
+        <section className={styles.pinnedSection}>
+          <p className={styles.sectionLabel}>📌 중요 정보</p>
+          {pinned.length === 0 ? (
+            <div className="empty-state" style={{ padding: '1.25rem 0', textAlign: 'center' }}>
+              <p style={{ margin: 0, color: '#8a9ab0', fontSize: '0.875rem' }}>
+                아직 등록된 {meta.label} 중요 정보가 없어요.
+              </p>
+            </div>
+          ) : (
             <div className={styles.list}>
               {pinned.map(item => (
                 <ItemCard
@@ -304,31 +316,7 @@ export default function CareInfoDetailPage() {
                 />
               ))}
             </div>
-          </section>
-        )}
-
-        <section className={styles.allSection}>
-          <p className={styles.sectionLabel}>전체 기록 ({records.length})</p>
-          {records.length === 0 && !isLoading && (
-            <div className="empty-state">
-              <p>아직 등록된 {meta.label} 기록이 없어요.</p>
-            </div>
           )}
-          <div className={styles.list}>
-            {unpinned.map(item => (
-              <ItemCard
-                key={item.id}
-                item={{
-                  id: item.id,
-                  content: item.content,
-                  pinned: false,
-                  updatedAt: toSeoulDateKey(item.recordedAt),
-                }}
-                onTogglePin={() => void togglePin(item.id, false)}
-                canPin={isGuardian}
-              />
-            ))}
-          </div>
         </section>
       </div>
 

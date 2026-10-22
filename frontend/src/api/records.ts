@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
+import type { DailyRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRequestItem } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -38,9 +38,28 @@ export function pinRecord(
   });
 }
 
-// TODO: GET /records/{recordId} — 경로 초안, 미구현 (API-Spec.md §상세·수정·삭제)
 export function getRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
+}
+
+export function updateRecord(
+  recipientId: number,
+  recordId: number,
+  payload: UpdateRecordPayload
+): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export function deleteRecord(
+  recipientId: number,
+  recordId: number
+): Promise<{ deletedAt: string; restoreUntil: string }> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, {
+    method: 'DELETE',
+  });
 }
 
 export function createRecord(

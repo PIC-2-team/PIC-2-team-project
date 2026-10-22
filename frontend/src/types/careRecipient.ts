@@ -9,5 +9,7 @@ export type CareRecipient = {
   otherDisabilityType?: string | null;
   latestRecordAt?: string | null;
   createdAt?: string;
+  guardianName?: string;
+  guardianPhone?: string;
 };
 

@@ -50,7 +50,7 @@ it('텍스트를 AI 초안으로 바꾸고 자동 분류를 확인한 뒤 기록
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '아침에 밥을 먹었어요.' } });
   fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
 
-  expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
+  expect(await screen.findByText('이렇게 정리했어요')).toBeInTheDocument();
   expect(screen.getByLabelText('정리된 기록')).toHaveValue('아침 식사를 했습니다.');
   expect(screen.getByText('자동 분류 · 필요하면 바꿀 수 있어요')).toBeInTheDocument();
   expect(screen.queryByText(/AI 분류/)).not.toBeInTheDocument();
@@ -77,7 +77,7 @@ it('돌봄정보 함께 표시를 선택하면 고정 기록으로 저장한다'
   fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '산책했어요.' } });
   fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
-  await screen.findByText('AI가 이렇게 정리했어요');
+  await screen.findByText('이렇게 정리했어요');
 
   const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
   expect(showInCareInfo).not.toBeChecked();
@@ -102,7 +102,7 @@ it('지원인력은 고정 선택 없이 생활기록을 저장할 수 있다', 
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '산책했어요.' } });
   fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
 
-  await screen.findByText('AI가 이렇게 정리했어요');
+  await screen.findByText('이렇게 정리했어요');
   expect(screen.queryByRole('checkbox', { name: '돌봄정보에도 표시' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '기록 저장하기' }));
 
@@ -150,7 +150,7 @@ it('음성을 녹음해 업로드·AI 정리하고 임시 오디오를 정리한
 
   fireEvent.click(screen.getByRole('button', { name: '녹음 시작하기' }));
   fireEvent.click(await screen.findByRole('button', { name: '녹음 마치기' }));
-  expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
+  expect(await screen.findByText('이렇게 정리했어요')).toBeInTheDocument();
   await waitFor(() => {
     expect(records.uploadRecordAudio).toHaveBeenCalledWith(42, expect.any(File));
     expect(records.createRecordDraft).toHaveBeenCalledWith(42, { inputType: 'AUDIO', mediaId: 77 });
@@ -221,7 +221,7 @@ it('임시 오디오 삭제에 실패하면 사용자에게 알린다', async ()
   fireEvent.click(screen.getByRole('button', { name: '녹음 시작하기' }));
   fireEvent.click(await screen.findByRole('button', { name: '녹음 마치기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('임시 녹음 파일을 삭제하지 못했어요. 다시 시도해 주세요.');
-  expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
+  expect(await screen.findByText('이렇게 정리했어요')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '뒤로가기' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '기록 저장하기' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: '녹음 파일 삭제 다시 시도' }));
@@ -264,7 +264,7 @@ it('임시 녹음 정리 중에는 화면을 떠나거나 기록을 중복 제�
 
   fireEvent.click(screen.getByRole('button', { name: '녹음 시작하기' }));
   fireEvent.click(await screen.findByRole('button', { name: '녹음 마치기' }));
-  expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
+  expect(await screen.findByText('이렇게 정리했어요')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '임시 녹음 정리 중…' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '뒤로가기' })).toBeDisabled();
   await act(async () => resolveDeletion({ deleted: true }));
