@@ -192,10 +192,10 @@ export function LoginPage() {
           {/* 브랜드 히어로 섹션 */}
           <section className={styles.heroSection}>
             <div className={styles.heroBadge}>
-              <svg className={styles.heroBadgeIcon} width="18" height="18" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-                <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#3CAB7E" strokeWidth="4" strokeLinecap="round" fill="none" />
-                <path d="M20 6c4 0 7 5 7 14" stroke="#3CAB7E" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.6" />
-                <circle cx="20" cy="20" r="5" fill="#3CAB7E" />
+              <svg className={styles.heroBadgeIcon} width="22" height="22" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
+                <path d="M20 6c4 0 7 5 7 14" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.6" />
+                <circle cx="20" cy="20" r="5" fill="#16a34a" />
               </svg>
               <span className={styles.brandName}>삶결</span>
               <span className={styles.badgeDivider} aria-hidden="true">·</span>
