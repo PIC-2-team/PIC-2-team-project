@@ -192,7 +192,7 @@ export function LoginPage() {
           {/* 브랜드 히어로 섹션 */}
           <section className={styles.heroSection}>
             <div className={styles.heroLogoCircle} aria-hidden="true">
-              <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
                 <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#3CAB7E" strokeWidth="3" strokeLinecap="round" fill="none" />
                 <path d="M20 6c4 0 7 5 7 14" stroke="#3CAB7E" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.5" />
                 <circle cx="20" cy="20" r="4" fill="#3CAB7E" />
