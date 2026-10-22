@@ -76,6 +76,25 @@ it('당사자가 2명 이상이면 당사자 전환 select가 표시된다', asy
   expect(screen.getByRole('option', { name: '이영희' })).toBeInTheDocument();
 });
 
+it('데이터 로딩 중에는 스켈레톤 로딩 UI가 표시된다', () => {
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '보호자', email: 'g@test.com', role: 'GUARDIAN' } as User,
+    token: 'tok',
+    selectedRecipientId: null,
+    login: vi.fn(),
+    loginWithGoogle: vi.fn(),
+    setAuth: vi.fn(),
+    logout: vi.fn(),
+    setSelectedRecipient: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockImplementation(
+    () => new Promise(() => {})
+  );
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+  expect(screen.queryByText('불러오는 중…')).not.toBeInTheDocument();
+  expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+});
+
 it('당사자 select 변경 시 setSelectedRecipient가 호출된다', async () => {
   const mockSetSelectedRecipient = vi.fn();
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({

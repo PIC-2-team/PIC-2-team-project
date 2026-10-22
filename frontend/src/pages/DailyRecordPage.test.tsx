@@ -50,6 +50,15 @@ afterEach(() => {
   cleanup();
 });
 
+it('데이터 로딩 중에는 스켈레톤 로딩 UI가 표시된다', () => {
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockImplementation(
+    () => new Promise(() => {})
+  );
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  expect(screen.queryByText('불러오는 중…')).not.toBeInTheDocument();
+  expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+});
+
 it('필터 버튼 클릭 시 카테고리 필터 시트가 표시된다', async () => {
   render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
 

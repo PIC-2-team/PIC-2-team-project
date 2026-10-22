@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getRecordsByMonth } from '../api/records';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import { toSeoulDateKey } from '../utils/date';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 import styles from './DailyRecordPage.module.css';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
@@ -236,7 +237,7 @@ export function DailyRecordPage() {
         </div>
       </section>
 
-      {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+      {isLoading && <div data-testid="loading-skeleton"><Skeleton height={56} count={3} /></div>}
       {error && <p className="error" role="alert">{error}</p>}
 
       <section>

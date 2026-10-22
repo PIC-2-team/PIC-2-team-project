@@ -5,6 +5,7 @@ import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 import styles from './HomePage.module.css';
 
 type PageState =
@@ -45,7 +46,11 @@ export function HomePage() {
     void load();
   }, [user?.role, navigate, setSelectedRecipient]);
 
-  if (page.status === 'loading') return <div className="demo-page status-page"><p className="empty-state" role="status">불러오는 중…</p></div>;
+  if (page.status === 'loading') return (
+    <div className="demo-page status-page" data-testid="loading-skeleton">
+      <Skeleton height={80} count={2} />
+    </div>
+  );
   if (page.status === 'error') return <div className="demo-page status-page"><p className="error" role="alert">{page.message}</p></div>;
   if (page.status === 'empty') {
     const isSupportWorker = user?.role === 'SUPPORT_WORKER';
