@@ -192,12 +192,8 @@ export function LoginPage() {
         <div className={styles.content}>
           {/* 브랜드 히어로 섹션 */}
           <section className={styles.heroSection}>
-            <div className={styles.heroBadge}>
-              <img src={logoImg} alt="삶결 로고" className={styles.heroBadgeLogo} />
-              <span className={styles.brandName}>삶결</span>
-              <span className={styles.badgeDivider} aria-hidden="true">·</span>
-              <span className={styles.brandSlogan}>삶의 결을 잇다</span>
-            </div>
+            <img src={logoImg} alt="삶결 로고" className={styles.heroMainLogo} />
+            <span className={styles.srOnly}>삶의 결을 잇다</span>
           </section>
 
           {/* 핵심 가치 카드 섹션 (가로 3열 그리드) */}
