@@ -1,4 +1,4 @@
-import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient } from '../types/agency';
+import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian } from '../types/agency';
 import { apiRequest } from './client';
 
 export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
@@ -24,22 +24,44 @@ export function getMembers(): Promise<OrganizationMember[]> {
   return apiRequest('/api/organizations/me/members');
 }
 
-export function addMember(userId: number): Promise<OrganizationMember> {
+export function addMember(payload: number | { name?: string; phone?: string; userId?: number }): Promise<OrganizationMember> {
+  const body = typeof payload === 'number' ? { userId: payload } : payload;
   return apiRequest('/api/organizations/me/members', {
     method: 'POST',
-    body: { userId },
+    body,
+  });
+}
+
+export function updateMember(memberId: number, payload: { active?: boolean; name?: string; phone?: string }): Promise<OrganizationMember> {
+  return apiRequest(`/api/organizations/me/members/${memberId}`, {
+    method: 'PATCH',
+    body: payload,
   });
 }
 
 export function updateMemberStatus(memberId: number, active: boolean): Promise<OrganizationMember> {
-  return apiRequest(`/api/organizations/me/members/${memberId}`, {
-    method: 'PATCH',
-    body: { active },
-  });
+  return updateMember(memberId, { active });
 }
 
 export function removeMember(memberId: number): Promise<void> {
   return apiRequest(`/api/organizations/me/members/${memberId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
+  return apiRequest('/api/organizations/me/guardians');
+}
+
+export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
+  return apiRequest('/api/organizations/me/guardians', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function removeOrganizationGuardian(guardianId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/guardians/${guardianId}`, {
     method: 'DELETE',
   });
 }
@@ -116,5 +138,22 @@ export function assignSupportWorker(payload: {
 export function endAssignment(assignmentId: number): Promise<void> {
   return apiRequest(`/api/organizations/me/assignments/${assignmentId}/end`, {
     method: 'PATCH',
+  });
+}
+
+export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
+  return apiRequest('/api/organizations/me/guardians');
+}
+
+export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
+  return apiRequest('/api/organizations/me/guardians', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function removeOrganizationGuardian(guardianId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/guardians/${guardianId}`, {
+    method: 'DELETE',
   });
 }

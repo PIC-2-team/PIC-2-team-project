@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
 
 import com.project.backend.care.dto.CareRelationsResponse;
 import com.project.backend.organization.entity.Organization;
+import com.project.backend.organization.entity.OrganizationGuardianLink;
 import com.project.backend.organization.entity.OrganizationRecipientLink;
+import com.project.backend.organization.repository.OrganizationGuardianLinkRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.organization.repository.OrganizationRepository;
 
@@ -42,6 +44,7 @@ public class CareRecipientService {
     private final CareAccessService careAccessService;
     private final UserRepository userRepository;
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    private final OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     private final OrganizationRepository organizationRepository;
 
     @Transactional(readOnly = true)
@@ -107,6 +110,18 @@ public class CareRecipientService {
                 .type(GuardianType.PRIMARY)
                 .status(GuardianStatus.ACTIVE)
                 .build());
+
+        // 보호자가 속한 기관들에 대해 당사자 링크 자동 연결
+        List<OrganizationGuardianLink> orgLinks = organizationGuardianLinkRepository.findByGuardianId(guardianUserId);
+        for (OrganizationGuardianLink orgLink : orgLinks) {
+            OrganizationRecipientLink link = OrganizationRecipientLink.builder()
+                    .organizationId(orgLink.getOrganizationId())
+                    .careRecipientId(recipientId)
+                    .requestedById(guardianUserId)
+                    .build();
+            link.accept();
+            organizationRecipientLinkRepository.save(link);
+        }
 
         List<DisabilityType> disabilities = disabilityRepository
                 .findByCareRecipientId(recipientId).stream()
@@ -235,8 +250,29 @@ public class CareRecipientService {
                         CareRecipientDisability::getCareRecipientId,
                         Collectors.mapping(CareRecipientDisability::getDisabilityType, Collectors.toList())));
 
+        // 당사자를 등록한 주 보호자 조회 (Primary Guardian)
+        List<CareGuardian> primaryGuardians = careGuardianRepository.findByCareRecipientIdInAndTypeAndStatus(
+                recipientIds, GuardianType.PRIMARY, GuardianStatus.ACTIVE);
+        Map<Long, Long> recipientToGuardianId = primaryGuardians.stream()
+                .collect(Collectors.toMap(CareGuardian::getCareRecipientId, CareGuardian::getGuardianId, (a, b) -> a));
+
+        List<Long> guardianUserIds = recipientToGuardianId.values().stream().distinct().toList();
+        Map<Long, User> guardianUserMap = userRepository.findAllById(guardianUserIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
         return recipients.stream()
-                .map(r -> CareRecipientResponse.of(r, disabilityMap.getOrDefault(r.getId(), List.of())))
+                .map(r -> {
+                    Long gId = recipientToGuardianId.get(r.getId());
+                    User gUser = gId != null ? guardianUserMap.get(gId) : null;
+                    String gName = gUser != null ? gUser.getName() : null;
+                    String gPhone = gUser != null ? gUser.getPhone() : null;
+                    return CareRecipientResponse.of(
+                            r,
+                            disabilityMap.getOrDefault(r.getId(), List.of()),
+                            gName,
+                            gPhone
+                    );
+                })
                 .toList();
     }
 

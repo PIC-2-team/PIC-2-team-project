@@ -1,7 +1,9 @@
 package com.project.backend.organization.service;
 
+import com.project.backend.auth.service.PublicCodeGenerator;
 import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.CareGuardian;
+import com.project.backend.care.entity.CareRecipient;
 import com.project.backend.care.entity.GuardianStatus;
 import com.project.backend.care.entity.GuardianType;
 import com.project.backend.care.repository.CareAssignmentRepository;
@@ -10,6 +12,7 @@ import com.project.backend.care.repository.CareRecipientRepository;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.organization.dto.*;
 import com.project.backend.organization.entity.*;
+import com.project.backend.organization.repository.OrganizationGuardianLinkRepository;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.organization.repository.OrganizationRepository;
@@ -38,10 +41,12 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    private final OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     private final CareAssignmentRepository careAssignmentRepository;
     private final CareGuardianRepository careGuardianRepository;
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
+    private final PublicCodeGenerator publicCodeGenerator;
 
     public OrganizationResponse register(Long ownerId, RegisterOrganizationRequest request) {
         User owner = findUser(ownerId);
@@ -147,6 +152,25 @@ public class OrganizationService {
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
+    public MemberResponse updateMember(Long ownerId, Long memberId, UpdateMemberRequest request) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        User worker = findUser(member.getUserId());
+
+        if (request.active() != null) {
+            if (request.active()) member.activate();
+            else member.deactivate();
+        }
+
+        if (request.name() != null && !request.name().isBlank()) {
+            String newPhone = request.phone() != null ? request.phone().trim() : worker.getPhone();
+            worker.updateProfile(request.name().trim(), newPhone);
+            userRepository.save(worker);
+        }
+
+        return MemberResponse.of(member, worker);
+    }
+
     @Transactional(readOnly = true)
     public List<CareAssignmentResponse> getAssignments(Long ownerId, Long careRecipientId) {
         Organization org = findOrgByOwner(ownerId);
@@ -161,6 +185,39 @@ public class OrganizationService {
         Organization org = findOrgByOwner(ownerId);
         return organizationRecipientLinkRepository.findByOrganizationId(org.getId()).stream()
                 .map(LinkRequestResponse::from).toList();
+    }
+
+    public MemberResponse addMember(Long ownerId, AddMemberRequest request) {
+        if (request.name() != null && !request.name().isBlank()) {
+            return addMemberByName(ownerId, request.name(), request.phone());
+        }
+        if (request.userId() != null) {
+            return addMember(ownerId, request.userId());
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 이름 또는 사용자 ID를 입력해 주세요.");
+    }
+
+    public MemberResponse addMemberByName(Long ownerId, String name, String phone) {
+        Organization org = findOrgByOwner(ownerId);
+        String publicCode = publicCodeGenerator.generate(UserRole.SUPPORT_WORKER);
+        String email = "sw_" + publicCode.toLowerCase().replace("-", "") + "@samgyeol.local";
+
+        User worker = User.builder()
+                .name(name.trim())
+                .email(email)
+                .phone(phone != null && !phone.isBlank() ? phone.trim() : null)
+                .publicCode(publicCode)
+                .role(UserRole.SUPPORT_WORKER)
+                .build();
+        worker = userRepository.save(worker);
+
+        OrganizationMember member = organizationMemberRepository.save(
+                OrganizationMember.builder()
+                        .organizationId(org.getId())
+                        .userId(worker.getId())
+                        .build()
+        );
+        return MemberResponse.of(member, worker);
     }
 
     public MemberResponse addMember(Long ownerId, Long supportWorkerId) {
@@ -183,6 +240,133 @@ public class OrganizationService {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
         organizationMemberRepository.delete(member);
+    }
+
+    public OrganizationGuardianResponse registerGuardian(Long ownerId, RegisterGuardianRequest request) {
+        Organization org = findOrgByOwner(ownerId);
+        String query = request.getIdentifier();
+
+        // 전화번호 정규화 및 조회
+        String cleanPhone = query.replaceAll("[^0-9]", "");
+        String formattedPhone = formatPhone(cleanPhone);
+
+        java.util.Optional<User> guardian = java.util.Optional.empty();
+        if (!cleanPhone.isEmpty()) {
+            guardian = userRepository.findByPhone(formattedPhone)
+                    .or(() -> userRepository.findByPhone(cleanPhone));
+        }
+        if (guardian.isEmpty()) {
+            guardian = userRepository.findByPublicCode(query)
+                    .or(() -> userRepository.findByEmail(query));
+        }
+
+        User finalGuardian = guardian.orElseThrow(() -> new ApiException(
+                HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 전화번호의 보호자를 찾을 수 없습니다."));
+
+        if (finalGuardian.getRole() != UserRole.GUARDIAN) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "돌봄 보호자 계정만 등록할 수 있습니다.");
+        }
+
+        if (organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(org.getId(), finalGuardian.getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 돌봄 보호자입니다.");
+        }
+
+        OrganizationGuardianLink link = organizationGuardianLinkRepository.save(
+                OrganizationGuardianLink.builder()
+                        .organizationId(org.getId())
+                        .guardianId(finalGuardian.getId())
+                        .build()
+        );
+
+        // 보호자가 이미 등록해 둔 돌봄 대상자가 있다면 기관과 자동 연결(ACCEPTED)
+        List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE);
+        for (CareGuardian cg : careGuardians) {
+            if (organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(org.getId(), cg.getCareRecipientId()).isEmpty()) {
+                OrganizationRecipientLink recipientLink = OrganizationRecipientLink.builder()
+                        .organizationId(org.getId())
+                        .careRecipientId(cg.getCareRecipientId())
+                        .requestedById(finalGuardian.getId())
+                        .build();
+                recipientLink.accept();
+                organizationRecipientLinkRepository.save(recipientLink);
+            }
+        }
+
+        List<Long> recipientIds = careGuardians.stream().map(CareGuardian::getCareRecipientId).toList();
+        List<CareRecipient> recipients = careRecipientRepository.findAllById(recipientIds);
+        List<OrganizationGuardianResponse.CareRecipientSummary> recipientSummaries = recipients.stream()
+                .map(r -> new OrganizationGuardianResponse.CareRecipientSummary(
+                        r.getId(),
+                        r.getName(),
+                        r.getCareRecipientNumber(),
+                        r.getBirthDate() != null ? r.getBirthDate().toString() : null
+                ))
+                .toList();
+
+        return new OrganizationGuardianResponse(
+                link.getId(),
+                finalGuardian.getId(),
+                finalGuardian.getName(),
+                finalGuardian.getPhone(),
+                finalGuardian.getEmail(),
+                finalGuardian.getPublicCode(),
+                link.getCreatedAt(),
+                recipientSummaries
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrganizationGuardianResponse> getGuardians(Long ownerId) {
+        Organization org = findOrgByOwner(ownerId);
+        List<OrganizationGuardianLink> links = organizationGuardianLinkRepository.findByOrganizationId(org.getId());
+        List<Long> guardianIds = links.stream().map(OrganizationGuardianLink::getGuardianId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(guardianIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        List<CareGuardian> allCareGuardians = careGuardianRepository.findByGuardianIdInAndStatus(guardianIds, GuardianStatus.ACTIVE);
+        Map<Long, List<Long>> guardianToRecipientIds = allCareGuardians.stream()
+                .collect(Collectors.groupingBy(
+                        CareGuardian::getGuardianId,
+                        Collectors.mapping(CareGuardian::getCareRecipientId, Collectors.toList())
+                ));
+
+        List<Long> allRecipientIds = allCareGuardians.stream().map(CareGuardian::getCareRecipientId).distinct().toList();
+        Map<Long, CareRecipient> recipientMap = careRecipientRepository.findAllById(allRecipientIds).stream()
+                .collect(Collectors.toMap(CareRecipient::getId, Function.identity()));
+
+        return links.stream().map(link -> {
+            User u = userMap.get(link.getGuardianId());
+            List<Long> recIds = guardianToRecipientIds.getOrDefault(link.getGuardianId(), List.of());
+            List<OrganizationGuardianResponse.CareRecipientSummary> summaries = recIds.stream()
+                    .map(recipientMap::get)
+                    .filter(java.util.Objects::nonNull)
+                    .map(r -> new OrganizationGuardianResponse.CareRecipientSummary(
+                            r.getId(),
+                            r.getName(),
+                            r.getCareRecipientNumber(),
+                            r.getBirthDate() != null ? r.getBirthDate().toString() : null
+                    ))
+                    .toList();
+
+            return new OrganizationGuardianResponse(
+                    link.getId(),
+                    link.getGuardianId(),
+                    u != null ? u.getName() : "알 수 없음",
+                    u != null ? u.getPhone() : null,
+                    u != null ? u.getEmail() : null,
+                    u != null ? u.getPublicCode() : null,
+                    link.getCreatedAt(),
+                    summaries
+            );
+        }).toList();
+    }
+
+    public void removeGuardian(Long ownerId, Long guardianId) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationGuardianLink link = organizationGuardianLinkRepository
+                .findByOrganizationIdAndGuardianId(org.getId(), guardianId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "LINK_NOT_FOUND", "등록된 돌봄 보호자를 찾을 수 없습니다."));
+        organizationGuardianLinkRepository.delete(link);
     }
 
     private Organization findOrgByOwner(Long ownerId) {
@@ -214,6 +398,16 @@ public class OrganizationService {
             code = sb.toString();
         } while (organizationRepository.existsByOrganizationCode(code));
         return code;
+    }
+
+    private String formatPhone(String cleanPhone) {
+        if (cleanPhone == null) return "";
+        if (cleanPhone.length() == 11) {
+            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 7) + "-" + cleanPhone.substring(7);
+        } else if (cleanPhone.length() == 10) {
+            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 6) + "-" + cleanPhone.substring(6);
+        }
+        return cleanPhone;
     }
 
     private User findUser(Long id) {
