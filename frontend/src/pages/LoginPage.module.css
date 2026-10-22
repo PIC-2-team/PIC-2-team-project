@@ -4,7 +4,7 @@
   max-width: 390px;
   height: 100%;
   margin: 0 auto;
-  background: #ffffff;
+  background: #f8fafc;
   color: var(--ink);
   font-size: 15px;
   line-height: 1.5;
@@ -20,8 +20,8 @@
   box-sizing: border-box;
   height: 100%;
   overflow: hidden;
-  justify-content: space-between;
-  padding: 16px 22px 20px;
+  justify-content: center;
+  padding: 12px 16px;
 }
 
 /* 브랜드 히어로 섹션 */
@@ -32,47 +32,38 @@
   text-align: center;
   justify-content: center;
   flex: 0 0 auto;
-  gap: 8px;
-  padding: 4px 0 0;
-}
-
-.heroLogoCircle {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: #eef7f2;
-  border: 1.5px solid #d4ece0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 10px rgba(60, 171, 126, 0.14);
+  padding: 0 0 4px;
 }
 
 .heroBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  gap: 7px;
+  padding: 5px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   border-radius: 20px;
 }
 
+.heroBadgeIcon {
+  flex-shrink: 0;
+}
+
 .brandName {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 800;
-  color: var(--green);
+  color: #16a34a;
   letter-spacing: -0.3px;
 }
 
 .badgeDivider {
-  color: #cbd5e1;
+  color: #86efac;
   font-size: 11px;
 }
 
 .brandSlogan {
   font-size: 12.5px;
-  color: #64748b;
+  color: #15803d;
   font-weight: 600;
 }
 
@@ -151,12 +142,12 @@
 .loginCard {
   display: flex;
   flex-direction: column;
-  gap: 13px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+  gap: 16px;
+  padding: 26px 22px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.07);
   box-sizing: border-box;
   width: 100%;
 }
@@ -164,21 +155,21 @@
 .heading {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .heading h2 {
   margin: 0;
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 850;
   line-height: 1.25;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
   color: #0f172a;
 }
 
 .subheading {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
 }
 
@@ -204,29 +195,29 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
 }
 
 .form label {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   font-size: 14px;
   font-weight: 700;
-  color: #334155;
+  color: #1e293b;
 }
 
 .form input {
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 12px 16px;
+  min-height: 50px;
+  padding: 13px 16px;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   background: #f8fafc;
   color: #0f172a;
   font: inherit;
-  font-size: 15.5px;
+  font-size: 16px;
   box-sizing: border-box;
   transition: all 0.15s ease;
 }
@@ -272,14 +263,14 @@
 
 /* 사각형 규격 CTA 버튼 */
 .submit {
-  min-height: 50px;
+  min-height: 52px;
   padding: 13px 20px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 13px;
   background: var(--green);
   color: #ffffff;
   font: inherit;
-  font-size: 16.5px;
+  font-size: 17px;
   font-weight: 800;
   cursor: pointer;
   box-sizing: border-box;

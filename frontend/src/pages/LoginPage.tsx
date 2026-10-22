@@ -189,24 +189,21 @@ export function LoginPage() {
     <AppShell>
       <main className={styles.page}>
         <div className={styles.content}>
-          {/* 브랜드 히어로 섹션 */}
-          <section className={styles.heroSection}>
-            <div className={styles.heroLogoCircle} aria-hidden="true">
-              <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
-                <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#3CAB7E" strokeWidth="3" strokeLinecap="round" fill="none" />
-                <path d="M20 6c4 0 7 5 7 14" stroke="#3CAB7E" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.5" />
-                <circle cx="20" cy="20" r="4" fill="#3CAB7E" />
-              </svg>
-            </div>
-            <div className={styles.heroBadge}>
-              <span className={styles.brandName}>삶결</span>
-              <span className={styles.badgeDivider} aria-hidden="true">·</span>
-              <span className={styles.brandSlogan}>삶의 결을 잇다</span>
-            </div>
-          </section>
-
           {/* 로그인 카드 섹션 */}
           <section className={styles.loginCard}>
+            <div className={styles.heroSection}>
+              <div className={styles.heroBadge}>
+                <svg className={styles.heroBadgeIcon} width="18" height="18" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                  <path d="M20 6C12 6 6 12 6 20s6 14 14 14 14-6 14-14" stroke="#3CAB7E" strokeWidth="4" strokeLinecap="round" fill="none" />
+                  <path d="M20 6c4 0 7 5 7 14" stroke="#3CAB7E" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.6" />
+                  <circle cx="20" cy="20" r="5" fill="#3CAB7E" />
+                </svg>
+                <span className={styles.brandName}>삶결</span>
+                <span className={styles.badgeDivider} aria-hidden="true">·</span>
+                <span className={styles.brandSlogan}>삶의 결을 잇다</span>
+              </div>
+            </div>
+
             <div className={styles.heading}>
               <h2>로그인</h2>
               <p className={styles.subheading}>서비스 이용을 위해 로그인해 주세요</p>
