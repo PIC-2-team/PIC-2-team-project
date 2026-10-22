@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import styles from './TabBar.module.css';
 
 type Tab = { to: string; label: string; icon: (active: boolean) => React.ReactNode };
@@ -10,6 +11,30 @@ const HOME_TAB: Tab = {
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" fill={active ? '#3CAB7E' : 'none'} fillOpacity={active ? 0.15 : 0} />
       <rect x="9" y="13" width="6" height="8" rx="1" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
+    </svg>
+  ),
+};
+
+const AGENCY_HOME_TAB: Tab = {
+  to: '/agency',
+  label: '홈',
+  icon: (active) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" fill={active ? '#3CAB7E' : 'none'} fillOpacity={active ? 0.15 : 0} />
+      <rect x="9" y="13" width="6" height="8" rx="1" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
+    </svg>
+  ),
+};
+
+const WORKERS_TAB: Tab = {
+  to: '/agency?tab=workers',
+  label: '돌봄지원사 관리',
+  icon: (active) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="9" cy="7" r="4" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 3.13a4 4 0 010 7.75" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   ),
 };
@@ -38,7 +63,6 @@ const CARE_TAB: Tab = {
   ),
 };
 
-
 const MORE_TAB: Tab = {
   to: '/more',
   label: '더보기',
@@ -51,8 +75,15 @@ const MORE_TAB: Tab = {
   ),
 };
 
-export default function TabBar() {
-  const tabs = [HOME_TAB, RECORDS_TAB, CARE_TAB, MORE_TAB];
+import type { UserRole } from '../../types/user';
+
+export default function TabBar({ role }: { role?: UserRole } = {}) {
+  const { user } = useAuth();
+  const effectiveRole = role ?? user?.role;
+  const isInstitution = effectiveRole === 'INSTITUTION';
+  const tabs = isInstitution
+    ? [AGENCY_HOME_TAB, WORKERS_TAB, MORE_TAB]
+    : [HOME_TAB, RECORDS_TAB, CARE_TAB, MORE_TAB];
 
   return (
     <nav className={styles.tabBar} aria-label="주요 메뉴">

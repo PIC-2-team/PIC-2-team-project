@@ -41,6 +41,13 @@ public class CareRecipientController {
         return ApiResponse.ok(careRecipientService.register(userId, request));
     }
 
+    @Operation(summary = "고유 코드로 당사자 등록 (연결)")
+    @PostMapping("/claim")
+    public ApiResponse<CareRecipientResponse> claim(@AuthenticationPrincipal Long userId,
+                                                    @Valid @RequestBody ClaimCareRecipientRequest request) {
+        return ApiResponse.ok(careRecipientService.claim(userId, request));
+    }
+
     @Operation(summary = "당사자 조회")
     @GetMapping("/{id}")
     public ApiResponse<CareRecipientResponse> getById(@AuthenticationPrincipal Long userId,

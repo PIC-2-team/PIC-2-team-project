@@ -1,5 +1,8 @@
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getCareRecipient } from '../api/careRecipients';
+import type { CareRecipient } from '../types/careRecipient';
 import styles from './MorePage.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -37,12 +40,65 @@ const BASE_MENU_SECTIONS: MenuSection[] = [
   },
 ];
 
-export function MorePage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    if (!window.confirm('로그아웃할까요?')) return;
+function LogoutConfirmDialog({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (ref.current?.showModal) {
+      ref.current.showModal();
+    }
+    const el = ref.current;
+    return () => {
+      if (el?.close) {
+        el.close();
+      }
+    };
+  }, []);
+  return (
+    <dialog ref={ref} onCancel={onCancel} role="alertdialog" aria-labelledby="logout-title" aria-describedby="logout-desc">
+      <h2 id="logout-title">로그아웃할까요?</h2>
+      <p id="logout-desc">로그아웃 후 다시 로그인해야 합니다.</p>
+      <div className="actions">
+        <button className="btn secondary" onClick={onCancel}>
+          취소
+        </button>
+        <button className="btn danger" onClick={onConfirm}>
+          로그아웃
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
+export function MorePage() {
+  const { user, logout, selectedRecipientId } = useAuth();
+  const navigate = useNavigate();
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [recipient, setRecipient] = useState<CareRecipient | null>(null);
+  const [loadingRecipient, setLoadingRecipient] = useState(false);
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  useEffect(() => {
+    if (showRecipientModal && selectedRecipientId) {
+      setLoadingRecipient(true);
+      setRecipientError(null);
+      getCareRecipient(selectedRecipientId)
+        .then(setRecipient)
+        .catch((err) =>
+          setRecipientError(err instanceof Error ? err.message : '당사자 정보를 불러오지 못했습니다.')
+        )
+        .finally(() => setLoadingRecipient(false));
+    }
+  }, [showRecipientModal, selectedRecipientId]);
+
+  const handleLogoutConfirm = () => {
     logout();
     navigate('/login', { replace: true });
   };
@@ -76,18 +132,111 @@ export function MorePage() {
       <h1>더보기</h1>
 
       <div className="demo-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div className={styles.avatar}>
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-            <circle cx="18" cy="14" r="7" fill="#b8c4ce" />
-            <path d="M4 32c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#b8c4ce" />
-          </svg>
-        </div>
+        <button
+          type="button"
+          className={styles.avatarButton}
+          onClick={() => setShowRecipientModal(true)}
+          aria-label="돌봄 대상자 프로필 보기"
+          title="돌봄 대상자 프로필 보기"
+        >
+          <div className={styles.avatar}>
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+              <circle cx="18" cy="14" r="7" fill="#b8c4ce" />
+              <path d="M4 32c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#b8c4ce" />
+            </svg>
+          </div>
+        </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 700, margin: '0 0 2px', fontSize: '1rem' }}>{user?.name ?? '—'}님</p>
           <p className="muted" style={{ margin: 0 }}>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</p>
           {user?.email && <p className="muted" style={{ margin: 0, overflowWrap: 'anywhere' }}>{user.email}</p>}
         </div>
       </div>
+
+      {showRecipientModal && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="recipient-profile-title"
+        >
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2 id="recipient-profile-title" className={styles.modalTitle}>
+                돌봄 대상자 프로필
+              </h2>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setShowRecipientModal(false)}
+                aria-label="프로필 닫기"
+              >
+                ✕
+              </button>
+            </div>
+
+
+            {loadingRecipient ? (
+              <p className="muted" role="status">당사자 정보를 불러오는 중입니다…</p>
+            ) : recipientError ? (
+              <p className="error" role="alert">{recipientError}</p>
+            ) : !selectedRecipientId ? (
+              <p className="muted">선택된 돌봄 대상자가 없습니다.</p>
+            ) : recipient ? (
+              <div
+                className="demo-card"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  background: '#f8faf9',
+                  border: '1px solid #d4ebdd',
+                }}
+              >
+                <div className={styles.avatar} style={{ background: '#d5ede0' }}>
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+                    <circle cx="18" cy="14" r="7" fill="#3CAB7E" />
+                    <path d="M4 32c0-7.7 6.3-14 14-14s14 6.3 14 14" fill="#3CAB7E" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 700, margin: '0 0 2px', fontSize: '1.05rem', color: '#1a2533' }}>
+                    {recipient.name} 님
+                  </p>
+                  <p className="tag" style={{ margin: '2px 0 6px' }}>돌봄 대상자</p>
+                  {recipient.careRecipientNumber && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      식별 번호: <strong>{recipient.careRecipientNumber}</strong>
+                    </p>
+                  )}
+                  {recipient.birthDate && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      생년월일: {recipient.birthDate}{' '}
+                      {recipient.gender === 'MALE' ? '(남)' : recipient.gender === 'FEMALE' ? '(여)' : ''}
+                    </p>
+                  )}
+                  {recipient.disabilityGrade && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      장애 정도: {recipient.disabilityGrade}급
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="muted">당사자 정보를 찾을 수 없습니다.</p>
+            )}
+
+            <button
+              type="button"
+              className="btn secondary"
+              style={{ width: '100%', marginTop: '0.5rem' }}
+              onClick={() => setShowRecipientModal(false)}
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
 
       {sections.map(section => (
         <div key={section.title}>
@@ -118,10 +267,18 @@ export function MorePage() {
         type="button"
         className="btn secondary"
         style={{ color: '#e05555', borderColor: '#f5c6c4' }}
-        onClick={handleLogout}
+        onClick={() => setShowLogoutDialog(true)}
       >
         로그아웃
       </button>
+
+      {showLogoutDialog && (
+        <LogoutConfirmDialog
+          onConfirm={handleLogoutConfirm}
+          onCancel={() => setShowLogoutDialog(false)}
+        />
+      )}
     </div>
   );
 }
+

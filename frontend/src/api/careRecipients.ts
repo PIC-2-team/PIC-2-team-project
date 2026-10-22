@@ -5,6 +5,11 @@ export function listCareRecipients(): Promise<CareRecipient[]> {
   return apiRequest('/api/care-recipients');
 }
 
+export function getCareRecipient(recipientId: number): Promise<CareRecipient> {
+  return apiRequest(`/api/care-recipients/${recipientId}`);
+}
+
+
 export type CreateCareRecipientPayload = {
   name: string;
   birthDate: string;
@@ -16,6 +21,13 @@ export type CreateCareRecipientPayload = {
 
 export function createCareRecipient(payload: CreateCareRecipientPayload): Promise<CareRecipient> {
   return apiRequest('/api/care-recipients', { method: 'POST', body: payload });
+}
+
+export function claimCareRecipient(careRecipientNumber: string): Promise<CareRecipient> {
+  return apiRequest('/api/care-recipients/claim', {
+    method: 'POST',
+    body: { careRecipientNumber },
+  });
 }
 
 export type OrganizationLinkStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
@@ -91,4 +103,3 @@ export function revokeSecondaryGuardian(recipientId: number): Promise<void> {
     method: 'DELETE',
   });
 }
-

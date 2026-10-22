@@ -1,6 +1,7 @@
 package com.project.backend.care.service;
 
 import com.project.backend.care.dto.CareRecipientResponse;
+import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.CareAssignmentRepository;
@@ -141,6 +142,66 @@ class CareRecipientServiceTest {
         assertThatThrownBy(() -> careRecipientService.getById(99L, 100L))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void claim_보호자가_발급된_고유코드로_등록시_성공() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-CLAIM123")
+                .name("김연동")
+                .birthDate(LocalDate.of(2002, 2, 2))
+                .gender(Gender.MALE)
+                .build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findByCareRecipientNumber("R-CLAIM123")).willReturn(Optional.of(recipient));
+        given(careGuardianRepository.findByCareRecipientIdAndTypeAndStatus(100L, GuardianType.PRIMARY, GuardianStatus.ACTIVE))
+                .willReturn(Optional.empty());
+        given(careGuardianRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(disabilityRepository.findByCareRecipientId(100L)).willReturn(List.of());
+
+        CareRecipientResponse response = careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123"));
+
+        assertThat(response.id()).isEqualTo(100L);
+        assertThat(response.careRecipientNumber()).isEqualTo("R-CLAIM123");
+        verify(careGuardianRepository).save(any(CareGuardian.class));
+    }
+
+    @Test
+    void claim_이미_주보호자가_연결된경우_CONFLICT_예외() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-CLAIM123")
+                .name("김연동")
+                .birthDate(LocalDate.of(2002, 2, 2))
+                .gender(Gender.MALE)
+                .build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findByCareRecipientNumber("R-CLAIM123")).willReturn(Optional.of(recipient));
+
+        CareGuardian existingGuardian = CareGuardian.builder()
+                .careRecipientId(100L).guardianId(99L).type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
+        given(careGuardianRepository.findByCareRecipientIdAndTypeAndStatus(100L, GuardianType.PRIMARY, GuardianStatus.ACTIVE))
+                .willReturn(Optional.of(existingGuardian));
+
+        assertThatThrownBy(() -> careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void claim_존재하지_않는_코드일경우_NOT_FOUND_예외() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+        given(careRecipientRepository.findByCareRecipientNumber("R-NONE")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-NONE")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

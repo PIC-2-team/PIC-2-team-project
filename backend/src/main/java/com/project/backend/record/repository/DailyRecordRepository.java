@@ -14,4 +14,8 @@ public interface DailyRecordRepository extends JpaRepository<DailyRecord, Long>,
     Optional<DailyRecord> findForUpdate(Long id, Long careRecipientId);
 
     List<DailyRecord> findByCareRecipientIdAndPinnedTrueAndDeletedAtIsNullOrderByRecordedAtDescIdDesc(Long careRecipientId);
+
+    List<DailyRecord> findByAuthorIdAndDeletedAtIsNullOrderByRecordedAtDesc(Long authorId);
+
+    List<DailyRecord> findByCareRecipientIdInAndDeletedAtIsNullOrderByRecordedAtDesc(List<Long> careRecipientIds);
 }

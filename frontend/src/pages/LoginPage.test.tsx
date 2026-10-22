@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -90,4 +90,85 @@ it('Google 가입이 필요한 사용자는 별도 이용 동의 경로로 안�
     JSON.stringify({ pendingToken: 'test-pending', email: 'test@example.com', name: '테스트' }),
   );
   expect(googleLogin).toHaveBeenCalledWith('test-google-token');
+});
+
+it('이메일 찾기 모달을 열고 정보를 입력하여 가입된 이메일을 확인한다', async () => {
+  const findEmailMock = vi.spyOn(authApi, 'findEmail').mockResolvedValue({ email: 'hon***@example.com' });
+  renderLogin();
+
+  fireEvent.click(screen.getByRole('button', { name: '이메일 찾기' }));
+  const dialog = screen.getByRole('dialog', { name: '계정 찾기' });
+  expect(dialog).toBeInTheDocument();
+
+  fireEvent.change(within(dialog).getByPlaceholderText('가입 시 등록한 이름'), { target: { value: '홍길동' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('010-0000-0000'), { target: { value: '010-1234-5678' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '이메일 조회' }));
+
+  expect(await within(dialog).findByText('hon***@example.com')).toBeInTheDocument();
+  expect(findEmailMock).toHaveBeenCalledWith({ name: '홍길동', phone: '010-1234-5678' });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '로그인하러 가기' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('비밀번호 재설정 탭에서 정보를 입력하여 비밀번호를 재설정한다', async () => {
+  const resetPasswordMock = vi.spyOn(authApi, 'resetPassword').mockResolvedValue(null);
+  renderLogin();
+
+  fireEvent.click(screen.getByRole('button', { name: '비밀번호 찾기' }));
+  const dialog = screen.getByRole('dialog', { name: '계정 찾기' });
+  expect(dialog).toBeInTheDocument();
+
+  fireEvent.change(within(dialog).getByPlaceholderText('가입 시 등록한 이름'), { target: { value: '홍길동' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('010-0000-0000'), { target: { value: '010-1234-5678' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('example@samgyeol.com'), { target: { value: 'hong@example.com' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('8자 이상 입력'), { target: { value: 'newPassword123' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('새 비밀번호 다시 입력'), { target: { value: 'newPassword123' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '비밀번호 변경' }));
+
+  expect(await within(dialog).findByText('비밀번호가 성공적으로 변경되었습니다.')).toBeInTheDocument();
+  expect(resetPasswordMock).toHaveBeenCalledWith({
+    name: '홍길동',
+    phone: '010-1234-5678',
+    email: 'hong@example.com',
+    newPassword: 'newPassword123',
+  });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '로그인하러 가기' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('이메일')).toHaveValue('hong@example.com');
+});
+
+it('비밀번호 재설정 시 새 비밀번호가 일치하지 않으면 오류를 안내한다', async () => {
+  renderLogin();
+
+  fireEvent.click(screen.getByRole('button', { name: '비밀번호 찾기' }));
+  const dialog = screen.getByRole('dialog', { name: '계정 찾기' });
+
+  fireEvent.change(within(dialog).getByPlaceholderText('가입 시 등록한 이름'), { target: { value: '홍길동' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('010-0000-0000'), { target: { value: '010-1234-5678' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('example@samgyeol.com'), { target: { value: 'hong@example.com' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('8자 이상 입력'), { target: { value: 'newPassword123' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('새 비밀번호 다시 입력'), { target: { value: 'differentPassword' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '비밀번호 변경' }));
+
+  expect(await within(dialog).findByText('새 비밀번호가 일치하지 않아요.')).toBeInTheDocument();
+});
+
+it('이메일 찾기 실패 시 오류 메시지를 안내한다', async () => {
+  vi.spyOn(authApi, 'findEmail').mockRejectedValue(new Error('not found'));
+  renderLogin();
+
+  fireEvent.click(screen.getByRole('button', { name: '이메일 찾기' }));
+  const dialog = screen.getByRole('dialog', { name: '계정 찾기' });
+
+  fireEvent.change(within(dialog).getByPlaceholderText('가입 시 등록한 이름'), { target: { value: '홍길동' } });
+  fireEvent.change(within(dialog).getByPlaceholderText('010-0000-0000'), { target: { value: '010-9999-9999' } });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '이메일 조회' }));
+
+  expect(await within(dialog).findByText('일치하는 회원 정보를 찾을 수 없어요. 이름과 전화번호를 확인해 주세요.')).toBeInTheDocument();
 });
