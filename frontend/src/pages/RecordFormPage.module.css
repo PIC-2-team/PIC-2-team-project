@@ -386,3 +386,12 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e05555;
+  display: block;
+  text-align: center;
+}
