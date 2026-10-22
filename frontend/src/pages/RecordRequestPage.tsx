@@ -187,7 +187,7 @@ export function RecordRequestPage() {
                 <span className={styles.directBadge}>보호자 직통 전달</span>
                 <h2 className={styles.recipientTitle}>{recipientName}님</h2>
                 <p className={styles.infoDesc}>
-                  활동지원사님의 요청은 기관을 거치지 않고 돌봄 보호자에게 다이렉트로 전달됩니다.
+                  보호자에게 바로 전달됩니다.
                   현장에서 관찰한 점이나 수정이 필요한 내용을 상세히 적어주세요.
                 </p>
                 {categoryLabel && (

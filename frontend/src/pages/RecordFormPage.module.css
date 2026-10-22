@@ -209,12 +209,13 @@
   font-size: 1.2rem;
 }
 
-.voicePanel > p {
-  max-width: 17rem;
+.voiceGuide {
   margin: 0;
   color: #6b7a8a;
-  font-size: 0.875rem;
-  line-height: 1.55;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: none;
 }
 
 .micIcon {

@@ -84,7 +84,7 @@ export function RecordFormPage() {
     try {
       prepareDraft(await createRecordDraft(selectedRecipientId, { inputType: 'TEXT', text: text.trim() }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 초안을 만들지 못했어요. 입력한 내용은 그대로 남아 있어요.');
+      setError(e instanceof Error ? e.message : '초안을 만들지 못했어요. 입력한 내용은 그대로 남아 있어요.');
     } finally {
       setProcessing(false);
     }
@@ -247,7 +247,7 @@ export function RecordFormPage() {
           <button type="button" className={styles.backButton} disabled={recording || requestingMic || processing || saving || orphanedMediaId !== null} onClick={() => stage === 'review' ? setStage('input') : navigate(-1)} aria-label="뒤로가기">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 19l-7-7 7-7" stroke="#1a2533" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-          <h1 className={styles.title}>{stage === 'review' ? 'AI 정리 확인' : '기록 작성'}</h1>
+          <h1 className={styles.title}>{stage === 'review' ? '정리 내용 확인' : '기록 작성'}</h1>
           <div className={styles.headerRight} />
         </header>
 
@@ -266,11 +266,11 @@ export function RecordFormPage() {
                 <section className={styles.voicePanel}>
                   <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
                   <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
-                  <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 카테고리는 자동으로 분류돼요.'}</p>
+                  <p className={styles.voiceGuide}>{recording ? '녹음을 마치면 내용을 정리해요.' : '녹음한 음성은 글로 정리하고 유형을 분류해요.'}</p>
                   <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
-                    {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? 'AI가 정리하고 있어요…' : '녹음 시작하기'}
+                    {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? '정리하고 있어요…' : '녹음 시작하기'}
                   </button>
-                  <p className={styles.privacyNote}>녹음 파일은 AI 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
+                  <p className={styles.privacyNote}>녹음 파일은 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
                 </section>
               ) : (
                 <>
@@ -294,7 +294,7 @@ export function RecordFormPage() {
                     <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
                     <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="오늘 있었던 일을 기록해주세요 (예: 아침 식사 후 산책을 다녀왔어요.)" value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
                     <div className={styles.textMeta}>
-                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
+                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? '정리하고 있어요…' : '정리하기'}</button>
                       <span className={styles.charCount}>{text.length} / 3,000</span>
                     </div>
                   </section>
@@ -319,7 +319,7 @@ export function RecordFormPage() {
           ) : (
             <>
               <section className={styles.reviewCard}>
-                <h2>AI가 이렇게 정리했어요</h2>
+                <h2>이렇게 정리했어요</h2>
                 <p>내용을 확인하고 필요한 부분을 고쳐 주세요.</p>
                 {transcript && transcript !== text && <details><summary>음성 인식 내용 보기</summary><p>{transcript}</p></details>}
                 <label htmlFor="record-review">정리된 기록</label>
