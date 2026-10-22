@@ -294,7 +294,7 @@ export function RecordFormPage() {
                     <label className={styles.sectionTitle} htmlFor="record-input">오늘 있었던 일을 편하게 적어주세요</label>
                     <textarea id="record-input" aria-label="기록할 내용" className={styles.textarea} placeholder="오늘 있었던 일을 기록해주세요 (예: 아침 식사 후 산책을 다녀왔어요.)" value={text} onChange={e => setText(e.target.value)} rows={7} maxLength={3000} />
                     <div className={styles.textMeta}>
-                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? 'AI가 정리하고 있어요…' : 'AI로 정리하기'}</button>
+                      <button type="button" className={styles.draftOutlineButton} disabled={!text.trim() || processing} onClick={() => { void createTextDraft(); }}>{processing ? '정리하고 있어요…' : '정리하기'}</button>
                       <span className={styles.charCount}>{text.length} / 3,000</span>
                     </div>
                   </section>
