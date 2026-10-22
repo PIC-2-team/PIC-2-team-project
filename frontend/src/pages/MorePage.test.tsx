@@ -194,3 +194,16 @@ it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다',
   expect(mockLogout).toHaveBeenCalled();
   expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
 });
+
+it('서비스 섹션에 알림함 메뉴가 표시되고 클릭 시 /notifications로 이동한다', () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const notifItem = screen.getByText('알림함');
+  expect(notifItem).toBeInTheDocument();
+  fireEvent.click(notifItem);
+  expect(mockNavigate).toHaveBeenCalledWith('/notifications');
+});
