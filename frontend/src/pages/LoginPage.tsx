@@ -20,9 +20,17 @@ declare global {
 }
 
 export function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { user, login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (user) {
+      const redirect = searchParams.get('redirect');
+      const home = user.role === 'ADMIN' ? '/admin' : user.role === 'INSTITUTION' ? '/agency' : '/home';
+      navigate(redirect ?? home, { replace: true });
+    }
+  }, [user, navigate, searchParams]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
