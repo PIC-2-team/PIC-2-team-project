@@ -7,10 +7,7 @@ import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 import com.project.backend.care.service.CareRecipientService;
 import com.project.backend.common.response.ApiResponse;
-import com.project.backend.organization.dto.AddMemberRequest;
-import com.project.backend.organization.dto.MemberResponse;
-import com.project.backend.organization.dto.OrganizationResponse;
-import com.project.backend.organization.dto.RegisterOrganizationRequest;
+import com.project.backend.organization.dto.*;
 import com.project.backend.organization.entity.OrganizationMemberStatus;
 import com.project.backend.organization.service.CareAssignmentService;
 import com.project.backend.organization.service.OrganizationService;
@@ -127,10 +124,10 @@ class OrganizationControllerTest {
     @Test
     @DisplayName("돌봄지원사 추가 API 호출 시 지원사를 멤버로 추가하고 반환한다")
     void addMember_endpoint() {
-        AddMemberRequest request = new AddMemberRequest(20L);
+        AddMemberRequest request = new AddMemberRequest(20L, null, null);
         MemberResponse mockMember = new MemberResponse(
                 5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now());
-        given(organizationService.addMember(10L, 20L)).willReturn(mockMember);
+        given(organizationService.addMember(10L, request)).willReturn(mockMember);
 
         ApiResponse<MemberResponse> response = controller.addMember(10L, request);
 
@@ -145,5 +142,44 @@ class OrganizationControllerTest {
 
         assertThat(response.success()).isTrue();
         verify(organizationService).removeMember(10L, 5L);
+    }
+
+    @Test
+    @DisplayName("기관 소속 돌봄 보호자 목록 조회 API 호출 시 보호자 목록을 반환한다")
+    void getGuardians_endpoint() {
+        OrganizationGuardianResponse mockGuardian = new OrganizationGuardianResponse(
+                1L, 20L, "박보호", "010-1234-5678", "guardian@test.com", "P-12345", LocalDateTime.now(), List.of()
+        );
+        given(organizationService.getGuardians(10L)).willReturn(List.of(mockGuardian));
+
+        ApiResponse<List<OrganizationGuardianResponse>> response = controller.getGuardians(10L);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).hasSize(1);
+        assertThat(response.data().get(0).name()).isEqualTo("박보호");
+    }
+
+    @Test
+    @DisplayName("기관 돌봄 보호자 등록 API 호출 시 보호자를 등록하고 반환한다")
+    void registerGuardian_endpoint() {
+        RegisterGuardianRequest request = new RegisterGuardianRequest("010-1234-5678");
+        OrganizationGuardianResponse mockGuardian = new OrganizationGuardianResponse(
+                1L, 20L, "박보호", "010-1234-5678", "guardian@test.com", "P-12345", LocalDateTime.now(), List.of()
+        );
+        given(organizationService.registerGuardian(10L, request)).willReturn(mockGuardian);
+
+        ApiResponse<OrganizationGuardianResponse> response = controller.registerGuardian(10L, request);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().publicCode()).isEqualTo("P-12345");
+    }
+
+    @Test
+    @DisplayName("기관 돌봄 보호자 연결 해제 API 호출 시 정상 처리된다")
+    void removeGuardian_endpoint() {
+        ApiResponse<Void> response = controller.removeGuardian(10L, 20L);
+
+        assertThat(response.success()).isTrue();
+        verify(organizationService).removeGuardian(10L, 20L);
     }
 }

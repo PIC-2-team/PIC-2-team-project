@@ -306,6 +306,7 @@ export function HomePage() {
         </section>
       )}
 
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>

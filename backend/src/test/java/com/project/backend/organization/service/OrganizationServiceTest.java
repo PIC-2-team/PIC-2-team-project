@@ -31,6 +31,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+
+import com.project.backend.care.entity.CareGuardian;
+import com.project.backend.care.entity.CareRecipient;
+import com.project.backend.care.entity.GuardianStatus;
+import com.project.backend.care.entity.GuardianType;
+import com.project.backend.organization.dto.RegisterGuardianRequest;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceTest {
@@ -38,10 +45,12 @@ class OrganizationServiceTest {
     @Mock OrganizationRepository organizationRepository;
     @Mock OrganizationMemberRepository organizationMemberRepository;
     @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    @Mock com.project.backend.organization.repository.OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     @Mock CareAssignmentRepository careAssignmentRepository;
     @Mock CareGuardianRepository careGuardianRepository;
     @Mock CareRecipientRepository careRecipientRepository;
     @Mock UserRepository userRepository;
+    @Mock com.project.backend.auth.service.PublicCodeGenerator publicCodeGenerator;
 
     @InjectMocks OrganizationService organizationService;
 
@@ -150,6 +159,32 @@ class OrganizationServiceTest {
     }
 
     @Test
+    void addMember_지원사_이름으로_추가시_자동_고유코드_발급_및_멤버_등록() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+
+        given(publicCodeGenerator.generate(UserRole.SUPPORT_WORKER)).willReturn("S-NEW1234");
+        given(userRepository.save(any())).willAnswer(inv -> {
+            User u = inv.getArgument(0);
+            ReflectionTestUtils.setField(u, "id", 20L);
+            return u;
+        });
+        given(organizationMemberRepository.save(any())).willAnswer(inv -> {
+            OrganizationMember m = inv.getArgument(0);
+            ReflectionTestUtils.setField(m, "id", 5L);
+            return m;
+        });
+
+        var req = new com.project.backend.organization.dto.AddMemberRequest(null, "새지원사", "010-5555-5555");
+        MemberResponse response = organizationService.addMember(1L, req);
+
+        assertThat(response.name()).isEqualTo("새지원사");
+        assertThat(response.publicCode()).isEqualTo("S-NEW1234");
+        assertThat(response.userId()).isEqualTo(20L);
+    }
+
+    @Test
     void getLinkRequests_기관_소유자가_연결_요청_목록_조회() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
@@ -166,6 +201,39 @@ class OrganizationServiceTest {
         assertThat(result.get(0).careRecipientId()).isEqualTo(100L);
     }
 
+    @Test
+    void registerGuardian_기관이_보호자_전화번호로_등록시_링크_생성_및_기존_당사자_자동_연결() {
+        Organization org = Organization.builder().ownerId(1L).name("테스트기관").organizationCode("ORG123").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+
+        User guardian = guardianUser(2L);
+        given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(guardian));
+        given(organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(10L, 2L)).willReturn(false);
+
+        com.project.backend.organization.entity.OrganizationGuardianLink savedLink =
+                com.project.backend.organization.entity.OrganizationGuardianLink.builder()
+                        .organizationId(10L).guardianId(2L).build();
+        ReflectionTestUtils.setField(savedLink, "id", 100L);
+        given(organizationGuardianLinkRepository.save(any())).willReturn(savedLink);
+
+        CareGuardian cg = CareGuardian.builder().careRecipientId(50L).guardianId(2L).type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
+        given(careGuardianRepository.findByGuardianIdAndStatus(2L, GuardianStatus.ACTIVE)).willReturn(List.of(cg));
+        given(organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(10L, 50L)).willReturn(Optional.empty());
+
+        CareRecipient recipient = CareRecipient.builder().name("김당사").careRecipientNumber("R-1234").build();
+        ReflectionTestUtils.setField(recipient, "id", 50L);
+        given(careRecipientRepository.findAllById(List.of(50L))).willReturn(List.of(recipient));
+
+        var response = organizationService.registerGuardian(1L, new RegisterGuardianRequest("01012345678"));
+
+        assertThat(response.guardianId()).isEqualTo(2L);
+        assertThat(response.phone()).isEqualTo("010-1234-5678");
+        assertThat(response.careRecipients()).hasSize(1);
+        assertThat(response.careRecipients().get(0).name()).isEqualTo("김당사");
+        verify(organizationRecipientLinkRepository).save(any());
+    }
+
     private User institutionUser(Long id) {
         User u = User.builder().name("기관").email("i@test.com").publicCode("I-X")
                 .role(UserRole.INSTITUTION).build();
@@ -174,7 +242,7 @@ class OrganizationServiceTest {
     }
 
     private User guardianUser(Long id) {
-        User u = User.builder().name("보호자").email("g@test.com").publicCode("P-X")
+        User u = User.builder().name("보호자").email("g@test.com").phone("010-1234-5678").publicCode("P-X")
                 .role(UserRole.GUARDIAN).build();
         ReflectionTestUtils.setField(u, "id", id);
         return u;
