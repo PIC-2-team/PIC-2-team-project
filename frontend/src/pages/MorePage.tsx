@@ -15,6 +15,8 @@ type MenuItem = {
   label: string;
   value?: string;
   to?: string;
+  href?: string;
+  pending?: boolean;
 };
 
 type MenuSection = {
@@ -26,15 +28,16 @@ const BASE_MENU_SECTIONS: MenuSection[] = [
   {
     title: '서비스',
     items: [
-      { label: '서비스 이용약관' },
-      { label: '개인정보처리방침' },
-      { label: '오픈소스 라이선스' },
+      { label: '알림함', to: '/notifications' },
+      { label: '서비스 이용약관', pending: true },
+      { label: '개인정보처리방침', pending: true },
+      { label: '오픈소스 라이선스', pending: true },
     ],
   },
   {
     title: '지원',
     items: [
-      { label: '문의하기' },
+      { label: '문의하기', href: 'mailto:contact@samgyeol.com' },
       { label: '앱 버전', value: '1.0.0' },
     ],
   },
@@ -80,10 +83,18 @@ export function MorePage() {
   const { user, logout, selectedRecipientId } = useAuth();
   const navigate = useNavigate();
   const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     if (showRecipientModal && selectedRecipientId) {
@@ -250,6 +261,8 @@ export function MorePage() {
                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '16px 20px' }}
                 onClick={() => {
                   if (item.to) navigate(item.to);
+                  else if (item.href) window.open(item.href, '_blank', 'noopener,noreferrer');
+                  else if (item.pending) setToast('준비 중입니다.');
                 }}
               >
                 <span>{item.label}</span>
@@ -278,6 +291,8 @@ export function MorePage() {
           onCancel={() => setShowLogoutDialog(false)}
         />
       )}
+
+      {toast && <div role="status" className={styles.toast}>{toast}</div>}
     </div>
   );
 }

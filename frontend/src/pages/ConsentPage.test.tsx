@@ -116,3 +116,10 @@ it('동의 API가 실패하면 이동하지 않고 재시도를 허용한다', a
   expect(screen.queryByRole('heading', { name: '회원가입 화면' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '동의하고 시작하기' })).toBeEnabled();
 });
+
+it('"전체 약관 보기" 클릭 시 role=status 준비 중 메시지가 표시된다', () => {
+  renderConsentPage();
+  selectRoleAndGoToConsent();
+  fireEvent.click(screen.getByRole('button', { name: /전체 약관 보기/ }));
+  expect(screen.getByRole('status')).toBeInTheDocument();
+});

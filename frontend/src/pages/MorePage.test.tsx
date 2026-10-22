@@ -194,3 +194,22 @@ it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다',
   expect(mockLogout).toHaveBeenCalled();
   expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
 });
+
+it('서비스 이용약관 클릭 시 role=status 토스트에 "준비 중입니다." 텍스트가 나타난다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '서비스 이용약관' }));
+  expect(screen.getByRole('status')).toHaveTextContent('준비 중입니다.');
+});
+
+it('개인정보처리방침 클릭 시 준비 중 토스트가 표시된다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '개인정보처리방침' }));
+  expect(screen.getByRole('status')).toHaveTextContent('준비 중입니다.');
+});
+
+it('문의하기 클릭 시 window.open이 mailto: URL로 호출된다', () => {
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '문의하기' }));
+  expect(openSpy).toHaveBeenCalledWith(expect.stringMatching(/^mailto:/), '_blank', 'noopener,noreferrer');
+});
