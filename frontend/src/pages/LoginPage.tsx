@@ -203,15 +203,15 @@ export function LoginPage() {
             </div>
           </section>
 
-          {/* 핵심 가치 카드 섹션 */}
+          {/* 핵심 가치 카드 섹션 (가로 3열 그리드) */}
           <section className={styles.featuresSection} aria-label="주요 특징">
             <div className={styles.featureCard}>
               <div className={styles.featureIconWrap} style={{ background: '#e8f5ee', color: '#2b825b' }}>
                 🎙️
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>쉬운 일상 기록</h3>
-                <p className={styles.featureDesc}>음성과 텍스트로 언제 어디서나 간편하게 남기는 생활 기록</p>
+                <h3 className={styles.featureTitle}>쉬운 기록</h3>
+                <p className={styles.featureDesc}>음성·텍스트</p>
               </div>
             </div>
 
@@ -220,8 +220,8 @@ export function LoginPage() {
                 🤝
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>믿을 수 있는 연결</h3>
-                <p className={styles.featureDesc}>보호자·활동지원사·기관의 빈틈없는 인수인계와 소통</p>
+                <h3 className={styles.featureTitle}>안심 연결</h3>
+                <p className={styles.featureDesc}>보호자·기관</p>
               </div>
             </div>
 
@@ -230,8 +230,8 @@ export function LoginPage() {
                 🛡️
               </div>
               <div className={styles.featureText}>
-                <h3 className={styles.featureTitle}>철저한 개인정보 보호</h3>
-                <p className={styles.featureDesc}>주민번호 대신 전용 고유 코드로 민감정보 암호화 보관</p>
+                <h3 className={styles.featureTitle}>철저 보안</h3>
+                <p className={styles.featureDesc}>암호화 코드</p>
               </div>
             </div>
           </section>
