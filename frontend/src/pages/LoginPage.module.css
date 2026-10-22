@@ -2,21 +2,26 @@
   --muted: #596775;
   width: 100%;
   max-width: 390px;
-  min-height: 100%;
+  height: 100%;
   margin: 0 auto;
   background: #f5f6f7;
   color: var(--ink);
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.4;
   box-sizing: border-box;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 18px 40px;
+  gap: 8px;
+  padding: 6px 16px 12px;
   box-sizing: border-box;
+  height: 100%;
+  justify-content: flex-start;
 }
 
 /* 브랜드 히어로 섹션 */
@@ -25,34 +30,34 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 12px 6px 4px;
-  gap: 12px;
+  padding: 2px 0;
+  gap: 4px;
 }
 
 .heroLogoCircle {
-  width: 68px;
-  height: 68px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #e8f5ee;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(60, 171, 126, 0.12);
-  margin-bottom: 2px;
+  box-shadow: 0 1px 4px rgba(60, 171, 126, 0.12);
+  margin-bottom: 0;
 }
 
 .heroBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 5px;
+  padding: 2px 10px;
   background: white;
   border: 1px solid #cde2d3;
-  border-radius: 20px;
+  border-radius: 16px;
 }
 
 .brandName {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--green);
   letter-spacing: -0.3px;
@@ -60,29 +65,29 @@
 
 .badgeDivider {
   color: #bdccc1;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .brandSlogan {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   font-weight: 600;
 }
 
 .heroTitle {
   margin: 0;
-  font-size: 21px;
+  font-size: 14.5px;
   font-weight: 800;
-  line-height: 1.35;
-  letter-spacing: -0.5px;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
   color: var(--ink);
   word-break: keep-all;
 }
 
 .heroDescription {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--muted);
   word-break: keep-all;
 }
@@ -144,11 +149,11 @@
 .loginCard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 22px 20px 24px;
+  gap: 8px;
+  padding: 12px 14px 14px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
 }
@@ -156,39 +161,39 @@
 .heading {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
 }
 
 .heading h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: -0.4px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
   color: var(--ink);
 }
 
 .subheading {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 /* 컴팩트 안내 카드 */
 .noticeCard {
-  padding: 11px 13px;
+  padding: 8px 10px;
   border: 1px solid #cde2d3;
   border-left: 3px solid var(--green);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--soft);
   box-sizing: border-box;
 }
 
 .noticeText {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: #2b5742;
-  line-height: 1.5;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -196,14 +201,14 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 7px;
 }
 
 .form label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
+  gap: 3px;
+  font-size: 12px;
   font-weight: 650;
   color: var(--ink);
 }
@@ -211,21 +216,21 @@
 .form input {
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 12px 14px;
+  min-height: 38px;
+  padding: 8px 12px;
   border: 1.5px solid #d0d7de;
-  border-radius: 10px;
+  border-radius: 8px;
   background: white;
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 13.5px;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form input::placeholder {
   color: #9aa5b1;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .form input:hover {
@@ -243,33 +248,33 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 13px;
+  padding: 8px 10px;
   background: #fdf2f2;
   border: 1px solid #f8b4b4;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #9b1c1c;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.35;
   box-sizing: border-box;
 }
 
 .alertIcon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   color: #e02424;
 }
 
 /* 사각형 규격 CTA 버튼 */
 .submit {
-  min-height: 50px;
-  padding: 12px 20px;
+  min-height: 42px;
+  padding: 10px 16px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--green);
   color: #ffffff;
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   box-sizing: border-box;
@@ -320,21 +325,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .textBtn {
   background: none;
   border: none;
-  min-height: 44px;
+  min-height: 26px;
   display: inline-flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 4px;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
 }
@@ -353,8 +358,8 @@
   align-items: center;
   gap: 12px;
   color: var(--muted);
-  font-size: 13px;
-  margin: 4px 0;
+  font-size: 11px;
+  margin: 1px 0;
 }
 
 .divider::before,
@@ -369,21 +374,21 @@
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 38px;
   min-width: 0;
 }
 
 .signupWrap {
   display: flex;
   justify-content: center;
-  padding-top: 4px;
+  padding-top: 2px;
   border-top: 1px solid var(--line);
 }
 
 .signup {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12.5px;
   text-align: center;
 }
 
@@ -391,7 +396,7 @@
   color: var(--green);
   font-weight: 700;
   text-decoration: underline;
-  min-height: 44px;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   padding: 0 4px;

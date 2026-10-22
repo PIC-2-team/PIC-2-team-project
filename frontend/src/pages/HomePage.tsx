@@ -3,15 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
+import { getCareInfoOverview } from '../api/careInfo';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import { toSeoulDateKey } from '../utils/date';
 import styles from './HomePage.module.css';
 
 type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, setSelectedRecipient } = useAuth();
@@ -36,8 +38,16 @@ export function HomePage() {
           return;
         }
         setSelectedRecipient(first.id);
-        const records = await getTodayRecords(first.id);
-        setPage({ status: 'ok', recipient: first, todayRecords: records });
+        const [records, overview] = await Promise.all([
+          getTodayRecords(first.id),
+          getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+        ]);
+        setPage({
+          status: 'ok',
+          recipient: first,
+          todayRecords: records,
+          pinnedRecords: overview.pinnedRecords ?? [],
+        });
       } catch (e) {
         setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
       }
@@ -66,7 +76,7 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords } = page;
+  const { recipient, todayRecords, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN';
 
   return (
@@ -82,6 +92,25 @@ export function HomePage() {
       </div>
 
       <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
+
+      {pinnedRecords.length > 0 && (
+        <section className={styles.section} aria-labelledby="pinned-records-title">
+          <div className={styles.sectionHeader}>
+            <h2 id="pinned-records-title" className={styles.sectionTitle}>📌 중요 생활기록</h2>
+          </div>
+          <div className={styles.records}>
+            {pinnedRecords.map(record => (
+              <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
+                <p className={styles.recordContent}>{record.content}</p>
+                <span className={styles.recordTime}>
+                  {toSeoulDateKey(record.recordedAt)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>

@@ -52,13 +52,10 @@ it('로그인 화면에서 이용 동의로 돌아가는 링크를 제공하지 
   expect(screen.queryByRole('link', { name: '이용 동의로 돌아가기' })).not.toBeInTheDocument();
 });
 
-it('브랜드 히어로, 슬로건, 핵심 가치 카드 및 로그인 헤더가 표시된다', () => {
+it('브랜드 히어로, 슬로건 및 로그인 헤더가 표시된다', () => {
   renderLogin();
   expect(screen.getByText('삶의 결을 잇다')).toBeInTheDocument();
   expect(screen.getByText('보호자가 없어도 이어지는 맞춤 돌봄 기록')).toBeInTheDocument();
-  expect(screen.getByText('쉬운 일상 기록')).toBeInTheDocument();
-  expect(screen.getByText('믿을 수 있는 연결')).toBeInTheDocument();
-  expect(screen.getByText('철저한 개인정보 보호')).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: '로그인' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/consent');
 });

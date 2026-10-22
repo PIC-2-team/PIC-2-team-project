@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareInfoOverview } from '../api/careInfo';
-import type { CareInfoCategory, CareInfoOverview } from '../types/careInfo';
-import { toSeoulDateKey } from '../utils/date';
+import { getRecordsByCategory } from '../api/records';
+import type { CareInfoCategory } from '../types/careInfo';
 import styles from './CareInfoPage.module.css';
 
 const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: ReactNode }[] = [
@@ -12,7 +12,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '의사소통',
     bg: '#e8f5ee',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <circle cx="13" cy="15" r="8" fill="#3CAB7E" />
         <circle cx="23" cy="19" r="8" fill="#2d9468" />
         <circle cx="10" cy="13" r="3" fill="white" opacity="0.6" />
@@ -27,7 +27,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '생활습관',
     bg: '#fff3e8',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M6 16L18 6l12 10v14H6V16z" fill="#f57c00" />
         <rect x="14" y="22" width="8" height="8" rx="1" fill="white" opacity="0.8" />
         <rect x="16" y="19" width="4" height="4" rx="0.5" fill="white" opacity="0.6" />
@@ -39,7 +39,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '식사',
     bg: '#fff0f6',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <ellipse cx="18" cy="20" rx="11" ry="8" fill="#c2185b" opacity="0.15" />
         <ellipse cx="18" cy="20" rx="11" ry="8" stroke="#c2185b" strokeWidth="2" />
         <line x1="10" y1="8" x2="10" y2="16" stroke="#c2185b" strokeWidth="2" strokeLinecap="round" />
@@ -55,7 +55,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '선호·비선호',
     bg: '#fdedf0',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path
           d="M18 29s-13-8.5-13-16a8 8 0 0116 0 8 8 0 0116 0c0 7.5-13 16-19 16z"
           fill="#e05555"
@@ -68,7 +68,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '도전행동',
     bg: '#fef3e2',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <path d="M18 6 L30 28 H6 Z" fill="#e65100" opacity="0.15" />
         <path d="M18 6 L30 28 H6 Z" stroke="#e65100" strokeWidth="2" strokeLinejoin="round" />
         <rect x="16.5" y="14" width="3" height="7" rx="1.5" fill="#e65100" />
@@ -81,7 +81,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '건강·복약',
     bg: '#e8f0fb',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <rect
           x="8" y="14" width="20" height="9" rx="4.5"
           fill="#5b8dee"
@@ -99,7 +99,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '위기대처',
     bg: '#fdedf0',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <rect x="10" y="18" width="16" height="10" rx="2" fill="#e05555" />
         <path d="M13 18V14a5 5 0 0110 0v4" stroke="#e05555" strokeWidth="2.5" fill="none" />
         <ellipse cx="18" cy="13" rx="7" ry="5" fill="#e05555" opacity="0.25" />
@@ -115,7 +115,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
     label: '기타',
     bg: '#f5f5f5',
     icon: (
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
         <circle cx="18" cy="18" r="12" fill="#9e9e9e" opacity="0.15" />
         <circle cx="18" cy="18" r="12" stroke="#9e9e9e" strokeWidth="2" />
         <circle cx="11" cy="18" r="2" fill="#9e9e9e" />
@@ -129,7 +129,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
-  const [overview, setOverview] = useState<CareInfoOverview | null>(null);
+  const [recordCounts, setRecordCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,15 +138,34 @@ export function CareInfoPage() {
     let isCurrent = true;
     setIsLoading(true);
     setError(null);
-    setOverview(null);
-    getCareInfoOverview(selectedRecipientId)
-      .then(data => { if (isCurrent) setOverview(data); })
-      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패'); })
-      .finally(() => { if (isCurrent) setIsLoading(false); });
+
+    void getCareInfoOverview(selectedRecipientId).catch(() => null);
+
+    Promise.all(
+      CATEGORIES.map(async cat => {
+        try {
+          const res = await getRecordsByCategory(selectedRecipientId, cat.id as any, 1, 1);
+          return { id: cat.id, count: res.pagination?.totalItems ?? res.items.length };
+        } catch {
+          return { id: cat.id, count: 0 };
+        }
+      })
+    )
+      .then(results => {
+        if (!isCurrent) return;
+        const counts: Record<string, number> = {};
+        results.forEach(r => { counts[r.id] = r.count; });
+        setRecordCounts(counts);
+      })
+      .catch(e => {
+        if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패');
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
     return () => { isCurrent = false; };
   }, [selectedRecipientId]);
-
-  const pinnedRecords = overview?.pinnedRecords ?? [];
 
   return (
     <div className="demo-page">
@@ -154,22 +173,6 @@ export function CareInfoPage() {
 
       {isLoading && <p className="muted" role="status">불러오는 중…</p>}
       {error && <p className="error" role="alert">{error}</p>}
-
-      {pinnedRecords.length > 0 && (
-        <section className="demo-card accent" aria-labelledby="pinned-records-title">
-          <h2 id="pinned-records-title">중요 생활기록</h2>
-          <ul className={styles.recordList}>
-            {pinnedRecords.map(record => (
-              <li key={record.id}>
-                <Link to={`/records/${record.id}`} className={styles.recordCard}>
-                  <p>{record.content}</p>
-                  <time dateTime={record.recordedAt}>{toSeoulDateKey(record.recordedAt)}</time>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <div className={styles.grid} role="group" aria-label="돌봄정보 카테고리">
         {CATEGORIES.map(cat => (
@@ -182,6 +185,9 @@ export function CareInfoPage() {
             <span className={styles.iconWrap} style={{ background: cat.bg }}>{cat.icon}</span>
             <span className={styles.cardBottom}>
               <span className={styles.cardLabel}>{cat.label}</span>
+              {recordCounts[cat.id] !== undefined && (
+                <span className={styles.cardCount}>{recordCounts[cat.id]}개</span>
+              )}
               <span className={styles.chevron} aria-hidden="true">&gt;</span>
             </span>
           </button>

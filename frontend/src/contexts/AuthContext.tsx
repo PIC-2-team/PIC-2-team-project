@@ -18,23 +18,60 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'SET':
+    case 'SET': {
+      try {
+        localStorage.setItem('sam_token', action.payload.accessToken);
+        localStorage.setItem('sam_user', JSON.stringify(action.payload.user));
+      } catch {
+        // Storage unavailable
+      }
       return { ...state, user: action.payload.user, token: action.payload.accessToken };
-    case 'UPDATE_TOKEN':
+    }
+    case 'UPDATE_TOKEN': {
+      try {
+        localStorage.setItem('sam_token', action.token);
+      } catch {
+        // Storage unavailable
+      }
       return { ...state, token: action.token };
-    case 'CLEAR':
+    }
+    case 'CLEAR': {
+      try {
+        localStorage.removeItem('sam_token');
+        localStorage.removeItem('sam_user');
+        localStorage.removeItem('sam_recipient_id');
+      } catch {
+        // Storage unavailable
+      }
       return { user: null, token: null, selectedRecipientId: null };
-    case 'SELECT_RECIPIENT':
+    }
+    case 'SELECT_RECIPIENT': {
+      try {
+        if (action.id !== null) {
+          localStorage.setItem('sam_recipient_id', String(action.id));
+        } else {
+          localStorage.removeItem('sam_recipient_id');
+        }
+      } catch {
+        // Storage unavailable
+      }
       return { ...state, selectedRecipientId: action.id };
+    }
   }
 }
 
 function createInitialState(): State {
   try {
-    localStorage.removeItem('sam_token');
-    localStorage.removeItem('sam_user');
+    const token = localStorage.getItem('sam_token');
+    const userStr = localStorage.getItem('sam_user');
+    const recipientIdStr = localStorage.getItem('sam_recipient_id');
+    const user = userStr ? JSON.parse(userStr) as User : null;
+    const selectedRecipientId = recipientIdStr ? Number(recipientIdStr) : null;
+    if (token && user) {
+      return { user, token, selectedRecipientId };
+    }
   } catch {
-    // Storage may be unavailable; authentication remains memory-only.
+    // Storage unavailable or JSON parse error
   }
   return { user: null, token: null, selectedRecipientId: null };
 }

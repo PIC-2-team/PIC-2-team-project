@@ -25,6 +25,13 @@ export type CreateRecordPayload = {
   pinned?: boolean;
 };
 
+export type UpdateRecordPayload = {
+  content?: string;
+  category?: RecordCategory;
+  recordedAt?: string;
+  mediaIds?: number[];
+};
+
 export type RecordRequestStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
 
 export type RecordRequestItem = {
