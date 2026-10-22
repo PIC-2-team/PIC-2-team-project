@@ -77,7 +77,7 @@ const MORE_TAB: Tab = {
 
 import type { UserRole } from '../../types/user';
 
-export default function TabBar({ role }: { role?: UserRole } = {}) {
+export default function TabBar({ role, unreadCount }: { role?: UserRole; unreadCount?: number } = {}) {
   const { user } = useAuth();
   const effectiveRole = role ?? user?.role;
   const isInstitution = effectiveRole === 'INSTITUTION';
@@ -87,20 +87,33 @@ export default function TabBar({ role }: { role?: UserRole } = {}) {
 
   return (
     <nav className={styles.tabBar} aria-label="주요 메뉴">
-      {tabs.map(tab => (
-        <NavLink
-          key={tab.to}
-          to={tab.to}
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.active : ''}`}
-        >
-          {({ isActive }) => (
-            <>
-              {tab.icon(isActive)}
-              <span className={styles.label}>{tab.label}</span>
-            </>
-          )}
-        </NavLink>
-      ))}
+      {tabs.map(tab => {
+        const showBadge = tab === MORE_TAB && (unreadCount ?? 0) > 0;
+        return (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            className={({ isActive }) => `${styles.tab} ${isActive ? styles.active : ''}`}
+          >
+            {({ isActive }) => (
+              <>
+                <span className={styles.iconWrap}>
+                  {tab.icon(isActive)}
+                  {showBadge && (
+                    <span
+                      className={styles.badge}
+                      aria-label={`안 읽은 알림 ${unreadCount! > 99 ? '99+' : unreadCount}개`}
+                    >
+                      {unreadCount! > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </span>
+                <span className={styles.label}>{tab.label}</span>
+              </>
+            )}
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }
