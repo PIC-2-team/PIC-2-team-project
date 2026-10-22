@@ -11,7 +11,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[] };
+  | { status: 'ok'; recipients: CareRecipient[]; recipient: CareRecipient; todayRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, setSelectedRecipient } = useAuth();
@@ -37,7 +37,7 @@ export function HomePage() {
         }
         setSelectedRecipient(first.id);
         const records = await getTodayRecords(first.id);
-        setPage({ status: 'ok', recipient: first, todayRecords: records });
+        setPage({ status: 'ok', recipients, recipient: first, todayRecords: records });
       } catch (e) {
         setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
       }
@@ -66,8 +66,20 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords } = page;
+  const { recipients, recipient, todayRecords } = page;
   const canWrite = user?.role === 'GUARDIAN';
+
+  const handleRecipientChange = async (id: number) => {
+    const next = recipients.find(r => r.id === id);
+    if (!next) return;
+    setSelectedRecipient(id);
+    try {
+      const records = await getTodayRecords(id);
+      setPage({ status: 'ok', recipients, recipient: next, todayRecords: records });
+    } catch {
+      setPage({ status: 'ok', recipients, recipient: next, todayRecords: [] });
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -81,7 +93,23 @@ export function HomePage() {
         </div>
       </div>
 
-      <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
+      {recipients.length > 1 ? (
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <span className="muted">돌봄 당사자</span>
+          <select
+            aria-label="당사자 선택"
+            value={recipient.id}
+            onChange={e => void handleRecipientChange(Number(e.target.value))}
+            style={{ border: '1px solid #d0d5dc', borderRadius: '6px', padding: '4px 8px', fontSize: '0.9rem' }}
+          >
+            {recipients.map(r => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p className="muted">돌봄 당사자 · <span>{recipient.name}님</span></p>
+      )}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>
