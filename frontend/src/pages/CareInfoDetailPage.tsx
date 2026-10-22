@@ -239,7 +239,10 @@ export default function CareInfoDetailPage() {
   };
 
   const pinned = records.filter(r => r.pinned);
-  const unpinned = records.filter(r => !r.pinned);
+  const [showAllRecords, setShowAllRecords] = useState(false);
+  const ALL_RECORD_LIMIT = 5;
+  const visibleRecords = showAllRecords ? records : records.slice(0, ALL_RECORD_LIMIT);
+  const hasMoreRecords = !showAllRecords && records.length > ALL_RECORD_LIMIT;
   const hasCareInfoContent = careInfo && (typeof careInfo.content === 'string' ? careInfo.content.length > 0 : careInfo.content != null);
 
   return (
@@ -315,19 +318,28 @@ export default function CareInfoDetailPage() {
             </div>
           )}
           <div className={styles.list}>
-            {unpinned.map(item => (
+            {visibleRecords.map(item => (
               <ItemCard
                 key={item.id}
                 item={{
                   id: item.id,
                   content: item.content,
-                  pinned: false,
+                  pinned: item.pinned ?? false,
                   updatedAt: toSeoulDateKey(item.recordedAt),
                 }}
-                onTogglePin={() => void togglePin(item.id, false)}
+                onTogglePin={() => void togglePin(item.id, item.pinned ?? false)}
                 canPin={isGuardian}
               />
             ))}
+            {hasMoreRecords && (
+              <button
+                type="button"
+                className={styles.loadMore}
+                onClick={() => setShowAllRecords(true)}
+              >
+                더 보기 ({records.length - ALL_RECORD_LIMIT}개 더)
+              </button>
+            )}
           </div>
         </section>
       </div>
