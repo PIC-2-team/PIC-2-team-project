@@ -71,6 +71,7 @@ export function NotificationInboxPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const fetchList = useCallback(async (currentFilter: 'all' | 'unread') => {
     setLoading(true);
@@ -95,6 +96,8 @@ export function NotificationInboxPage() {
     try {
       await markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setFeedback('모든 알림을 읽음 처리했습니다.');
+      setTimeout(() => setFeedback(null), 3000);
     } catch {
       // 갱신 재시도
       fetchList(filter);
@@ -123,16 +126,31 @@ export function NotificationInboxPage() {
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className={styles.title}>알림함</h1>
-          {unreadCount > 0 && (
+          {notifications.length > 0 && (
             <button
               type="button"
               className={styles.markAllBtn}
               onClick={handleMarkAllRead}
+              disabled={unreadCount === 0}
+              aria-label="모두 읽음 처리"
             >
-              모두 읽기
+              {unreadCount > 0 ? '모두 읽음 처리' : '모두 읽음 완료'}
             </button>
           )}
         </div>
+
+        {feedback && (
+          <div className={styles.feedbackBanner} role="status">
+            <span>{feedback}</span>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <div className={styles.tabs} role="tablist">
           <button

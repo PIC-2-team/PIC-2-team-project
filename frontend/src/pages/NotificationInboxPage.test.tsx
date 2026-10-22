@@ -96,7 +96,7 @@ describe('NotificationInboxPage', () => {
     });
   });
 
-  it('모두 읽기 버튼을 누르면 markAllNotificationsRead를 호출하고 목록을 갱신한다', async () => {
+  it('모두 읽음 처리 버튼을 누르면 markAllNotificationsRead를 호출하고 목록을 갱신한다', async () => {
     vi.spyOn(notificationApi, 'getNotifications').mockResolvedValue({
       items: mockNotifications,
       pagination: { page: 1, pageSize: 20, totalItems: 2, totalPages: 1 },
@@ -106,13 +106,14 @@ describe('NotificationInboxPage', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '모두 읽기' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '모두 읽음 처리' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '모두 읽기' }));
+    fireEvent.click(screen.getByRole('button', { name: '모두 읽음 처리' }));
 
     await waitFor(() => {
       expect(markAllSpy).toHaveBeenCalled();
+      expect(screen.getByText('모든 알림을 읽음 처리했습니다.')).toBeInTheDocument();
     });
   });
 

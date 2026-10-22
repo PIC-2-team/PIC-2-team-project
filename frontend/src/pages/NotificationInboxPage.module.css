@@ -19,19 +19,38 @@
 }
 
 .markAllBtn {
-  background: none;
-  border: 1px solid var(--color-border, #d1d5db);
+  background: var(--color-primary, #3cab7e);
+  color: #ffffff;
+  border: none;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 0.8125rem;
-  color: var(--color-text-secondary, #4b5563);
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.markAllBtn:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
+.markAllBtn:hover:not(:disabled) {
+  background-color: #2e8b65;
+}
+
+.markAllBtn:disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.feedbackBanner {
+  background-color: #eaf6f0;
+  color: #2e8b65;
+  border: 1px solid #cce8d9;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .tabs {
