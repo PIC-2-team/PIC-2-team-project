@@ -43,6 +43,10 @@ export function getRecord(recipientId: number, recordId: number): Promise<DailyR
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`);
 }
 
+export function deleteRecord(recipientId: number, recordId: number): Promise<void> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, { method: 'DELETE' });
+}
+
 export function createRecord(
   recipientId: number,
   payload: CreateRecordPayload

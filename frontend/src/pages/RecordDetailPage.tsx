@@ -2,7 +2,8 @@ import { AppShell } from '../components/AppShell';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getRecord, createSuggestion } from '../api/records';
+import { getRecord, createSuggestion, deleteRecord } from '../api/records';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { DailyRecord } from '../types/record';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -24,6 +25,7 @@ export function RecordDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // 수정 제안 상태
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -58,6 +60,18 @@ export function RecordDetailPage() {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!selectedRecipientId || !id) return;
+    try {
+      await deleteRecord(selectedRecipientId, Number(id));
+      navigate('/records');
+    } catch {
+      setActionMsg('기록 삭제 중 오류가 발생했어요.');
+    } finally {
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
     <AppShell role={user?.role}>
       <main className="demo-page">
@@ -82,9 +96,18 @@ export function RecordDetailPage() {
             {user?.role === 'GUARDIAN' && (
               <div className="actions">
                 <button type="button" className="btn secondary" onClick={() => setActionMsg('기록 수정은 현재 준비 중이에요.')}>수정</button>
-                <button type="button" className="btn secondary" disabled>삭제 (준비 중)</button>
+                <button type="button" className="btn secondary" style={{ color: '#e05555' }} onClick={() => setShowDeleteDialog(true)}>삭제</button>
               </div>
             )}
+            <ConfirmDialog
+              open={showDeleteDialog}
+              title="기록을 삭제할까요?"
+              description="삭제 후 되돌릴 수 없습니다."
+              confirmLabel="삭제"
+              variant="danger"
+              onConfirm={() => { void handleDeleteConfirm(); }}
+              onCancel={() => setShowDeleteDialog(false)}
+            />
             {user?.role === 'SUPPORT_WORKER' && (
               <>
                 {suggestionDone ? (
