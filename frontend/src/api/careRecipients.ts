@@ -23,6 +23,13 @@ export function createCareRecipient(payload: CreateCareRecipientPayload): Promis
   return apiRequest('/api/care-recipients', { method: 'POST', body: payload });
 }
 
+export function claimCareRecipient(careRecipientNumber: string): Promise<CareRecipient> {
+  return apiRequest('/api/care-recipients/claim', {
+    method: 'POST',
+    body: { careRecipientNumber },
+  });
+}
+
 export type OrganizationLinkStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 
 export type OrganizationLinkInfo = {
@@ -96,4 +103,3 @@ export function revokeSecondaryGuardian(recipientId: number): Promise<void> {
     method: 'DELETE',
   });
 }
-

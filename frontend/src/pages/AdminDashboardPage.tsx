@@ -13,10 +13,13 @@ import {
   updateAdminUser,
   deleteAdminUser,
   getAdminUserRecords,
+  getAdminCareRecipients,
+  createAdminCareRecipient,
   type AdminOrganization,
   type AdminUserSummary,
   type AdminRecordSummary,
   type PaginatedAdminUsers,
+  type AdminCareRecipient,
 } from '../api/admin';
 import { AppShell } from '../components/AppShell';
 import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
@@ -37,6 +40,12 @@ const ROLE_LABELS: Record<string, string> = {
   SUPPORT_WORKER: '활동지원사',
   INSTITUTION: '기관',
   ADMIN: '관리자',
+};
+
+const DISABILITY_LABELS: Record<string, string> = {
+  INTELLECTUAL: '지적 장애',
+  AUTISM: '자폐성 장애',
+  OTHER: '기타 장애',
 };
 
 const RECORD_CATEGORY_LABELS: Record<string, string> = {
@@ -62,6 +71,23 @@ export function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<PaginatedAdminUsers | null>(null);
   const [organizations, setOrganizations] = useState<AdminOrganization[] | null>(null);
+
+  // 당사자 고유 코드 상태
+  const [recipients, setRecipients] = useState<AdminCareRecipient[] | null>(null);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientBirthDate, setRecipientBirthDate] = useState('');
+  const [recipientGender, setRecipientGender] = useState<'MALE' | 'FEMALE'>('MALE');
+  const [recipientDisabilityTypes, setRecipientDisabilityTypes] = useState<
+    ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[]
+  >([]);
+  const [recipientDisabilityGrade, setRecipientDisabilityGrade] = useState('');
+  const [recipientOtherDisabilityType, setRecipientOtherDisabilityType] = useState('');
+  const [isCreatingRecipient, setIsCreatingRecipient] = useState(false);
+  const [recipientMessage, setRecipientMessage] = useState<string | null>(null);
+  const [recipientCreatedCode, setRecipientCreatedCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // 필터 및 페이징
   const [roleFilter, setRoleFilter] = useState('');
@@ -117,6 +143,7 @@ export function AdminDashboardPage() {
   useEffect(() => {
     void fetchStats();
     void fetchOrganizations();
+    void fetchRecipients();
   }, []);
 
   useEffect(() => {
@@ -154,6 +181,74 @@ export function AdminDashboardPage() {
     } catch {
       // 기관 목록 조회 오류
     }
+  };
+
+  const fetchRecipients = async (searchQuery?: string) => {
+    setLoadingRecipients(true);
+    try {
+      const data = await getAdminCareRecipients(searchQuery);
+      setRecipients(data);
+    } catch {
+      // 당사자 목록 오류 처리
+    } finally {
+      setLoadingRecipients(false);
+    }
+  };
+
+  const handleCreateRecipient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recipientName.trim() || !recipientBirthDate || isCreatingRecipient) return;
+    setIsCreatingRecipient(true);
+    setRecipientMessage(null);
+    setRecipientCreatedCode(null);
+
+    const grade = recipientDisabilityGrade.trim() ? Number(recipientDisabilityGrade) : null;
+    try {
+      const created = await createAdminCareRecipient({
+        name: recipientName.trim(),
+        birthDate: recipientBirthDate,
+        gender: recipientGender,
+        disabilityTypes: recipientDisabilityTypes,
+        disabilityGrade: grade,
+        otherDisabilityType: recipientDisabilityTypes.includes('OTHER')
+          ? recipientOtherDisabilityType.trim()
+          : null,
+      });
+
+      setRecipientName('');
+      setRecipientBirthDate('');
+      setRecipientDisabilityTypes([]);
+      setRecipientDisabilityGrade('');
+      setRecipientOtherDisabilityType('');
+      setRecipientCreatedCode(created.careRecipientNumber);
+      setRecipientMessage(`'${created.name}' 당사자 고유 코드 발급 완료`);
+      await Promise.all([fetchRecipients(recipientSearch), fetchStats()]);
+    } catch (err) {
+      setRecipientMessage(err instanceof Error ? err.message : '당사자 코드 발급에 실패했어요.');
+    } finally {
+      setIsCreatingRecipient(false);
+    }
+  };
+
+  const toggleDisabilityType = (type: 'INTELLECTUAL' | 'AUTISM' | 'OTHER') => {
+    setRecipientDisabilityTypes((current) =>
+      current.includes(type) ? current.filter((t) => t !== type) : [...current, type]
+    );
+  };
+
+  const handleCopy = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      // 복사 실패 무시
+    }
+  };
+
+  const handleSearchRecipient = (e: React.FormEvent) => {
+    e.preventDefault();
+    void fetchRecipients(recipientSearch);
   };
 
   const fetchUsers = async () => {
@@ -389,45 +484,277 @@ export function AdminDashboardPage() {
 
         {/* 1. 대시보드 탭 */}
         {activeTab === 'dashboard' && (
-          <section aria-label="서비스 통계">
-            <div className={styles.sectionHeading}>
-              <h2 className={styles.sectionTitle}>서비스 통계</h2>
-            </div>
-            {stats ? (
-              <div className={styles.statsGrid}>
-                <div className={`${styles.statCard} ${styles.highlight}`}>
-                  <p className={styles.statLabel}>전체 사용자</p>
-                  <p className={styles.statValue}>{stats.totalUsers.toLocaleString()}</p>
-                </div>
-                <div className={`${styles.statCard} ${styles.highlight}`}>
-                  <p className={styles.statLabel}>돌봄 대상자</p>
-                  <p className={styles.statValue}>{stats.totalCareRecipients.toLocaleString()}</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>보호자</p>
-                  <p className={styles.statValue}>{stats.guardians.toLocaleString()}</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>활동지원사</p>
-                  <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>기관 담당자</p>
-                  <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>등록 기관 수</p>
-                  <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
-                </div>
-                <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
-                  <p className={styles.statLabel}>총 생활기록</p>
-                  <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
-                </div>
+          <>
+            <section aria-label="서비스 통계">
+              <div className={styles.sectionHeading}>
+                <h2 className={styles.sectionTitle}>서비스 통계</h2>
               </div>
-            ) : (
-              <div className={styles.emptyBox}>통계를 불러오는 중…</div>
-            )}
-          </section>
+              {stats ? (
+                <div className={styles.statsGrid}>
+                  <div className={`${styles.statCard} ${styles.highlight}`}>
+                    <p className={styles.statLabel}>전체 사용자</p>
+                    <p className={styles.statValue}>{stats.totalUsers.toLocaleString()}</p>
+                  </div>
+                  <div className={`${styles.statCard} ${styles.highlight}`}>
+                    <p className={styles.statLabel}>돌봄 대상자</p>
+                    <p className={styles.statValue}>{stats.totalCareRecipients.toLocaleString()}</p>
+                  </div>
+                  <div className={styles.statCard}>
+                    <p className={styles.statLabel}>보호자</p>
+                    <p className={styles.statValue}>{stats.guardians.toLocaleString()}</p>
+                  </div>
+                  <div className={styles.statCard}>
+                    <p className={styles.statLabel}>활동지원사</p>
+                    <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
+                  </div>
+                  <div className={styles.statCard}>
+                    <p className={styles.statLabel}>기관 담당자</p>
+                    <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
+                  </div>
+                  <div className={styles.statCard}>
+                    <p className={styles.statLabel}>등록 기관 수</p>
+                    <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
+                  </div>
+                  <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
+                    <p className={styles.statLabel}>총 생활기록</p>
+                    <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.emptyBox}>통계를 불러오는 중…</div>
+              )}
+            </section>
+
+            {/* 당사자 고유 코드 발급 및 관리 */}
+            <section style={{ marginTop: 24 }} aria-label="당사자 고유 코드 관리">
+              <div className={styles.sectionHeading} style={{ marginBottom: 12 }}>
+                <h2 className={styles.sectionTitle}>
+                  당사자 고유 코드 관리 {recipients ? `(${recipients.length})` : ''}
+                </h2>
+              </div>
+
+              {/* 신규 당사자 등록 및 고유 코드 발급 폼 */}
+              <div className="demo-card" style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: '15px', margin: '0 0 10px', color: 'var(--ink)' }}>
+                  신규 당사자 등록 및 고유 코드 발급
+                </h3>
+                <form className="demo-form" onSubmit={(e) => { void handleCreateRecipient(e); }}>
+                  <label>
+                    당사자 이름
+                    <input
+                      type="text"
+                      aria-label="신규 당사자 이름"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="예: 홍길동"
+                      required
+                      maxLength={50}
+                    />
+                  </label>
+
+                  <label>
+                    생년월일
+                    <input
+                      type="date"
+                      aria-label="당사자 생년월일"
+                      value={recipientBirthDate}
+                      onChange={(e) => setRecipientBirthDate(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>성별</span>
+                    <div className={styles.genderGroup}>
+                      <label className={styles.genderLabel}>
+                        <input
+                          type="radio"
+                          name="recipientGender"
+                          value="MALE"
+                          checked={recipientGender === 'MALE'}
+                          onChange={() => setRecipientGender('MALE')}
+                        />
+                        남성
+                      </label>
+                      <label className={styles.genderLabel}>
+                        <input
+                          type="radio"
+                          name="recipientGender"
+                          value="FEMALE"
+                          checked={recipientGender === 'FEMALE'}
+                          onChange={() => setRecipientGender('FEMALE')}
+                        />
+                        여성
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                      장애 유형 <span className="muted" style={{ fontWeight: 400 }}>(선택)</span>
+                    </span>
+                    <div className={styles.checkboxGroup}>
+                      {(['INTELLECTUAL', 'AUTISM', 'OTHER'] as const).map((type) => (
+                        <label key={type} className={styles.checkboxLabel}>
+                          <input
+                            type="checkbox"
+                            checked={recipientDisabilityTypes.includes(type)}
+                            onChange={() => toggleDisabilityType(type)}
+                          />
+                          {DISABILITY_LABELS[type]}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {recipientDisabilityTypes.includes('OTHER') && (
+                    <label>
+                      기타 장애 유형
+                      <input
+                        type="text"
+                        value={recipientOtherDisabilityType}
+                        onChange={(e) => setRecipientOtherDisabilityType(e.target.value)}
+                        placeholder="예: 뇌병변 장애"
+                        maxLength={100}
+                      />
+                    </label>
+                  )}
+
+                  <label>
+                    장애 정도 <span className="muted" style={{ fontWeight: 400 }}>(선택, 숫자)</span>
+                    <input
+                      type="number"
+                      value={recipientDisabilityGrade}
+                      onChange={(e) => setRecipientDisabilityGrade(e.target.value)}
+                      placeholder="예: 1 또는 2"
+                      min={1}
+                      max={6}
+                    />
+                  </label>
+
+                  {recipientMessage && (
+                    <div style={{ margin: '4px 0 0' }}>
+                      <p className="hint" role="status" style={{ margin: 0, color: 'var(--green)', fontWeight: 600 }}>
+                        {recipientMessage}
+                      </p>
+                      {recipientCreatedCode && (
+                        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: '13px', color: 'var(--ink)' }}>발급된 코드:</span>
+                          <span className={styles.userCode} style={{ fontWeight: 700, color: 'var(--green)' }}>
+                            {recipientCreatedCode}
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.copyButton}
+                            onClick={() => { void handleCopy(recipientCreatedCode); }}
+                          >
+                            {copiedCode === recipientCreatedCode ? '복사됨!' : '코드 복사'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    className="btn"
+                    type="submit"
+                    disabled={!recipientName.trim() || !recipientBirthDate || isCreatingRecipient}
+                  >
+                    {isCreatingRecipient ? '발급 중…' : '당사자 고유 코드 발급'}
+                  </button>
+                </form>
+              </div>
+
+              {/* 당사자 검색 폼 */}
+              <form
+                onSubmit={handleSearchRecipient}
+                style={{ display: 'flex', gap: 8, marginBottom: 12 }}
+              >
+                <input
+                  type="text"
+                  aria-label="당사자 검색"
+                  className={styles.searchInput}
+                  placeholder="이름 또는 고유 코드 검색"
+                  value={recipientSearch}
+                  onChange={(e) => setRecipientSearch(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="btn secondary"
+                  style={{ padding: '6px 14px', minHeight: 'unset', fontSize: '13px' }}
+                >
+                  검색
+                </button>
+              </form>
+
+              {/* 당사자 목록 */}
+              {loadingRecipients ? (
+                <div className={styles.emptyBox}>당사자 목록을 불러오는 중…</div>
+              ) : !recipients || recipients.length === 0 ? (
+                <div className={styles.emptyBox}>등록된 당사자가 없어요.</div>
+              ) : (
+                <div className={styles.userList}>
+                  {recipients.map((r) => (
+                    <div key={r.id} className={styles.userCard}>
+                      <div className={styles.userCardHeader}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span className={styles.userName}>{r.name}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                            ({r.gender === 'MALE' ? '남' : '여'}, {r.birthDate})
+                          </span>
+                        </div>
+                        {r.guardianName ? (
+                          <span className={styles.statusBadgeLinked}>
+                            보호자: {r.guardianName}
+                          </span>
+                        ) : (
+                          <span className={styles.statusBadgeUnlinked}>
+                            미연결 (발급 완료)
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.userDetails}>
+                        <div className={styles.userMeta}>
+                          <span>
+                            고유 코드 <span className={styles.userCode}>{r.careRecipientNumber}</span>
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.copyButton}
+                            onClick={() => { void handleCopy(r.careRecipientNumber); }}
+                            aria-label={`${r.name} 고유 코드 복사`}
+                          >
+                            {copiedCode === r.careRecipientNumber ? '복사됨!' : '복사'}
+                          </button>
+                          {r.organizationName && (
+                            <>
+                              <span>·</span>
+                              <span>소속: {r.organizationName}</span>
+                            </>
+                          )}
+                          <span>·</span>
+                          <span>{new Date(r.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+                        </div>
+                        {r.disabilityTypes && r.disabilityTypes.length > 0 && (
+                          <div className={styles.tagList}>
+                            {r.disabilityTypes.map((dt) => (
+                              <span key={dt} className={styles.tag}>
+                                {DISABILITY_LABELS[dt] ?? dt}
+                                {dt === 'OTHER' && r.otherDisabilityType ? `(${r.otherDisabilityType})` : ''}
+                              </span>
+                            ))}
+                            {r.disabilityGrade && (
+                              <span className={styles.tag}>{r.disabilityGrade}급(정도)</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
         )}
 
         {/* 2. 기관 관리 탭 */}
@@ -668,7 +995,7 @@ export function AdminDashboardPage() {
                   type="button"
                   className={styles.pageButton}
                   disabled={page >= users.pagination.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => setPage((p) => p - 1)}
                 >
                   다음
                 </button>

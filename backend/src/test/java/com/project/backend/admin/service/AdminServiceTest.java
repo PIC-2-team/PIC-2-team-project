@@ -3,8 +3,14 @@ package com.project.backend.admin.service;
 import com.project.backend.admin.dto.*;
 import com.project.backend.auth.repository.ConsentRepository;
 import com.project.backend.auth.service.PublicCodeGenerator;
+import com.project.backend.care.entity.*;
+import com.project.backend.care.repository.CareGuardianRepository;
+import com.project.backend.care.repository.CareRecipientDisabilityRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.care.service.CareRecipientNumberGenerator;
+import com.project.backend.organization.entity.LinkStatus;
 import com.project.backend.organization.entity.Organization;
+import com.project.backend.organization.entity.OrganizationRecipientLink;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.organization.repository.OrganizationRepository;
@@ -21,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +35,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -37,10 +45,13 @@ class AdminServiceTest {
 
     @Mock UserRepository userRepository;
     @Mock CareRecipientRepository careRecipientRepository;
+    @Mock CareRecipientDisabilityRepository disabilityRepository;
+    @Mock CareGuardianRepository careGuardianRepository;
+    @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock OrganizationRepository organizationRepository;
     @Mock OrganizationMemberRepository organizationMemberRepository;
-    @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock DailyRecordRepository dailyRecordRepository;
+    @Mock CareRecipientNumberGenerator numberGenerator;
     @Mock PasswordEncoder passwordEncoder;
     @Mock ConsentRepository consentRepository;
     @Mock PublicCodeGenerator publicCodeGenerator;
@@ -143,5 +154,106 @@ class AdminServiceTest {
         assertThat(list.get(0).ownerName()).isEqualTo("홍길동");
         assertThat(list.get(1).name()).isEqualTo("기관2");
         assertThat(list.get(1).ownerName()).isNull();
+    }
+
+    @Test
+    @DisplayName("슈퍼 어드민이 당사자를 생성하면 고유 코드가 발급되고 보호자 정보는 null로 등록된다")
+    void createCareRecipient_success() {
+        given(numberGenerator.generate()).willReturn("R-TEST1234");
+        given(careRecipientRepository.save(any(CareRecipient.class))).willAnswer(inv -> {
+            CareRecipient r = inv.getArgument(0);
+            ReflectionTestUtils.setField(r, "id", 200L);
+            ReflectionTestUtils.setField(r, "createdAt", LocalDateTime.now());
+            return r;
+        });
+
+        CreateAdminCareRecipientRequest request = new CreateAdminCareRecipientRequest(
+                "김철수",
+                LocalDate.of(2005, 5, 5),
+                Gender.MALE,
+                List.of(DisabilityType.AUTISM),
+                1,
+                null
+        );
+
+        AdminCareRecipientResponse response = adminService.createCareRecipient(request);
+
+        assertThat(response.id()).isEqualTo(200L);
+        assertThat(response.name()).isEqualTo("김철수");
+        assertThat(response.careRecipientNumber()).isEqualTo("R-TEST1234");
+        assertThat(response.gender()).isEqualTo(Gender.MALE);
+        assertThat(response.disabilityTypes()).containsExactly(DisabilityType.AUTISM);
+        assertThat(response.guardianName()).isNull();
+        assertThat(response.guardianEmail()).isNull();
+        assertThat(response.organizationName()).isNull();
+        verify(disabilityRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("전체 당사자 목록 조회 시 보호자 정보 및 소속 기관 정보가 함께 매핑된다")
+    void getCareRecipients_withMapping() {
+        CareRecipient r1 = CareRecipient.builder()
+                .careRecipientNumber("R-AAAA1111")
+                .name("이영희")
+                .birthDate(LocalDate.of(2010, 1, 1))
+                .gender(Gender.FEMALE)
+                .build();
+        ReflectionTestUtils.setField(r1, "id", 101L);
+        ReflectionTestUtils.setField(r1, "createdAt", LocalDateTime.now());
+
+        CareRecipient r2 = CareRecipient.builder()
+                .careRecipientNumber("R-BBBB2222")
+                .name("박민수")
+                .birthDate(LocalDate.of(2012, 2, 2))
+                .gender(Gender.MALE)
+                .build();
+        ReflectionTestUtils.setField(r2, "id", 102L);
+        ReflectionTestUtils.setField(r2, "createdAt", LocalDateTime.now());
+
+        given(careRecipientRepository.findAllByOrderByCreatedAtDesc()).willReturn(List.of(r1, r2));
+
+        // disabilities
+        CareRecipientDisability d1 = CareRecipientDisability.builder()
+                .careRecipientId(101L).disabilityType(DisabilityType.INTELLECTUAL).build();
+        given(disabilityRepository.findByCareRecipientIdIn(List.of(101L, 102L))).willReturn(List.of(d1));
+
+        // guardian mapping (r1만 보호자 있음)
+        CareGuardian guardianLink = CareGuardian.builder()
+                .careRecipientId(101L).guardianId(50L).type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
+        given(careGuardianRepository.findByCareRecipientIdInAndTypeAndStatus(
+                List.of(101L, 102L), GuardianType.PRIMARY, GuardianStatus.ACTIVE
+        )).willReturn(List.of(guardianLink));
+
+        User guardianUser = User.builder().email("guardian@test.com").name("보호자김").phone("010-0000-0000").role(UserRole.GUARDIAN).build();
+        ReflectionTestUtils.setField(guardianUser, "id", 50L);
+        given(userRepository.findAllById(List.of(50L))).willReturn(List.of(guardianUser));
+
+        // organization mapping (r1만 기관 연결됨)
+        OrganizationRecipientLink orgLink = OrganizationRecipientLink.builder()
+                .organizationId(30L).careRecipientId(101L).requestedById(50L).build();
+        ReflectionTestUtils.setField(orgLink, "status", LinkStatus.ACCEPTED);
+        given(organizationRecipientLinkRepository.findByCareRecipientIdInAndStatus(
+                List.of(101L, 102L), LinkStatus.ACCEPTED
+        )).willReturn(List.of(orgLink));
+
+        Organization org = Organization.builder().name("나눔복지관").organizationCode("ORG123").build();
+        ReflectionTestUtils.setField(org, "id", 30L);
+        given(organizationRepository.findAllById(List.of(30L))).willReturn(List.of(org));
+
+        List<AdminCareRecipientResponse> result = adminService.getCareRecipients(null);
+
+        assertThat(result).hasSize(2);
+        AdminCareRecipientResponse first = result.get(0);
+        assertThat(first.name()).isEqualTo("이영희");
+        assertThat(first.guardianName()).isEqualTo("보호자김");
+        assertThat(first.guardianEmail()).isEqualTo("guardian@test.com");
+        assertThat(first.organizationName()).isEqualTo("나눔복지관");
+        assertThat(first.disabilityTypes()).containsExactly(DisabilityType.INTELLECTUAL);
+
+        AdminCareRecipientResponse second = result.get(1);
+        assertThat(second.name()).isEqualTo("박민수");
+        assertThat(second.guardianName()).isNull();
+        assertThat(second.guardianEmail()).isNull();
+        assertThat(second.organizationName()).isNull();
     }
 }

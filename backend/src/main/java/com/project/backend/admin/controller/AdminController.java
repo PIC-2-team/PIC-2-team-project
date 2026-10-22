@@ -112,6 +112,21 @@ public class AdminController {
         return ApiResponse.ok(adminService.getOrganizations());
     }
 
+    @Operation(summary = "당사자 등록 (고유 코드 발급)")
+    @PostMapping("/care-recipients")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<AdminCareRecipientResponse> createCareRecipient(
+            @Valid @RequestBody CreateAdminCareRecipientRequest request) {
+        return ApiResponse.ok(adminService.createCareRecipient(request));
+    }
+
+    @Operation(summary = "당사자 목록 및 고유 코드 조회")
+    @GetMapping("/care-recipients")
+    public ApiResponse<List<AdminCareRecipientResponse>> getCareRecipients(
+            @RequestParam(required = false) String search) {
+        return ApiResponse.ok(adminService.getCareRecipients(search));
+    }
+
     @Operation(summary = "특정 기관의 생활기록 조회")
     @GetMapping("/organizations/{id}/records")
     public ApiResponse<List<AdminRecordSummaryResponse>> getOrganizationRecords(@PathVariable Long id) {

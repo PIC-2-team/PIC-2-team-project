@@ -4,9 +4,18 @@ import com.project.backend.admin.dto.*;
 import com.project.backend.auth.entity.Consent;
 import com.project.backend.auth.repository.ConsentRepository;
 import com.project.backend.auth.service.PublicCodeGenerator;
+import com.project.backend.care.entity.CareGuardian;
 import com.project.backend.care.entity.CareRecipient;
+import com.project.backend.care.entity.CareRecipientDisability;
+import com.project.backend.care.entity.DisabilityType;
+import com.project.backend.care.entity.GuardianStatus;
+import com.project.backend.care.entity.GuardianType;
+import com.project.backend.care.repository.CareGuardianRepository;
+import com.project.backend.care.repository.CareRecipientDisabilityRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.care.service.CareRecipientNumberGenerator;
 import com.project.backend.common.exception.ApiException;
+import com.project.backend.organization.entity.LinkStatus;
 import com.project.backend.organization.entity.Organization;
 import com.project.backend.organization.entity.OrganizationMember;
 import com.project.backend.organization.entity.OrganizationMemberStatus;
@@ -42,10 +51,13 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final CareRecipientRepository careRecipientRepository;
+    private final CareRecipientDisabilityRepository disabilityRepository;
+    private final CareGuardianRepository careGuardianRepository;
+    private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     private final OrganizationRepository organizationRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
-    private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     private final DailyRecordRepository dailyRecordRepository;
+    private final CareRecipientNumberGenerator numberGenerator;
     private final PasswordEncoder passwordEncoder;
     private final ConsentRepository consentRepository;
     private final PublicCodeGenerator publicCodeGenerator;
@@ -176,6 +188,93 @@ public class AdminService {
                         org.getOwnerId() != null ? ownerNameMap.get(org.getOwnerId()) : null
                 ))
                 .toList();
+    }
+
+    @Transactional
+    public AdminCareRecipientResponse createCareRecipient(CreateAdminCareRecipientRequest request) {
+        String code = numberGenerator.generate();
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber(code)
+                .name(request.name().trim())
+                .birthDate(request.birthDate())
+                .gender(request.gender())
+                .disabilityGrade(request.disabilityGrade())
+                .otherDisabilityType(request.otherDisabilityType())
+                .build();
+        recipient = careRecipientRepository.save(recipient);
+
+        Long recipientId = recipient.getId();
+        List<DisabilityType> disabilities = request.disabilityTypes() != null ? request.disabilityTypes() : List.of();
+        if (!disabilities.isEmpty()) {
+            disabilityRepository.saveAll(disabilities.stream()
+                    .map(dt -> CareRecipientDisability.builder()
+                            .careRecipientId(recipientId)
+                            .disabilityType(dt)
+                            .build())
+                    .toList());
+        }
+
+        return AdminCareRecipientResponse.of(recipient, disabilities, null, null, null);
+    }
+
+    public List<AdminCareRecipientResponse> getCareRecipients(String search) {
+        List<CareRecipient> recipients;
+        if (search != null && !search.trim().isEmpty()) {
+            String keyword = search.trim();
+            recipients = careRecipientRepository
+                    .findByNameContainingIgnoreCaseOrCareRecipientNumberContainingIgnoreCaseOrderByCreatedAtDesc(keyword, keyword);
+        } else {
+            recipients = careRecipientRepository.findAllByOrderByCreatedAtDesc();
+        }
+
+        if (recipients.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> recipientIds = recipients.stream().map(CareRecipient::getId).toList();
+
+        // 장애유형 매핑
+        Map<Long, List<DisabilityType>> disabilityMap = disabilityRepository
+                .findByCareRecipientIdIn(recipientIds).stream()
+                .collect(Collectors.groupingBy(
+                        CareRecipientDisability::getCareRecipientId,
+                        Collectors.mapping(CareRecipientDisability::getDisabilityType, Collectors.toList())
+                ));
+
+        // 주 보호자 매핑
+        List<CareGuardian> primaryGuardians = careGuardianRepository
+                .findByCareRecipientIdInAndTypeAndStatus(recipientIds, GuardianType.PRIMARY, GuardianStatus.ACTIVE);
+        Map<Long, Long> recipientToGuardianId = primaryGuardians.stream()
+                .collect(Collectors.toMap(CareGuardian::getCareRecipientId, CareGuardian::getGuardianId, (a, b) -> a));
+
+        List<Long> guardianUserIds = new ArrayList<>(recipientToGuardianId.values());
+        Map<Long, User> guardianUserMap = guardianUserIds.isEmpty() ? Collections.emptyMap() :
+                userRepository.findAllById(guardianUserIds).stream()
+                        .collect(Collectors.toMap(User::getId, u -> u));
+
+        // 승인된 기관 매핑
+        List<OrganizationRecipientLink> orgLinks = organizationRecipientLinkRepository
+                .findByCareRecipientIdInAndStatus(recipientIds, LinkStatus.ACCEPTED);
+        Map<Long, Long> recipientToOrgId = orgLinks.stream()
+                .collect(Collectors.toMap(OrganizationRecipientLink::getCareRecipientId, OrganizationRecipientLink::getOrganizationId, (a, b) -> a));
+
+        List<Long> orgIds = new ArrayList<>(recipientToOrgId.values());
+        Map<Long, String> orgNameMap = orgIds.isEmpty() ? Collections.emptyMap() :
+                organizationRepository.findAllById(orgIds).stream()
+                        .collect(Collectors.toMap(Organization::getId, Organization::getName));
+
+        return recipients.stream().map(r -> {
+            List<DisabilityType> dtList = disabilityMap.getOrDefault(r.getId(), List.of());
+            Long guardianId = recipientToGuardianId.get(r.getId());
+            User guardian = guardianId != null ? guardianUserMap.get(guardianId) : null;
+            String guardianName = guardian != null ? guardian.getName() : null;
+            String guardianEmail = guardian != null ? guardian.getEmail() : null;
+
+            Long orgId = recipientToOrgId.get(r.getId());
+            String orgName = orgId != null ? orgNameMap.get(orgId) : null;
+
+            return AdminCareRecipientResponse.of(r, dtList, guardianName, guardianEmail, orgName);
+        }).toList();
     }
 
     @Transactional

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import * as AuthContext from '../contexts/AuthContext';
 import type { User } from '../types/user';
+import type { AdminCareRecipient } from '../api/admin';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -44,6 +45,37 @@ const MOCK_ORGS = [
   { id: 2, name: '미등록센터', organizationCode: 'NOT999', ownerId: null, ownerName: null, createdAt: '2026-10-19T10:00:00Z' },
 ];
 
+const MOCK_RECIPIENTS: AdminCareRecipient[] = [
+  {
+    id: 1,
+    careRecipientNumber: 'R-KNU12345',
+    name: '김당사',
+    birthDate: '2010-05-15',
+    gender: 'MALE',
+    disabilityTypes: ['AUTISM'],
+    disabilityGrade: 1,
+    otherDisabilityType: null,
+    guardianName: '김보호',
+    guardianEmail: 'guardian1@test.com',
+    organizationName: '행복복지관',
+    createdAt: '2026-10-18T11:00:00Z',
+  },
+  {
+    id: 2,
+    careRecipientNumber: 'R-NEW99999',
+    name: '이신규',
+    birthDate: '2015-08-20',
+    gender: 'FEMALE',
+    disabilityTypes: ['INTELLECTUAL'],
+    disabilityGrade: null,
+    otherDisabilityType: null,
+    guardianName: null,
+    guardianEmail: null,
+    organizationName: null,
+    createdAt: '2026-10-20T10:00:00Z',
+  },
+];
+
 function renderAdminPage(initialEntries = ['/admin']) {
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
     user: { id: 999, name: '최고관리자', email: 'admin@samgyeol.com', role: 'ADMIN' } as User,
@@ -74,6 +106,9 @@ it('통계 및 하단바 탭을 렌더링하고, 사용자 목록 탭으로 전�
     }
     if (url.includes('/api/admin/organizations')) {
       return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/care-recipients')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_RECIPIENTS }), { status: 200 });
     }
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
@@ -108,6 +143,9 @@ it('역할 및 기관 필터를 변경하면 해당 조건을 포함하여 사�
     }
     if (url.includes('/api/admin/organizations')) {
       return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/care-recipients')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_RECIPIENTS }), { status: 200 });
     }
     return new Response(JSON.stringify({ success: false }), { status: 404 });
   });
@@ -328,4 +366,148 @@ it('더보기 탭으로 이동하면 관리자 정보 및 시스템 현황이 �
   expect(screen.getByText('플랫폼 버전')).toBeInTheDocument();
   expect(screen.getByText('v1.0.0')).toBeInTheDocument();
   expect(screen.getByText('정상 동작 중')).toBeInTheDocument();
+});
+
+it('당사자 고유 코드 목록을 조회하고 신규 당사자 코드를 발급할 수 있다', async () => {
+  let recipients = [...MOCK_RECIPIENTS];
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+
+    if (url.includes('/api/admin/stats')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_STATS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/users')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    if (url.endsWith('/api/admin/care-recipients') && method === 'POST') {
+      const newRecipient: AdminCareRecipient = {
+        id: 3,
+        careRecipientNumber: 'R-GEN77777',
+        name: '박희망',
+        birthDate: '2018-03-10',
+        gender: 'MALE',
+        disabilityTypes: ['AUTISM'],
+        disabilityGrade: 1,
+        otherDisabilityType: null,
+        guardianName: null,
+        guardianEmail: null,
+        organizationName: null,
+        createdAt: '2026-10-21T09:00:00Z',
+      };
+      recipients = [newRecipient, ...recipients];
+      return new Response(JSON.stringify({ success: true, data: newRecipient }), { status: 201 });
+    }
+    if (url.includes('/api/admin/care-recipients')) {
+      return new Response(JSON.stringify({ success: true, data: recipients }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+
+  renderAdminPage();
+
+  // 기존 당사자 렌더링 확인
+  expect(await screen.findByText('김당사')).toBeInTheDocument();
+  expect(screen.getByText('R-KNU12345')).toBeInTheDocument();
+  expect(screen.getByText('보호자: 김보호')).toBeInTheDocument();
+  expect(screen.getByText('소속: 행복복지관')).toBeInTheDocument();
+
+  expect(screen.getByText('이신규')).toBeInTheDocument();
+  expect(screen.getByText('R-NEW99999')).toBeInTheDocument();
+  expect(screen.getByText('미연결 (발급 완료)')).toBeInTheDocument();
+
+  // 신규 당사자 등록 폼 작성
+  fireEvent.change(screen.getByLabelText('신규 당사자 이름'), { target: { value: '박희망' } });
+  fireEvent.change(screen.getByLabelText('당사자 생년월일'), { target: { value: '2018-03-10' } });
+  fireEvent.click(screen.getByLabelText('자폐성 장애'));
+  fireEvent.change(screen.getByPlaceholderText('예: 1 또는 2'), { target: { value: '1' } });
+
+  // 발급 버튼 클릭
+  fireEvent.click(screen.getByRole('button', { name: '당사자 고유 코드 발급' }));
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/admin/care-recipients', expect.objectContaining({
+    method: 'POST',
+    body: JSON.stringify({
+      name: '박희망',
+      birthDate: '2018-03-10',
+      gender: 'MALE',
+      disabilityTypes: ['AUTISM'],
+      disabilityGrade: 1,
+      otherDisabilityType: null,
+    }),
+  }));
+
+  // 발급 완료 피드백 및 목록 업데이트 확인
+  expect(await screen.findByText(/'박희망' 당사자 고유 코드 발급 완료/)).toBeInTheDocument();
+  expect(screen.getAllByText('R-GEN77777')).toHaveLength(2);
+  expect(screen.getByRole('button', { name: '코드 복사' })).toBeInTheDocument();
+});
+
+it('당사자 고유 코드 검색창에 입력 후 검색하면 검색 쿼리로 요청한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/admin/stats')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_STATS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/users')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/care-recipients')) {
+      return new Response(JSON.stringify({ success: true, data: [MOCK_RECIPIENTS[0]] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+
+  renderAdminPage();
+
+  await screen.findByText('김당사');
+
+  const searchInput = screen.getByLabelText('당사자 검색');
+  fireEvent.change(searchInput, { target: { value: '김당사' } });
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/admin/care-recipients?search=%EA%B9%80%EB%8B%B9%EC%82%AC'),
+    expect.anything()
+  );
+});
+
+it('고유 코드 복사 버튼 클릭 시 클립보드에 복사되고 복사됨 피드백이 표시된다', async () => {
+  const writeTextMock = vi.fn().mockResolvedValue(undefined);
+  Object.assign(navigator, {
+    clipboard: { writeText: writeTextMock },
+  });
+
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/admin/stats')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_STATS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/users')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_USERS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/organizations')) {
+      return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }), { status: 200 });
+    }
+    if (url.includes('/api/admin/care-recipients')) {
+      return new Response(JSON.stringify({ success: true, data: [MOCK_RECIPIENTS[0]] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+
+  renderAdminPage();
+
+  await screen.findByText('김당사');
+
+  const copyBtn = screen.getByRole('button', { name: '김당사 고유 코드 복사' });
+  fireEvent.click(copyBtn);
+
+  expect(writeTextMock).toHaveBeenCalledWith('R-KNU12345');
+  expect(await screen.findByText('복사됨!')).toBeInTheDocument();
 });
