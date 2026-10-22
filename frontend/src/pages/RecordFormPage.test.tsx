@@ -48,7 +48,7 @@ it('텍스트를 AI 초안으로 바꾸고 자동 분류를 확인한 뒤 기록
 
   fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '아침에 밥을 먹었어요.' } });
-  fireEvent.click(screen.getByRole('button', { name: 'AI로 정리하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
 
   expect(await screen.findByText('AI가 이렇게 정리했어요')).toBeInTheDocument();
   expect(screen.getByLabelText('정리된 기록')).toHaveValue('아침 식사를 했습니다.');
@@ -76,7 +76,7 @@ it('돌봄정보 함께 표시를 선택하면 고정 기록으로 저장한다'
 
   fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '산책했어요.' } });
-  fireEvent.click(screen.getByRole('button', { name: 'AI로 정리하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
   await screen.findByText('AI가 이렇게 정리했어요');
 
   const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
@@ -100,7 +100,7 @@ it('지원인력은 고정 선택 없이 생활기록을 저장할 수 있다', 
 
   fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '산책했어요.' } });
-  fireEvent.click(screen.getByRole('button', { name: 'AI로 정리하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
 
   await screen.findByText('AI가 이렇게 정리했어요');
   expect(screen.queryByRole('checkbox', { name: '돌봄정보에도 표시' })).not.toBeInTheDocument();
@@ -115,7 +115,7 @@ it('텍스트 초안 생성에 실패하면 원문을 보존하고 오류를 표
   renderPage();
   fireEvent.click(screen.getByRole('button', { name: '텍스트로 기록하기' }));
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '관찰한 내용' } });
-  fireEvent.click(screen.getByRole('button', { name: 'AI로 정리하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '정리하기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('AI 서비스를 사용할 수 없습니다.');
   expect(screen.getByLabelText('기록할 내용')).toHaveValue('관찰한 내용');
 });
