@@ -14,60 +14,155 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 24px 20px 32px;
+  gap: 24px;
+  padding: 24px 18px 40px;
   box-sizing: border-box;
 }
 
-/* 브랜드 헤더 */
-.brandHeader {
+/* 브랜드 히어로 섹션 */
+.heroSection {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  text-align: center;
+  padding: 12px 6px 4px;
   gap: 12px;
-  padding: 8px 0 4px;
 }
 
-.brandSymbol {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--soft);
+.heroLogoCircle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #e8f5ee;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(60, 171, 126, 0.12);
+  margin-bottom: 2px;
 }
 
-.brandMeta {
-  display: flex;
-  flex-direction: column;
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #cde2d3;
+  border-radius: 20px;
 }
 
 .brandName {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: -0.5px;
   color: var(--green);
-  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.badgeDivider {
+  color: #bdccc1;
+  font-size: 12px;
 }
 
 .brandSlogan {
   font-size: 12px;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* 페이지 제목 및 계층 */
+.heroTitle {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  word-break: keep-all;
+}
+
+.heroDescription {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  word-break: keep-all;
+}
+
+/* 핵심 가치 3포인트 카드 */
+.featuresSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.featureCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.featureIconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.featureText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.featureTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+
+.featureDesc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+/* 로그인 카드 섹션 */
+.loginCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 20px 24px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
 .heading {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.heading h1 {
+.heading h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   line-height: 1.3;
   letter-spacing: -0.4px;
   color: var(--ink);
@@ -75,23 +170,23 @@
 
 .subheading {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 /* 컴팩트 안내 카드 */
 .noticeCard {
-  padding: 12px 14px;
+  padding: 11px 13px;
   border: 1px solid #cde2d3;
   border-left: 3px solid var(--green);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--soft);
   box-sizing: border-box;
 }
 
 .noticeText {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: #2b5742;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -101,14 +196,14 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 15px;
 }
 
 .form label {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 650;
   color: var(--ink);
 }
@@ -123,7 +218,7 @@
   background: white;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -148,12 +243,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 11px 13px;
   background: #fdf2f2;
   border: 1px solid #f8b4b4;
-  border-radius: 10px;
+  border-radius: 9px;
   color: #9b1c1c;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.4;
   box-sizing: border-box;
 }
@@ -221,47 +316,6 @@
   }
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-.googleButton {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  min-width: 0;
-}
-
-.signup {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  text-align: center;
-}
-
-.signupLink {
-  color: var(--green);
-  font-weight: 600;
-  text-decoration: underline;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 4px;
-}
-
 .findAccountLinks {
   display: flex;
   justify-content: center;
@@ -292,6 +346,55 @@
 .linkDivider {
   color: var(--line);
   user-select: none;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.googleButton {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  min-width: 0;
+}
+
+.signupWrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.signup {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.signupLink {
+  color: var(--green);
+  font-weight: 700;
+  text-decoration: underline;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
 }
 
 /* Modal styles */
