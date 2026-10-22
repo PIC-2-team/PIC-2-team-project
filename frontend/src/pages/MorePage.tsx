@@ -27,6 +27,7 @@ const BASE_MENU_SECTIONS: MenuSection[] = [
   {
     title: '서비스',
     items: [
+      { label: '알림함', to: '/notifications' },
       { label: '서비스 이용약관' },
       { label: '개인정보처리방침' },
       { label: '오픈소스 라이선스' },

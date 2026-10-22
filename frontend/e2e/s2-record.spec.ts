@@ -54,7 +54,7 @@ test.describe('S2 — 로그인 → 당사자 등록 → 기록 작성', () => {
     await page.locator('textarea').fill('오늘 밥을 잘 먹었어요');
 
     // AI 정리 요청
-    await page.getByRole('button', { name: 'AI로 정리하기' }).click();
+    await page.getByRole('button', { name: '정리하기' }).click();
 
     // review 단계 — 저장 버튼 클릭
     await page.getByRole('button', { name: '기록 저장하기' }).click();

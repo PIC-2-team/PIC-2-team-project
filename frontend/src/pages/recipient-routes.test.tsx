@@ -51,7 +51,7 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
     fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
     fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
-    await screen.findByText('테스트 당사자님');
+    await screen.findByText(/테스트 당사자/);
     await memoryRouter.navigate(path);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients',
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) })));
@@ -109,7 +109,7 @@ it('기록 화면에서 세션 갱신에 실패하면 로그인 화면으로 보
   fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
   fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
   fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
-  await screen.findByText('테스트 당사자님');
+  await screen.findByText(/테스트 당사자/);
 
   expireSession = true;
   await memoryRouter.navigate('/records');

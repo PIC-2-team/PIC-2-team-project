@@ -193,3 +193,16 @@ it('사용자 이름/역할 영역을 클릭하면 사용자 프로필 모달이
   expect(screen.getAllByText('worker@test.com').length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: '확인' })).toBeInTheDocument();
 });
+
+it('서비스 섹션에 알림함 메뉴가 표시되고 클릭 시 /notifications로 이동한다', () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const notifItem = screen.getByText('알림함');
+  expect(notifItem).toBeInTheDocument();
+  fireEvent.click(notifItem);
+  expect(mockNavigate).toHaveBeenCalledWith('/notifications');
+});
