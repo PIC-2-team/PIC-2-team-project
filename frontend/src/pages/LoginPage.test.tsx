@@ -48,8 +48,16 @@ function submit() {
 
 it('로그인 화면에서 이용 동의로 돌아가는 링크를 제공하지 않는다', () => {
   renderLogin();
-  expect(screen.getByText('삶결')).toBeInTheDocument();
+  expect(screen.getAllByText('삶결').length).toBeGreaterThanOrEqual(1);
   expect(screen.queryByRole('link', { name: '이용 동의로 돌아가기' })).not.toBeInTheDocument();
+});
+
+it('브랜드 심볼, 슬로건 및 로그인 헤더가 표시된다', () => {
+  renderLogin();
+  expect(screen.getByText('삶의 결을 잇다')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 1, name: '로그인' })).toBeInTheDocument();
+  expect(screen.getByText('서비스 이용을 위해 로그인해 주세요')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/consent');
 });
 
 it.each([

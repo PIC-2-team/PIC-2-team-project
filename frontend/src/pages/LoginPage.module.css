@@ -8,6 +8,7 @@
   color: var(--ink);
   font-size: 16px;
   line-height: 1.6;
+  box-sizing: border-box;
 }
 
 .content {
@@ -15,35 +16,92 @@
   flex-direction: column;
   gap: 18px;
   padding: 24px 20px 32px;
+  box-sizing: border-box;
+}
+
+/* 브랜드 헤더 */
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+
+.brandSymbol {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brandMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--green);
+  line-height: 1.2;
+}
+
+.brandSlogan {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* 페이지 제목 및 계층 */
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .heading h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.4px;
+  color: var(--ink);
 }
 
-.eyebrow {
-  margin-bottom: 5px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.notice {
-  padding: 20px;
-  border: 1px solid #cde2d3;
-  border-radius: 16px;
-  background: var(--soft);
+.subheading {
+  margin: 0;
   font-size: 14px;
+  color: var(--muted);
+}
+
+/* 컴팩트 안내 카드 */
+.noticeCard {
+  padding: 12px 14px;
+  border: 1px solid #cde2d3;
+  border-left: 3px solid var(--green);
+  border-radius: 10px;
+  background: var(--soft);
+  box-sizing: border-box;
+}
+
+.noticeText {
+  margin: 0;
+  font-size: 13px;
+  color: #2b5742;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
+/* 폼 스타일 */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .form label {
@@ -52,31 +110,82 @@
   gap: 7px;
   font-size: 14px;
   font-weight: 650;
+  color: var(--ink);
 }
 
 .form input {
   width: 100%;
   min-width: 0;
-  min-height: 46px;
-  padding: 12px;
-  border: 1px solid #bdccc1;
-  border-radius: 9px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1.5px solid #d0d7de;
+  border-radius: 10px;
   background: white;
   color: var(--ink);
   font: inherit;
   font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.form input::placeholder {
+  color: #9aa5b1;
+  font-size: 14px;
+}
+
+.form input:hover {
+  border-color: #adb5bd;
+}
+
+.form input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(60, 171, 126, 0.18);
+}
+
+/* 에러 경고 카드 */
+.errorAlert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fdf2f2;
+  border: 1px solid #f8b4b4;
+  border-radius: 10px;
+  color: #9b1c1c;
+  font-size: 14px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.alertIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #e02424;
+}
+
+/* 사각형 규격 CTA 버튼 */
 .submit {
-  min-height: 52px;
-  padding: 14px 20px;
+  min-height: 50px;
+  padding: 12px 20px;
   border: 0;
-  border-radius: 50px;
+  border-radius: 12px;
   background: var(--green);
-  color: #102e22;
+  color: #ffffff;
   font: inherit;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.submit:not(:disabled):hover {
+  filter: brightness(0.92);
 }
 
 .submit:disabled {
@@ -85,19 +194,31 @@
   cursor: not-allowed;
 }
 
-.submit:not(:disabled):hover {
-  filter: brightness(0.93);
-}
-
-.submit:focus-visible,
-.form input:focus-visible {
+.submit:focus-visible {
   outline: 2px solid var(--green);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
-.error {
-  color: #a23d38;
-  font-size: 14px;
+.loadingWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .divider {
@@ -119,20 +240,33 @@
 .googleButton {
   display: flex;
   justify-content: center;
+  width: 100%;
+  min-height: 44px;
   min-width: 0;
 }
 
 .signup {
+  margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
+}
+
+.signupLink {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
 }
 
 .findAccountLinks {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-size: 13px;
   color: var(--muted);
 }
@@ -140,7 +274,10 @@
 .textBtn {
   background: none;
   border: none;
-  padding: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
   color: var(--muted);
   font: inherit;
   font-size: 13px;
