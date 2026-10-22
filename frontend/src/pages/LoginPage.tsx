@@ -204,10 +204,6 @@ export function LoginPage() {
               <span className={styles.brandSlogan}>삶의 결을 잇다</span>
             </div>
             <h1 className={styles.heroTitle}>보호자가 없어도 이어지는 맞춤 돌봄 기록</h1>
-            <p className={styles.heroDescription}>
-              발달장애인 당사자의 일상과 특성을 안전하게 기록하고,<br />
-              새로운 돌봄 제공자에게 따뜻하게 전달합니다.
-            </p>
           </section>
 
           {/* 로그인 카드 섹션 */}
