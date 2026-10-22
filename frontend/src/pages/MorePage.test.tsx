@@ -213,3 +213,23 @@ it('문의하기 클릭 시 window.open이 mailto: URL로 호출된다', () => {
   fireEvent.click(screen.getByRole('button', { name: '문의하기' }));
   expect(openSpy).toHaveBeenCalledWith(expect.stringMatching(/^mailto:/), '_blank', 'noopener,noreferrer');
 });
+
+it('회원 탈퇴 버튼이 로그아웃 버튼 아래에 표시된다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  const withdrawBtn = screen.getByRole('button', { name: /회원 탈퇴/ });
+  expect(withdrawBtn).toBeInTheDocument();
+});
+
+it('회원 탈퇴 클릭 시 탈퇴 확인 다이얼로그가 표시된다', async () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: /회원 탈퇴/ }));
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+  expect(screen.getByText(/정말 탈퇴하시겠습니까/)).toBeInTheDocument();
+});
+
+it('탈퇴 다이얼로그 취소 시 logout이 호출되지 않는다', async () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: /회원 탈퇴/ }));
+  fireEvent.click(await screen.findByRole('button', { name: '취소' }));
+  expect(mockLogout).not.toHaveBeenCalled();
+});
