@@ -26,6 +26,14 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             다시 시도
           </button>
+          <button
+            type="button"
+            onClick={() => { window.location.href = '/home'; }}
+            className="btn"
+            style={{ marginTop: '0.5rem' }}
+          >
+            홈으로 이동
+          </button>
         </main></div>
       );
     }
