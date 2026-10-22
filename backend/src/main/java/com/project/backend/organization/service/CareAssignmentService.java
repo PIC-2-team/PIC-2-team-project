@@ -9,6 +9,7 @@ import com.project.backend.organization.entity.LinkStatus;
 import com.project.backend.organization.entity.OrganizationMemberStatus;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
+import com.project.backend.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class CareAssignmentService {
     private final CareAssignmentRepository careAssignmentRepository;
     private final OrganizationMemberRepository organizationMemberRepository;
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    private final NotificationService notificationService;
 
     public CareAssignmentResponse assign(Long organizationId, Long requesterId, AssignSupportWorkerRequest request) {
         if (!organizationMemberRepository.existsByOrganizationIdAndUserIdAndStatus(
@@ -49,6 +51,11 @@ public class CareAssignmentService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .build());
+
+        if (notificationService != null) {
+            notificationService.notifyAssignmentChanged(request.supportWorkerId(), "새 당사자가 배정되었습니다.");
+            notificationService.notifyAssignmentChangedGuardians(request.careRecipientId(), "새 활동지원사가 배정되었습니다.");
+        }
 
         return CareAssignmentResponse.from(assignment);
     }

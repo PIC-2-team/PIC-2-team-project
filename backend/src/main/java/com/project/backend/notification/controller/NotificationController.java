@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Tag(name = "Notifications")
 @RestController
 @RequestMapping("/api/notifications")
@@ -27,6 +29,19 @@ public class NotificationController {
             @RequestParam(required = false) Boolean read,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
         return ApiResponse.ok(service.list(userId, read, page, pageSize));
+    }
+
+    @Operation(summary = "안 읽은 알림 개수 조회")
+    @GetMapping("/unread-count")
+    public ApiResponse<Map<String, Long>> countUnread(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(Map.of("unreadCount", service.countUnread(userId)));
+    }
+
+    @Operation(summary = "내 알림 전체 읽음 처리")
+    @PatchMapping("/read-all")
+    public ApiResponse<Map<String, Object>> markAllRead(@AuthenticationPrincipal Long userId) {
+        int count = service.markAllRead(userId);
+        return ApiResponse.ok(Map.of("updatedCount", count));
     }
 
     @Operation(summary = "내 알림 읽음 상태 변경")
