@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AdminDashboardPage } from './AdminDashboardPage';
@@ -174,6 +174,9 @@ it('역할 및 기관 필터를 변경하면 해당 조건을 포함하여 사�
 });
 
 it('기관 관리에서 기관 목록 조회, 신규 생성, 수정, 삭제가 모두 가능하다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+
   let orgs = [...MOCK_ORGS];
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
@@ -209,8 +212,6 @@ it('기관 관리에서 기관 목록 조회, 신규 생성, 수정, 삭제가 �
     return new Response(JSON.stringify({ success: false, error: { code: 'NOT_FOUND', message: `Unhandled ${method} ${url}` } }), { status: 404 });
   });
 
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
-
   renderAdminPage(['/admin?tab=organizations']);
 
   expect(await screen.findByText('행복복지관')).toBeInTheDocument();
@@ -238,14 +239,20 @@ it('기관 관리에서 기관 목록 조회, 신규 생성, 수정, 삭제가 �
     expect.objectContaining({ method: 'PATCH' })
   );
 
-  // 3. 기관 삭제
+  // 3. 기관 삭제 — ConfirmDialog alertdialog 내 삭제 버튼 클릭 후 DELETE 호출
   const deleteButtons = screen.getAllByRole('button', { name: '삭제' });
   fireEvent.click(deleteButtons[1]);
 
-  expect(fetchMock).toHaveBeenCalledWith(
-    expect.stringMatching(/\/api\/admin\/organizations\/\d+/),
-    expect.objectContaining({ method: 'DELETE' })
-  );
+  const dialog = await screen.findByRole('alertdialog');
+  const { getByRole: getDialogButton } = within(dialog);
+  fireEvent.click(getDialogButton('button', { name: '삭제' }));
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/admin\/organizations\/\d+/),
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
 });
 
 it('사용자 목록에서 신규 사용자 등록 모달을 열고 사용자를 생성할 수 있다', async () => {
@@ -510,4 +517,24 @@ it('고유 코드 복사 버튼 클릭 시 클립보드에 복사되고 복사�
 
   expect(writeTextMock).toHaveBeenCalledWith('R-KNU12345');
   expect(await screen.findByText('복사됨!')).toBeInTheDocument();
+});
+
+it('기관 삭제 버튼 클릭 시 window.confirm이 호출되지 않고 ConfirmDialog가 표시된다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/admin/stats')) return new Response(JSON.stringify({ success: true, data: MOCK_STATS }));
+    if (url.includes('/api/admin/organizations')) return new Response(JSON.stringify({ success: true, data: MOCK_ORGS }));
+    if (url.includes('/api/admin/users')) return new Response(JSON.stringify({ success: true, data: MOCK_USERS }));
+    if (url.includes('/api/admin/care-recipients')) return new Response(JSON.stringify({ success: true, data: MOCK_RECIPIENTS }));
+    return new Response(JSON.stringify({ success: false }), { status: 404 });
+  });
+  renderAdminPage();
+  fireEvent.click(await screen.findByRole('tab', { name: /기관 관리/ }));
+  const deleteButtons = await screen.findAllByRole('button', { name: '삭제' });
+  fireEvent.click(deleteButtons[0]);
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
 });
