@@ -65,6 +65,12 @@ public class AuthService {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 사용 중인 이메일입니다.");
         }
 
+        String cleanPhone = normalizePhone(request.phone());
+        String formattedPhone = formatPhone(cleanPhone);
+        if (userRepository.existsByPhone(formattedPhone) || userRepository.existsByPhone(cleanPhone)) {
+            throw new ApiException(HttpStatus.CONFLICT, "PHONE_ALREADY_EXISTS", "이미 가입된 전화번호입니다.");
+        }
+
         String publicCode = publicCodeGenerator.generate(request.role());
         String encodedPassword = request.password() != null
                 ? passwordEncoder.encode(request.password()) : null;
@@ -73,7 +79,7 @@ public class AuthService {
                 .name(request.name())
                 .email(request.email())
                 .password(encodedPassword)
-                .phone(request.phone())
+                .phone(formattedPhone)
                 .publicCode(publicCode)
                 .role(request.role())
                 .build();
@@ -143,13 +149,17 @@ public class AuthService {
     @Transactional(readOnly = true)
     public FindEmailResponse findEmail(FindEmailRequest request) {
         String cleanInputPhone = normalizePhone(request.phone());
-        java.util.List<User> users = userRepository.findByName(request.name().trim());
-        User matchedUser = users.stream()
-                .filter(u -> u.getPhone() != null && normalizePhone(u.getPhone()).equals(cleanInputPhone))
-                .findFirst()
+        String formattedPhone = formatPhone(cleanInputPhone);
+
+        User user = userRepository.findByPhone(formattedPhone)
+                .or(() -> userRepository.findByPhone(cleanInputPhone))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다."));
 
-        return new FindEmailResponse(maskEmail(matchedUser.getEmail()));
+        if (!user.getName().trim().equals(request.name().trim())) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다.");
+        }
+
+        return new FindEmailResponse(maskEmail(user.getEmail()));
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -190,6 +200,16 @@ public class AuthService {
     private String normalizePhone(String phone) {
         if (phone == null) return "";
         return phone.replaceAll("[^0-9]", "");
+    }
+
+    private String formatPhone(String cleanPhone) {
+        if (cleanPhone == null) return "";
+        if (cleanPhone.length() == 11) {
+            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 7) + "-" + cleanPhone.substring(7);
+        } else if (cleanPhone.length() == 10) {
+            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 6) + "-" + cleanPhone.substring(6);
+        }
+        return cleanPhone;
     }
 
     private String saveRefreshToken(Long userId) {

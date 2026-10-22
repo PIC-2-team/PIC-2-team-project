@@ -109,7 +109,7 @@ class AuthServiceTest {
         given(consentRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
         given(refreshTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        RegisterRequest req = new RegisterRequest(ticket, "홍길동", "test@example.com", "password123", null, UserRole.GUARDIAN);
+        RegisterRequest req = new RegisterRequest(ticket, "홍길동", "test@example.com", "password123", "010-1234-5678", UserRole.GUARDIAN);
         SessionResult<AuthResponse> session = authService.register(req);
 
         assertThat(jwtProvider.isValid(session.data().accessToken())).isTrue();
@@ -128,7 +128,22 @@ class AuthServiceTest {
         given(userRepository.existsByEmail("taken@example.com")).willReturn(true);
 
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest(ticket, "홍길동", "taken@example.com", "pw12345678", null, UserRole.GUARDIAN)))
+                new RegisterRequest(ticket, "홍길동", "taken@example.com", "pw12345678", "010-1234-5678", UserRole.GUARDIAN)))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void register_이미_가입된_전화번호로_CONFLICT_예외() {
+        String ticket = jwtProvider.generateConsentTicket(Map.of(
+                "basicInfo", true, "sensitiveInfo", true,
+                "caregiverShare", false, "marketing", false, "termsVersion", "1.0"
+        ));
+        given(userRepository.existsByEmail("new@example.com")).willReturn(false);
+        given(userRepository.existsByPhone("010-1234-5678")).willReturn(true);
+
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest(ticket, "홍길동", "new@example.com", "pw12345678", "010-1234-5678", UserRole.GUARDIAN)))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.CONFLICT);
     }
@@ -136,7 +151,7 @@ class AuthServiceTest {
     @Test
     void register_유효하지_않은_consentTicket으로_UNAUTHORIZED_예외() {
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("invalid.ticket.value", "홍길동", "test@example.com", "pw12345678", null, UserRole.GUARDIAN)))
+                new RegisterRequest("invalid.ticket.value", "홍길동", "test@example.com", "pw12345678", "010-1234-5678", UserRole.GUARDIAN)))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -208,7 +223,7 @@ class AuthServiceTest {
                 .build();
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        given(userRepository.findByName("홍길동")).willReturn(java.util.List.of(user));
+        given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(user));
 
         FindEmailResponse res = authService.findEmail(new FindEmailRequest("홍길동", "01012345678"));
 
@@ -216,8 +231,25 @@ class AuthServiceTest {
     }
 
     @Test
+    void findEmail_전화번호는_일치하지만_이름이_다르면_NOT_FOUND_예외() {
+        User user = User.builder()
+                .name("이몽룡")
+                .email("lee@example.com")
+                .phone("010-1234-5678")
+                .publicCode("P-ABCD1234")
+                .role(UserRole.GUARDIAN)
+                .build();
+
+        given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.findEmail(new FindEmailRequest("홍길동", "01012345678")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     void findEmail_일치하는_사용자가_없으면_NOT_FOUND_예외() {
-        given(userRepository.findByName("홍길동")).willReturn(java.util.List.of());
+        given(userRepository.findByPhone(anyString())).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.findEmail(new FindEmailRequest("홍길동", "01012345678")))
                 .isInstanceOf(ApiException.class)

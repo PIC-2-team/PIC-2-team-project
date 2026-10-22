@@ -39,6 +39,7 @@ test.describe('S1 — 이메일 회원가입 전체 흐름', () => {
     // 비밀번호 두 필드를 placeholder로 구분
     await page.getByPlaceholder('8자 이상 입력').fill(user.password);
     await page.getByPlaceholder('비밀번호를 다시 입력').fill(user.password);
+    await page.getByLabel('전화번호').fill('010-1234-5678');
 
     await page.getByRole('button', { name: '가입하기' }).click();
 
