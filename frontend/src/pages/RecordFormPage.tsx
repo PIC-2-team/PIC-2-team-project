@@ -266,7 +266,7 @@ export function RecordFormPage() {
                 <section className={styles.voicePanel}>
                   <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
                   <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
-                  <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 유형을 분류해요.'}</p>
+                  <p>{recording ? '녹음을 마치면 AI가 내용을 정리해요.' : '녹음한 음성은 AI가 글로 정리하고 카테고리는 자동으로 분류돼요.'}</p>
                   <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
                     {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? 'AI가 정리하고 있어요…' : '녹음 시작하기'}
                   </button>
@@ -327,7 +327,7 @@ export function RecordFormPage() {
                 <p className={styles.charCount}>{content.length} / 500</p>
               </section>
               <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>AI 분류 · 필요하면 바꿀 수 있어요</h2>
+                <h2 className={styles.sectionTitle}>자동 분류 · 필요하면 바꿀 수 있어요</h2>
                 <div className={styles.chips} role="group" aria-label="기록 유형 선택">
                   {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
                 </div>
