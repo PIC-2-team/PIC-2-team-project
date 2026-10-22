@@ -8,6 +8,7 @@ import { LoginPage } from './LoginPage';
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   delete window.google;
@@ -32,6 +33,7 @@ function renderLogin(path = '/login') {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/home" element={<h1>홈 화면</h1>} />
           <Route path="/agency" element={<h1>기관 화면</h1>} />
+          <Route path="/admin" element={<h1>어드민 화면</h1>} />
           <Route path="/records" element={<h1>기록 화면</h1>} />
           <Route path="/consent" element={<ConsentRoute />} />
         </Routes>
@@ -72,6 +74,13 @@ it.each([
   expect(screen.getByRole('button', { name: '로그인 중…' })).toBeDisabled();
   await screen.findByRole('heading', { name: heading });
   expect(login).toHaveBeenCalledWith({ email: 'test@example.com', password: 'test-password' });
+});
+
+it('이미 로그인된 ADMIN 사용자는 /login 접근 시 /admin으로 자동 리다이렉트된다', async () => {
+  localStorage.setItem('sam_token', 'admin-token');
+  localStorage.setItem('sam_user', JSON.stringify({ id: 1, name: '관리자', email: 'admin@test.com', role: 'ADMIN' }));
+  renderLogin();
+  expect(await screen.findByRole('heading', { name: '어드민 화면' })).toBeInTheDocument();
 });
 
 it('잘못된 인증 정보를 안내하고 재시도할 수 있다', async () => {

@@ -52,6 +52,8 @@ it('텍스트를 AI 초안으로 바꾸고 자동 분류를 확인한 뒤 기록
 
   expect(await screen.findByText('이렇게 정리했어요')).toBeInTheDocument();
   expect(screen.getByLabelText('정리된 기록')).toHaveValue('아침 식사를 했습니다.');
+  expect(screen.getByText('자동 분류 · 필요하면 바꿀 수 있어요')).toBeInTheDocument();
+  expect(screen.queryByText(/AI 분류/)).not.toBeInTheDocument();
   expect(screen.getByText('식사')).toBeInTheDocument();
   await waitFor(() => expect(records.createRecordDraft).toHaveBeenCalledWith(42, {
     inputType: 'TEXT', text: '아침에 밥을 먹었어요.',

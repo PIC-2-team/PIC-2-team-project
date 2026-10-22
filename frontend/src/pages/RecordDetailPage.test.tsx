@@ -232,4 +232,3 @@ it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 �
   expect(await screen.findByText(/#1차 수정 · 이활동 \(활동지원사\)/)).toBeInTheDocument();
   expect(screen.getByText('식사 1차 변경 기록')).toBeInTheDocument();
 });
-

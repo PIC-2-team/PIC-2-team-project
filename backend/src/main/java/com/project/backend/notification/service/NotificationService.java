@@ -47,6 +47,15 @@ public class NotificationService {
         return NotificationResponse.from(notification);
     }
 
+    public int markAllRead(Long userId) {
+        return notifications.markAllReadByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countUnread(Long userId) {
+        return notifications.countByUserIdAndRead(userId, false);
+    }
+
     public void notifySuggestionReceived(Long careRecipientId) {
         var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
                 .map(guardian -> guardian.getGuardianId()).distinct().toList();
@@ -80,6 +89,42 @@ public class NotificationService {
                 .map(guardian -> guardian.getGuardianId()).distinct().toList();
         for (Long guardianId : guardianIds) {
             notifyInformationRequest(guardianId, "새 정보 요청이 도착했습니다.");
+        }
+    }
+
+    public void notifyAssignmentChanged(Long userId, String message) {
+        User user = users.findById(userId).orElse(null);
+        if (user != null && user.isAssignmentChanged()) {
+            notifications.save(new Notification(userId, NotificationType.ASSIGNMENT_CHANGED,
+                    message, clock.instant()));
+        }
+    }
+
+    public void notifyAssignmentChangedGuardians(Long careRecipientId, String message) {
+        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
+                .map(guardian -> guardian.getGuardianId()).distinct().toList();
+        for (Long guardianId : guardianIds) {
+            notifyAssignmentChanged(guardianId, message);
+        }
+    }
+
+    public void notifyRecordRequest(Long supportWorkerId, String message) {
+        User user = users.findById(supportWorkerId).orElse(null);
+        if (user != null && user.isRecordRequestReceived()) {
+            notifications.save(new Notification(supportWorkerId, NotificationType.RECORD_REQUEST_RECEIVED,
+                    message, clock.instant()));
+        }
+    }
+
+    public void notifyRecordCreatedGuardians(Long careRecipientId, String message) {
+        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
+                .map(guardian -> guardian.getGuardianId()).distinct().toList();
+        for (Long guardianId : guardianIds) {
+            User user = users.findById(guardianId).orElse(null);
+            if (user != null && user.isRecordCreated()) {
+                notifications.save(new Notification(guardianId, NotificationType.RECORD_CREATED,
+                        message, clock.instant()));
+            }
         }
     }
 

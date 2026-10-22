@@ -91,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useLayoutEffect(() => {
     setTokenProvider(() => state.token);
-    return () => setTokenProvider(() => null);
   }, [state.token]);
 
   useLayoutEffect(() => {

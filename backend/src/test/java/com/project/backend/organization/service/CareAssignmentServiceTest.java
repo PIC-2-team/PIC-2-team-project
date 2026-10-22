@@ -31,6 +31,7 @@ class CareAssignmentServiceTest {
     @Mock CareAssignmentRepository careAssignmentRepository;
     @Mock OrganizationMemberRepository organizationMemberRepository;
     @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
+    @Mock com.project.backend.notification.service.NotificationService notificationService;
 
     @InjectMocks CareAssignmentService careAssignmentService;
 
@@ -56,6 +57,8 @@ class CareAssignmentServiceTest {
         assertThat(response.careRecipientId()).isEqualTo(20L);
         assertThat(response.supportWorkerId()).isEqualTo(30L);
         assertThat(response.endedAt()).isNull();
+        org.mockito.Mockito.verify(notificationService).notifyAssignmentChanged(30L, "새 당사자가 배정되었습니다.");
+        org.mockito.Mockito.verify(notificationService).notifyAssignmentChangedGuardians(20L, "새 활동지원사가 배정되었습니다.");
     }
 
     @Test
