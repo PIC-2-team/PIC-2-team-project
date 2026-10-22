@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -215,8 +215,10 @@ it('기관 대시보드에서 등록된 대상자와 지원사를 선택하여 �
 });
 
 it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 종료한다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+
   let ended = false;
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
@@ -264,6 +266,10 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
 
   const endBtn = screen.getByRole('button', { name: '배정 종료' });
   fireEvent.click(endBtn);
+
+  // ConfirmDialog 종료 버튼 클릭
+  const dialog = await screen.findByRole('alertdialog');
+  fireEvent.click(within(dialog).getByRole('button', { name: '종료' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/assignments/10/end', expect.objectContaining({
@@ -380,4 +386,38 @@ it('돌봄지원사 추가 모달에서 지원사를 추가할 수 있다', asyn
   });
 
   expect(await screen.findByText('새지원사')).toBeInTheDocument();
+});
+
+it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 ConfirmDialog가 표시된다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 10, organizationId: 1, careRecipientId: 100, supportWorkerId: 2, startDate: '2026-10-01', endDate: null, endedAt: null }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/recipients')) return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 2, userId: 2, name: '이지원', publicCode: 'SW-001', status: 'ACTIVE' }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me')) return new Response(JSON.stringify({ success: true, data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' } }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+  });
+
+  renderWithProviders();
+  await screen.findByText('이용자 #100');
+
+  fireEvent.click(screen.getByRole('button', { name: '배정 종료' }));
+
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
 });

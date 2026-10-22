@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppShell } from '../../components/AppShell';
 import TabBar from '../../components/TabBar/TabBar';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
   getMyOrganization,
   getMembers,
@@ -65,6 +66,21 @@ export function AgencyDashboardPage() {
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
+
+  // ConfirmDialog 상태
+  const [showEndAssignmentDialog, setShowEndAssignmentDialog] = useState(false);
+  const [endAssignmentTarget, setEndAssignmentTarget] = useState<{ id: number; label: string } | null>(null);
+  const [endAssignmentError, setEndAssignmentError] = useState<string | null>(null);
+
+  const [showDeleteRecipientDialog, setShowDeleteRecipientDialog] = useState(false);
+  const [deleteRecipientTarget, setDeleteRecipientTarget] = useState<OrganizationCareRecipient | null>(null);
+  const [deleteRecipientError, setDeleteRecipientError] = useState<string | null>(null);
+
+  const [showRemoveMemberDialog, setShowRemoveMemberDialog] = useState(false);
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<OrganizationMember | null>(null);
+  const [removeMemberError, setRemoveMemberError] = useState<string | null>(null);
+
+  const [toggleMemberError, setToggleMemberError] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -181,15 +197,22 @@ export function AgencyDashboardPage() {
   };
 
   // 배정 종료 처리
-  const handleEndAssignment = async (assignmentId: number, workerLabel: string) => {
-    if (!window.confirm(`'${workerLabel}' 지원사의 배정을 종료하시겠습니까? 종료 즉시 정보 접근이 차단됩니다.`)) {
-      return;
-    }
+  const handleEndAssignment = (assignmentId: number, workerLabel: string) => {
+    setEndAssignmentTarget({ id: assignmentId, label: workerLabel });
+    setShowEndAssignmentDialog(true);
+  };
+
+  const handleEndAssignmentConfirm = async () => {
+    if (!endAssignmentTarget) return;
+    setShowEndAssignmentDialog(false);
+    setEndAssignmentError(null);
     try {
-      await endAssignment(assignmentId);
+      await endAssignment(endAssignmentTarget.id);
       await fetchDashboardData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '배정 종료 처리에 실패했습니다.');
+      setEndAssignmentError(err instanceof Error ? err.message : '배정 종료 처리에 실패했습니다.');
+    } finally {
+      setEndAssignmentTarget(null);
     }
   };
 
@@ -248,15 +271,22 @@ export function AgencyDashboardPage() {
   };
 
   // 돌봄 대상자 삭제
-  const handleDeleteRecipient = async (recipient: OrganizationCareRecipient) => {
-    if (!window.confirm(`'${recipient.name}' 대상자를 기관 목록에서 삭제(연결 해제)하시겠습니까?`)) {
-      return;
-    }
+  const handleDeleteRecipient = (recipient: OrganizationCareRecipient) => {
+    setDeleteRecipientTarget(recipient);
+    setShowDeleteRecipientDialog(true);
+  };
+
+  const handleDeleteRecipientConfirm = async () => {
+    if (!deleteRecipientTarget) return;
+    setShowDeleteRecipientDialog(false);
+    setDeleteRecipientError(null);
     try {
-      await deleteOrganizationRecipient(recipient.id);
+      await deleteOrganizationRecipient(deleteRecipientTarget.id);
       await fetchDashboardData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      setDeleteRecipientError(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+    } finally {
+      setDeleteRecipientTarget(null);
     }
   };
 
@@ -285,24 +315,32 @@ export function AgencyDashboardPage() {
   // 돌봄지원사 상태 토글
   const handleToggleMemberStatus = async (member: OrganizationMember) => {
     const nextActive = member.status !== 'ACTIVE';
+    setToggleMemberError(null);
     try {
       await updateMemberStatus(member.id, nextActive);
       await fetchDashboardData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
+      setToggleMemberError(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
     }
   };
 
   // 돌봄지원사 삭제(소속 해제)
-  const handleRemoveMember = async (member: OrganizationMember) => {
-    if (!window.confirm(`'${member.name}' 지원사를 소속 해제(삭제)하시겠습니까?`)) {
-      return;
-    }
+  const handleRemoveMember = (member: OrganizationMember) => {
+    setRemoveMemberTarget(member);
+    setShowRemoveMemberDialog(true);
+  };
+
+  const handleRemoveMemberConfirm = async () => {
+    if (!removeMemberTarget) return;
+    setShowRemoveMemberDialog(false);
+    setRemoveMemberError(null);
     try {
-      await removeMember(member.id);
+      await removeMember(removeMemberTarget.id);
       await fetchDashboardData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '소속 해제에 실패했습니다.');
+      setRemoveMemberError(err instanceof Error ? err.message : '소속 해제에 실패했습니다.');
+    } finally {
+      setRemoveMemberTarget(null);
     }
   };
 
@@ -396,7 +434,7 @@ export function AgencyDashboardPage() {
                           type="button"
                           className="btn btn-secondary"
                           style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
-                          onClick={() => void handleDeleteRecipient(r)}
+                          onClick={() => handleDeleteRecipient(r)}
                         >
                           삭제
                         </button>
@@ -471,7 +509,7 @@ export function AgencyDashboardPage() {
                           type="button"
                           className="btn btn-secondary"
                           style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
-                          onClick={() => void handleRemoveMember(m)}
+                          onClick={() => handleRemoveMember(m)}
                         >
                           삭제
                         </button>
@@ -562,7 +600,7 @@ export function AgencyDashboardPage() {
                                   type="button"
                                   className="btn btn-secondary"
                                   style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#c0392b' }}
-                                  onClick={() => void handleEndAssignment(a.id, workerLabel)}
+                                  onClick={() => handleEndAssignment(a.id, workerLabel)}
                                 >
                                   배정 종료
                                 </button>
@@ -830,6 +868,38 @@ export function AgencyDashboardPage() {
             )}
           </>
         )}
+
+        {endAssignmentError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{endAssignmentError}</p>}
+        {deleteRecipientError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{deleteRecipientError}</p>}
+        {removeMemberError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{removeMemberError}</p>}
+        {toggleMemberError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{toggleMemberError}</p>}
+
+        <ConfirmDialog
+          open={showEndAssignmentDialog}
+          title="배정을 종료하시겠습니까?"
+          description="종료 즉시 정보 접근이 차단됩니다."
+          confirmLabel="종료"
+          variant="danger"
+          onConfirm={() => { void handleEndAssignmentConfirm(); }}
+          onCancel={() => { setShowEndAssignmentDialog(false); setEndAssignmentTarget(null); }}
+        />
+        <ConfirmDialog
+          open={showDeleteRecipientDialog}
+          title="대상자를 삭제하시겠습니까?"
+          description="기관 목록에서 연결이 해제됩니다."
+          confirmLabel="삭제"
+          variant="danger"
+          onConfirm={() => { void handleDeleteRecipientConfirm(); }}
+          onCancel={() => { setShowDeleteRecipientDialog(false); setDeleteRecipientTarget(null); }}
+        />
+        <ConfirmDialog
+          open={showRemoveMemberDialog}
+          title="지원사를 소속 해제하시겠습니까?"
+          confirmLabel="소속 해제"
+          variant="danger"
+          onConfirm={() => { void handleRemoveMemberConfirm(); }}
+          onCancel={() => { setShowRemoveMemberDialog(false); setRemoveMemberTarget(null); }}
+        />
       </main>
     </AppShell>
   );
