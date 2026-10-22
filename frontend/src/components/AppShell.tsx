@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { UserRole } from '../types/user';
 import '../styles/design-system.css';
@@ -7,6 +7,18 @@ const ROLE_LABEL = { GUARDIAN: '돌봄 보호자', SUPPORT_WORKER: '활동지원
 
 export function AppShell({ children, footer, role, homeDisabled = false }: { children: ReactNode; footer?: ReactNode; role?: UserRole; homeDisabled?: boolean }) {
   const [largeText, setLargeText] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const onOffline = () => setIsOffline(true);
+    const onOnline = () => setIsOffline(false);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
+    };
+  }, []);
 
   const homePath = role === 'ADMIN' ? '/admin' : role === 'INSTITUTION' ? '/agency' : '/home';
 
@@ -27,6 +39,9 @@ export function AppShell({ children, footer, role, homeDisabled = false }: { chi
       </header>
       <div className="app-main">{children}</div>
       {footer}
+      {isOffline && (
+        <div role="alert" className="offline-banner">네트워크 연결이 원활하지 않습니다.</div>
+      )}
     </div>
   );
 }

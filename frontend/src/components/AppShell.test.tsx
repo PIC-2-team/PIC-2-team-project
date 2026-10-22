@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, expect, it } from 'vitest';
 import { AppShell } from './AppShell';
@@ -22,4 +22,17 @@ it('녹음 또는 저장 중에는 브랜드 링크로 화면을 이탈할 수 �
   render(<MemoryRouter><AppShell homeDisabled><p>녹음 중</p></AppShell></MemoryRouter>);
   expect(screen.getByText('삶결')).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: '삶결' })).not.toBeInTheDocument();
+});
+
+it('offline 이벤트 발생 시 네트워크 연결 경고 배너가 표시된다', () => {
+  render(<MemoryRouter><AppShell><p>콘텐츠</p></AppShell></MemoryRouter>);
+  act(() => { window.dispatchEvent(new Event('offline')); });
+  expect(screen.getByRole('alert')).toHaveTextContent('네트워크 연결이 원활하지 않습니다.');
+});
+
+it('online 이벤트 발생 시 오프라인 배너가 사라진다', () => {
+  render(<MemoryRouter><AppShell><p>콘텐츠</p></AppShell></MemoryRouter>);
+  act(() => { window.dispatchEvent(new Event('offline')); });
+  act(() => { window.dispatchEvent(new Event('online')); });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

@@ -635,3 +635,16 @@
 .app-shell input, .app-shell select, .app-shell textarea { font-family: inherit; }
 .app-shell button:disabled { cursor: not-allowed; }
 .app-shell p { overflow-wrap: anywhere; }
+
+.offline-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  background: #e05555;
+  color: #fff;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  z-index: 150;
+}
