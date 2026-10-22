@@ -1,4 +1,4 @@
-import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient } from '../types/agency';
+import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian } from '../types/agency';
 import { apiRequest } from './client';
 
 export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
@@ -116,5 +116,22 @@ export function assignSupportWorker(payload: {
 export function endAssignment(assignmentId: number): Promise<void> {
   return apiRequest(`/api/organizations/me/assignments/${assignmentId}/end`, {
     method: 'PATCH',
+  });
+}
+
+export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
+  return apiRequest('/api/organizations/me/guardians');
+}
+
+export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
+  return apiRequest('/api/organizations/me/guardians', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function removeOrganizationGuardian(guardianId: number): Promise<void> {
+  return apiRequest(`/api/organizations/me/guardians/${guardianId}`, {
+    method: 'DELETE',
   });
 }
