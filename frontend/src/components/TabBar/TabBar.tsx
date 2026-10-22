@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './TabBar.module.css';
 
@@ -28,13 +28,25 @@ const AGENCY_HOME_TAB: Tab = {
 
 const WORKERS_TAB: Tab = {
   to: '/agency?tab=workers',
-  label: '돌봄지원사 관리',
+  label: '돌봄 지원사 관리',
   icon: (active) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
       <circle cx="9" cy="7" r="4" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
       <path d="M23 21v-2a4 4 0 00-3-3.87" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
       <path d="M16 3.13a4 4 0 010 7.75" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  ),
+};
+
+const ASSIGNMENTS_TAB: Tab = {
+  to: '/agency?tab=assignments',
+  label: '배정',
+  icon: (active) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" />
+      <path d="M9 12l2 2 4-4" stroke={active ? '#3CAB7E' : '#8a9ab0'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
 };
@@ -79,28 +91,40 @@ import type { UserRole } from '../../types/user';
 
 export default function TabBar({ role }: { role?: UserRole } = {}) {
   const { user } = useAuth();
+  const location = useLocation();
   const effectiveRole = role ?? user?.role;
   const isInstitution = effectiveRole === 'INSTITUTION';
   const tabs = isInstitution
-    ? [AGENCY_HOME_TAB, WORKERS_TAB, MORE_TAB]
+    ? [AGENCY_HOME_TAB, WORKERS_TAB, ASSIGNMENTS_TAB, MORE_TAB]
     : [HOME_TAB, RECORDS_TAB, CARE_TAB, MORE_TAB];
+
+  const currentTab = new URLSearchParams(location.search).get('tab') || 'home';
+
+  const checkIsActive = (to: string) => {
+    if (isInstitution && location.pathname === '/agency') {
+      if (to === '/agency') return currentTab === 'home';
+      if (to.includes('tab=workers')) return currentTab === 'workers';
+      if (to.includes('tab=assignments')) return currentTab === 'assignments';
+      return false;
+    }
+    return location.pathname === to;
+  };
 
   return (
     <nav className={styles.tabBar} aria-label="주요 메뉴">
-      {tabs.map(tab => (
-        <NavLink
-          key={tab.to}
-          to={tab.to}
-          className={({ isActive }) => `${styles.tab} ${isActive ? styles.active : ''}`}
-        >
-          {({ isActive }) => (
-            <>
-              {tab.icon(isActive)}
-              <span className={styles.label}>{tab.label}</span>
-            </>
-          )}
-        </NavLink>
-      ))}
+      {tabs.map(tab => {
+        const active = checkIsActive(tab.to);
+        return (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            className={`${styles.tab} ${active ? styles.active : ''}`}
+          >
+            {tab.icon(active)}
+            <span className={styles.label}>{tab.label}</span>
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }

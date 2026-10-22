@@ -62,15 +62,15 @@ public class OrganizationController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MemberResponse> addMember(@AuthenticationPrincipal Long userId,
                                                   @Valid @RequestBody AddMemberRequest request) {
-        return ApiResponse.ok(organizationService.addMember(userId, request.userId()));
+        return ApiResponse.ok(organizationService.addMember(userId, request));
     }
 
-    @Operation(summary = "지원사 상태 변경")
+    @Operation(summary = "지원사 상태 및 정보 변경")
     @PatchMapping("/me/members/{memberId}")
     public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
                                                            @PathVariable Long memberId,
-                                                           @Valid @RequestBody UpdateMemberStatusRequest request) {
-        return ApiResponse.ok(organizationService.updateMemberStatus(userId, memberId, request.active()));
+                                                           @RequestBody UpdateMemberRequest request) {
+        return ApiResponse.ok(organizationService.updateMember(userId, memberId, request));
     }
 
     @Operation(summary = "지원사 삭제 (소속 해제)")
@@ -78,6 +78,28 @@ public class OrganizationController {
     public ApiResponse<Void> removeMember(@AuthenticationPrincipal Long userId,
                                           @PathVariable Long memberId) {
         organizationService.removeMember(userId, memberId);
+        return ApiResponse.ok(null);
+    }
+
+    @Operation(summary = "기관 소속 돌봄 보호자 목록 조회")
+    @GetMapping("/me/guardians")
+    public ApiResponse<List<OrganizationGuardianResponse>> getGuardians(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(organizationService.getGuardians(userId));
+    }
+
+    @Operation(summary = "기관 돌봄 보호자 등록")
+    @PostMapping("/me/guardians")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<OrganizationGuardianResponse> registerGuardian(@AuthenticationPrincipal Long userId,
+                                                                      @Valid @RequestBody RegisterGuardianRequest request) {
+        return ApiResponse.ok(organizationService.registerGuardian(userId, request));
+    }
+
+    @Operation(summary = "기관 돌봄 보호자 연결 해제")
+    @DeleteMapping("/me/guardians/{guardianId}")
+    public ApiResponse<Void> removeGuardian(@AuthenticationPrincipal Long userId,
+                                            @PathVariable Long guardianId) {
+        organizationService.removeGuardian(userId, guardianId);
         return ApiResponse.ok(null);
     }
 
