@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getCareRecipient } from '../api/careRecipients';
+import { getCareRecipient, listCareRecipients } from '../api/careRecipients';
 import type { CareRecipient } from '../types/careRecipient';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
@@ -81,8 +81,18 @@ function LogoutConfirmDialog({
 }
 
 export function MorePage() {
-  const { user, logout, selectedRecipientId } = useAuth();
+  const { user, logout, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
+  const [recipients, setRecipients] = useState<CareRecipient[]>([]);
+  const [recipientListError, setRecipientListError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.role !== 'GUARDIAN' && user?.role !== 'SUPPORT_WORKER') return;
+    let active = true;
+    listCareRecipients().then(items => { if (active) setRecipients(items); })
+      .catch(() => { if (active) setRecipientListError('당사자 목록을 불러오지 못했어요. 화면을 다시 열어 주세요.'); });
+    return () => { active = false; };
+  }, [user?.role]);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
@@ -188,6 +198,22 @@ export function MorePage() {
           </button>
         </div>
       </div>
+
+      {recipientListError && <p role="alert" className="error">{recipientListError}</p>}
+      {recipients.length > 1 && (
+        <section className="demo-card">
+          <h2>당사자 전환</h2>
+          <p className="muted">선택한 당사자의 홈, 생활기록, 돌봄정보를 확인합니다.</p>
+          <select aria-label="당사자 선택" value={selectedRecipientId ?? ''}
+            onChange={event => {
+              const id = Number(event.target.value);
+              if (recipients.some(item => item.id === id)) setSelectedRecipient(id);
+            }}>
+            {selectedRecipientId === null && <option value="" disabled>당사자를 선택해 주세요</option>}
+            {recipients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </section>
+      )}
 
       {showUserModal && (
         <UserProfileModal user={user} onClose={() => setShowUserModal(false)} />

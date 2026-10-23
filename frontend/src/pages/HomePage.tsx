@@ -49,15 +49,13 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipients: CareRecipient[]; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
-  const { user, setSelectedRecipient } = useAuth();
+  const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const requestRef = useRef(0);
-  const [recordsLoading, setRecordsLoading] = useState(false);
-  const [recordsError, setRecordsError] = useState<string | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
@@ -71,18 +69,19 @@ export function HomePage() {
       navigate('/agency', { replace: true });
       return;
     }
+    setPage({ status: 'loading' });
     const requests = requestRef;
     const requestId = ++requests.current;
     const load = async () => {
       try {
         const recipients = await listCareRecipients();
         if (requestId !== requestRef.current) return;
-        const first = recipients[0] ?? null;
+        const first = recipients.find(recipient => recipient.id === selectedRecipientId) ?? recipients[0] ?? null;
         if (!first) {
           setPage({ status: 'empty' });
           return;
         }
-        setSelectedRecipient(first.id);
+        if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
         const [records, overview, suggestionsRes] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
@@ -96,7 +95,6 @@ export function HomePage() {
         }
         setPage({
           status: 'ok',
-          recipients,
           recipient: first,
           todayRecords: records,
           pinnedRecords: overview.pinnedRecords ?? [],
@@ -108,7 +106,7 @@ export function HomePage() {
     };
     void load();
     return () => { requests.current++; };
-  }, [user?.role, navigate, setSelectedRecipient]);
+  }, [user?.role, selectedRecipientId, navigate, setSelectedRecipient]);
 
   if (page.status === 'loading') return (
     <div className="demo-page status-page" data-testid="loading-skeleton">
@@ -135,34 +133,8 @@ export function HomePage() {
     );
   }
 
-  const { recipients, recipient, todayRecords, pinnedRecords } = page;
+  const { recipient, todayRecords, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN';
-
-  const handleRecipientChange = async (id: number) => {
-    const next = recipients.find(r => r.id === id);
-    if (!next) return;
-    const requestId = ++requestRef.current;
-    setSelectedRecipient(id);
-    setPage({ status: 'ok', recipients, recipient: next, todayRecords: [], pinnedRecords: [] });
-    setPendingSuggestionCount(0);
-    setRecordsLoading(true);
-    setRecordsError(null);
-    try {
-      const [records, overview, suggestions] = await Promise.all([
-        getTodayRecords(id),
-        getCareInfoOverview(id).catch(() => ({ categories: [], pinnedRecords: [] })),
-        user?.role === 'GUARDIAN' ? getRecordSuggestions(id, 'PENDING').catch(() => null) : Promise.resolve(null),
-      ]);
-      if (requestId !== requestRef.current) return;
-      setPage({ status: 'ok', recipients, recipient: next, todayRecords: records, pinnedRecords: overview.pinnedRecords ?? [] });
-      setPendingSuggestionCount(suggestions?.pagination.totalItems ?? 0);
-    } catch {
-      if (requestId !== requestRef.current) return;
-      setRecordsError('기록을 불러오지 못했어요. 다시 당사자를 선택해 주세요.');
-    } finally {
-      if (requestId === requestRef.current) setRecordsLoading(false);
-    }
-  };
 
   return (
     <div className={styles.page}>
@@ -313,21 +285,6 @@ export function HomePage() {
       )}
 
 
-      {recipients.length > 1 ? (
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <span className="muted">돌봄 당사자</span>
-          <select
-            aria-label="당사자 선택"
-            value={recipient.id}
-            onChange={e => void handleRecipientChange(Number(e.target.value))}
-            style={{ border: '1px solid #d0d5dc', borderRadius: '6px', padding: '4px 8px', fontSize: '0.9rem' }}
-          >
-            {recipients.map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </label>
-      ) : null}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>
@@ -341,11 +298,7 @@ export function HomePage() {
         </div>
 
         <div className={styles.records}>
-          {recordsLoading ? (
-            <p role="status">기록을 불러오는 중…</p>
-          ) : recordsError ? (
-            <p role="alert" className="error">{recordsError}</p>
-          ) : todayRecords.length === 0 ? (
+          {todayRecords.length === 0 ? (
             <p>오늘 기록이 없어요.</p>
           ) : (
             todayRecords.map(record => (

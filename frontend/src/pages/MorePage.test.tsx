@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MorePage } from './MorePage';
+import * as recipientsApi from '../api/careRecipients';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -20,6 +21,8 @@ let mockUser: { id: number; name: string; email: string; role: string } | null =
   role: 'SUPPORT_WORKER',
 };
 
+const mockSetSelectedRecipient = vi.fn();
+
 let mockSelectedRecipientId: number | null = null;
 let mockLogout = vi.fn();
 
@@ -28,10 +31,12 @@ vi.mock('../contexts/AuthContext', () => ({
     user: mockUser,
     logout: mockLogout,
     selectedRecipientId: mockSelectedRecipientId,
+    setSelectedRecipient: mockSetSelectedRecipient,
   }),
 }));
 
 beforeEach(() => {
+  vi.spyOn(recipientsApi, 'listCareRecipients').mockResolvedValue([]);
   mockUser = {
     id: 1,
     name: '홍길동',
@@ -47,6 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 it('활동지원사 로그인 시 돌봄 협업 섹션과 돌봄 내용 수정 요청 메뉴가 표시된다', () => {
@@ -241,4 +247,17 @@ it('서비스 섹션에 알림함 메뉴가 표시되고 클릭 시 /notificatio
   expect(notifItem).toBeInTheDocument();
   fireEvent.click(notifItem);
   expect(mockNavigate).toHaveBeenCalledWith('/notifications');
+});
+
+it('더보기에서 당사자 전환 시 공통 선택 상태를 변경한다', async () => {
+  mockSelectedRecipientId = 1;
+  vi.spyOn(recipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '김민준' }, { id: 2, name: '이서연' },
+  ] as Awaited<ReturnType<typeof recipientsApi.listCareRecipients>>);
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  const select = await screen.findByRole('combobox', { name: '당사자 선택' });
+  expect(select).toHaveValue('1');
+  fireEvent.change(select, { target: { value: '2' } });
+  expect(mockSetSelectedRecipient).toHaveBeenCalledWith(2);
+  expect(mockNavigate).not.toHaveBeenCalled();
 });

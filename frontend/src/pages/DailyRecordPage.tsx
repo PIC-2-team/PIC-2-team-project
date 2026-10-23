@@ -154,15 +154,14 @@ export function DailyRecordPage() {
         <h1>{listOnly ? '돌봄 기록 목록' : '생활기록'}</h1>
       </div>
 
-      <label className={styles.categoryFilter}>
-        카테고리
+      <div className={styles.categoryFilter}>
         <select aria-label="카테고리" value={category} onChange={event => {
           setCategory(event.target.value as RecordCategory | ''); setPage(1);
         }}>
-          <option value="">전체 카테고리</option>
+          <option value="">전체</option>
           {Object.entries(CATEGORY_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
-      </label>
+      </div>
 
       {!listOnly && (
       <section className="demo-card accent" aria-label="월별 캘린더">
