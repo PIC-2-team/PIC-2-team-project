@@ -5,7 +5,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 afterEach(cleanup);
 
-function ThrowError() {
+function ThrowError(): never {
   throw new Error('테스트 오류');
 }
 

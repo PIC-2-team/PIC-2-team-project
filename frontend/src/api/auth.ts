@@ -43,7 +43,3 @@ export function googleRegister(body: GoogleRegisterRequest): Promise<GoogleAuthR
 export function register(body: RegisterRequest): Promise<LoginResponse> {
   return apiRequest('/api/auth/register', { method: 'POST', body });
 }
-
-export function deleteAccount(): Promise<void> {
-  return apiRequest('/api/users/me', { method: 'DELETE' });
-}

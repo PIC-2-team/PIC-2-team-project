@@ -220,16 +220,13 @@ it('회원 탈퇴 버튼이 로그아웃 버튼 아래에 표시된다', () => {
   expect(withdrawBtn).toBeInTheDocument();
 });
 
-it('회원 탈퇴 클릭 시 탈퇴 확인 다이얼로그가 표시된다', async () => {
+it('회원 탈퇴는 준비 중으로 안내하고 API 호출이나 로그아웃을 하지 않는다', () => {
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
   render(<MemoryRouter><MorePage /></MemoryRouter>);
-  fireEvent.click(screen.getByRole('button', { name: /회원 탈퇴/ }));
-  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
-  expect(screen.getByText(/정말 탈퇴하시겠습니까/)).toBeInTheDocument();
-});
-
-it('탈퇴 다이얼로그 취소 시 logout이 호출되지 않는다', async () => {
-  render(<MemoryRouter><MorePage /></MemoryRouter>);
-  fireEvent.click(screen.getByRole('button', { name: /회원 탈퇴/ }));
-  fireEvent.click(await screen.findByRole('button', { name: '취소' }));
+  fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }));
+  expect(screen.getByRole('status')).toHaveTextContent('회원 탈퇴 기능은 준비 중입니다.');
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  expect(fetchSpy).not.toHaveBeenCalled();
   expect(mockLogout).not.toHaveBeenCalled();
+  fetchSpy.mockRestore();
 });

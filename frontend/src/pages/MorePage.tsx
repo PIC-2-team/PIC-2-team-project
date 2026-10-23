@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient } from '../api/careRecipients';
-import { deleteAccount } from '../api/auth';
-import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { CareRecipient } from '../types/careRecipient';
 import styles from './MorePage.module.css';
 
@@ -85,12 +83,10 @@ export function MorePage() {
   const { user, logout, selectedRecipientId } = useAuth();
   const navigate = useNavigate();
   const [showRecipientModal, setShowRecipientModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,17 +111,6 @@ export function MorePage() {
   const handleLogoutConfirm = () => {
     logout();
     navigate('/login', { replace: true });
-  };
-
-  const handleWithdrawConfirm = async () => {
-    try {
-      await deleteAccount();
-    } catch {
-      // 백엔드 미구현 시에도 로컬 상태 정리
-    } finally {
-      logout();
-      navigate('/login', { replace: true });
-    }
   };
 
   const sections: MenuSection[] = [];
@@ -303,7 +288,7 @@ export function MorePage() {
         type="button"
         className="btn secondary"
         style={{ color: '#e05555', borderColor: '#f5c6c4', marginTop: '0.5rem' }}
-        onClick={() => setShowWithdrawDialog(true)}
+        onClick={() => setToast('회원 탈퇴 기능은 준비 중입니다.')}
       >
         회원 탈퇴
       </button>
@@ -314,16 +299,6 @@ export function MorePage() {
           onCancel={() => setShowLogoutDialog(false)}
         />
       )}
-
-      <ConfirmDialog
-        open={showWithdrawDialog}
-        title="정말 탈퇴하시겠습니까?"
-        description="탈퇴 후 모든 데이터가 삭제되며 되돌릴 수 없습니다."
-        confirmLabel="탈퇴"
-        variant="danger"
-        onConfirm={() => { void handleWithdrawConfirm(); }}
-        onCancel={() => setShowWithdrawDialog(false)}
-      />
 
       {toast && <div role="status" className={styles.toast}>{toast}</div>}
     </div>

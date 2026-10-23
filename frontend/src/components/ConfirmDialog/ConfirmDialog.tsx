@@ -42,9 +42,8 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      open
       className={styles.dialog}
-      onCancel={onCancel}
+      onCancel={event => { event.preventDefault(); onCancel(); }}
       role="alertdialog"
       aria-labelledby="cd-title"
       aria-describedby={description ? 'cd-desc' : undefined}

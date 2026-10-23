@@ -4,8 +4,13 @@ import { afterEach, beforeEach, it, expect, vi } from 'vitest';
 import { ConfirmDialog } from './ConfirmDialog';
 
 beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn();
-  HTMLDialogElement.prototype.close = vi.fn();
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) {
+    if (this.open) throw new DOMException('Already open as non-modal', 'InvalidStateError');
+    this.open = true;
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) {
+    this.open = false;
+  });
 });
 afterEach(cleanup);
 
@@ -38,4 +43,19 @@ it('확인 버튼 클릭 시 onConfirm이 호출된다', () => {
 it('variant=danger일 때 확인 버튼에 danger 클래스가 있다', () => {
   render(<ConfirmDialog open title="삭제" variant="danger" onConfirm={vi.fn()} onCancel={vi.fn()} />);
   expect(screen.getByRole('button', { name: '확인' })).toHaveClass('danger');
+});
+
+it('닫았다 다시 열어도 모달로 열리고 Escape 취소를 부모에게 전달한다', () => {
+  const onCancel = vi.fn();
+  const props = { title: '삭제', onConfirm: vi.fn(), onCancel };
+  const { rerender } = render(<ConfirmDialog {...props} open />);
+  expect(screen.getByRole('alertdialog')).toHaveAttribute('open');
+  rerender(<ConfirmDialog {...props} open={false} />);
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  rerender(<ConfirmDialog {...props} open />);
+  const dialog = screen.getByRole('alertdialog');
+  const event = new Event('cancel', { cancelable: true });
+  fireEvent(dialog, event);
+  expect(onCancel).toHaveBeenCalledOnce();
+  expect(event.defaultPrevented).toBe(true);
 });

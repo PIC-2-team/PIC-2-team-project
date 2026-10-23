@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import CareInfoDetailPage from './CareInfoDetailPage';
 import * as recordsApi from '../api/records';
 import * as careInfoApi from '../api/careInfo';
@@ -177,4 +177,18 @@ it('활동지원사는 돌봄 내용 수정 요청 버튼이 표시되고 클릭
   expect(mockNavigate).toHaveBeenCalledWith('/record-requests/new', {
     state: { category: 'MEAL', categoryLabel: '식사' },
   });
+});
+
+it('잘못된 카테고리에서 정상 카테고리로 이동해도 Hook 순서가 유지된다', async () => {
+  vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
+    items: [], pagination: { page: 1, pageSize: 50, totalItems: 0, totalPages: 0 },
+  });
+  vi.spyOn(careInfoApi, 'getCareInfoByCategory').mockResolvedValue({ category: 'MEAL', content: '', updatedAt: null });
+  render(<MemoryRouter initialEntries={['/care-info/INVALID']}>
+    <Link to="/care-info/MEAL">정상 카테고리로 이동</Link>
+    <Routes><Route path="/care-info/:categoryId" element={<CareInfoDetailPage />} /></Routes>
+  </MemoryRouter>);
+  expect(screen.getByText('존재하지 않는 카테고리입니다.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('link', { name: '정상 카테고리로 이동' }));
+  expect(await screen.findByRole('heading', { name: '식사', level: 1 })).toBeInTheDocument();
 });

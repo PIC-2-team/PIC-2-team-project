@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
@@ -18,6 +18,9 @@ export function HomePage() {
   const { user, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const requestRef = useRef(0);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [recordsError, setRecordsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -28,9 +31,12 @@ export function HomePage() {
       navigate('/agency', { replace: true });
       return;
     }
+    const requests = requestRef;
+    const requestId = ++requests.current;
     const load = async () => {
       try {
         const recipients = await listCareRecipients();
+        if (requestId !== requestRef.current) return;
         const first = recipients[0] ?? null;
         if (!first) {
           setPage({ status: 'empty' });
@@ -38,12 +44,15 @@ export function HomePage() {
         }
         setSelectedRecipient(first.id);
         const records = await getTodayRecords(first.id);
+        if (requestId !== requestRef.current) return;
         setPage({ status: 'ok', recipients, recipient: first, todayRecords: records });
       } catch (e) {
+        if (requestId !== requestRef.current) return;
         setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
       }
     };
     void load();
+    return () => { requests.current++; };
   }, [user?.role, navigate, setSelectedRecipient]);
 
   if (page.status === 'loading') return (
@@ -77,12 +86,20 @@ export function HomePage() {
   const handleRecipientChange = async (id: number) => {
     const next = recipients.find(r => r.id === id);
     if (!next) return;
+    const requestId = ++requestRef.current;
     setSelectedRecipient(id);
+    setPage({ status: 'ok', recipients, recipient: next, todayRecords: [] });
+    setRecordsLoading(true);
+    setRecordsError(null);
     try {
       const records = await getTodayRecords(id);
+      if (requestId !== requestRef.current) return;
       setPage({ status: 'ok', recipients, recipient: next, todayRecords: records });
     } catch {
-      setPage({ status: 'ok', recipients, recipient: next, todayRecords: [] });
+      if (requestId !== requestRef.current) return;
+      setRecordsError('기록을 불러오지 못했어요. 다시 당사자를 선택해 주세요.');
+    } finally {
+      if (requestId === requestRef.current) setRecordsLoading(false);
     }
   };
 
@@ -128,7 +145,11 @@ export function HomePage() {
         </div>
 
         <div className={styles.records}>
-          {todayRecords.length === 0 ? (
+          {recordsLoading ? (
+            <p role="status">기록을 불러오는 중…</p>
+          ) : recordsError ? (
+            <p role="alert" className="error">{recordsError}</p>
+          ) : todayRecords.length === 0 ? (
             <p>오늘 기록이 없어요.</p>
           ) : (
             todayRecords.map(record => (

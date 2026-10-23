@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, waitFor, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
@@ -6,6 +6,7 @@ import * as AuthContext from '../contexts/AuthContext';
 import * as careRecipientsApi from '../api/careRecipients';
 import * as recordsApi from '../api/records';
 import type { User } from '../types/user';
+import type { DailyRecord } from '../types/record';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -119,4 +120,26 @@ it('당사자 select 변경 시 setSelectedRecipient가 호출된다', async () 
   fireEvent.change(sel, { target: { value: '2' } });
 
   expect(mockSetSelectedRecipient).toHaveBeenCalledWith(2);
+});
+
+it('당사자 전환의 이전 응답이 늦게 도착해도 마지막 선택과 기록을 유지한다', async () => {
+  let resolveSecond!: (records: DailyRecord[]) => void;
+  let resolveThird!: (records: DailyRecord[]) => void;
+  const second = new Promise<DailyRecord[]>(resolve => { resolveSecond = resolve; });
+  const third = new Promise<DailyRecord[]>(resolve => { resolveThird = resolve; });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '첫 당사자' }, { id: 2, name: '둘째 당사자' }, { id: 3, name: '셋째 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValueOnce([])
+    .mockReturnValueOnce(second).mockReturnValueOnce(third);
+  renderHomePage({ id: 1, name: '보호자', role: 'GUARDIAN' });
+  const select = await screen.findByRole('combobox', { name: '당사자 선택' });
+  fireEvent.change(select, { target: { value: '2' } });
+  fireEvent.change(select, { target: { value: '3' } });
+  await act(async () => { resolveThird([{ id: 3, content: '셋째 당사자 기록', category: 'MEAL', recordedAt: '2026-10-23T00:00:00Z' }]); });
+  await waitFor(() => expect(select).toHaveValue('3'));
+  await act(async () => { resolveSecond([{ id: 2, content: '둘째 당사자 기록', category: 'MEAL', recordedAt: '2026-10-23T00:00:00Z' }]); });
+  expect(select).toHaveValue('3');
+  expect(screen.getByText('셋째 당사자 기록')).toBeInTheDocument();
+  expect(screen.queryByText('둘째 당사자 기록')).not.toBeInTheDocument();
 });

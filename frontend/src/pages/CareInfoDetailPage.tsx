@@ -174,6 +174,7 @@ export default function CareInfoDetailPage() {
   const meta = CATEGORY_META[categoryId];
 
   const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [showAllRecords, setShowAllRecords] = useState(false);
   const [careInfo, setCareInfo] = useState<CareInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +240,6 @@ export default function CareInfoDetailPage() {
   };
 
   const pinned = records.filter(r => r.pinned);
-  const [showAllRecords, setShowAllRecords] = useState(false);
   const ALL_RECORD_LIMIT = 5;
   const visibleRecords = showAllRecords ? records : records.slice(0, ALL_RECORD_LIMIT);
   const hasMoreRecords = !showAllRecords && records.length > ALL_RECORD_LIMIT;

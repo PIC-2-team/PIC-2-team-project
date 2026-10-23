@@ -393,9 +393,8 @@ it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 Confir
   HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
   const confirmSpy = vi.spyOn(window, 'confirm');
 
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const url = String(input);
-    const method = init?.method ?? 'GET';
     if (url.includes('/api/organizations/me/assignments')) {
       return new Response(JSON.stringify({
         success: true,

@@ -1,5 +1,6 @@
 import { apiRequest } from './client';
 
-export function getUnreadNotificationCount(): Promise<number> {
-  return apiRequest<number>('/api/notifications/unread-count');
+export async function getUnreadNotificationCount(): Promise<number> {
+  const response = await apiRequest<{ unreadCount: number }>('/api/notifications/unread-count');
+  return response.unreadCount;
 }
