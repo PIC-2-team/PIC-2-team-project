@@ -93,11 +93,18 @@ export async function mockOrganization(page: Page) {
   });
 }
 
-// 알림 목록 모킹
+// 알림 목록 모킹 — fetch 요청만 처리해 Vite 소스 파일 요청(/src/api/notifications.ts)은 통과시킴
 export async function mockNotifications(page: Page) {
-  await page.route('**/api/notifications*', (route: Route) =>
-    route.fulfill({ json: ok([]) })
-  );
+  await page.route('**/api/notifications*', (route: Route) => {
+    if (route.request().resourceType() !== 'fetch') return route.continue();
+    const url = route.request().url();
+    if (url.includes('/unread-count')) {
+      return route.fulfill({ json: ok({ unreadCount: 0 }) });
+    }
+    return route.fulfill({
+      json: ok({ items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } }),
+    });
+  });
 }
 
 // AI 기록 초안 생성 모킹

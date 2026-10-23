@@ -21,6 +21,7 @@ import { RecordRequestPage } from './pages/RecordRequestPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
 import { RecordSuggestionsPage } from './pages/RecordSuggestionsPage';
+import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
             ],
           },
           { path: '/more', element: <MorePage /> },
+          { path: '/notifications', element: <NotificationInboxPage /> },
         ],
       },
       {

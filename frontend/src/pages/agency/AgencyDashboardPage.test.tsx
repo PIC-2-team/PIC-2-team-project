@@ -6,16 +6,18 @@ import { AuthProvider } from '../../contexts/AuthContext';
 import { AgencyDashboardPage } from './AgencyDashboardPage';
 import { setTokenProvider } from '../../api/client';
 
+import type { OrganizationGuardian } from '../../types/agency';
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   setTokenProvider(() => null);
 });
 
-function renderWithProviders() {
+function renderWithProviders(initialEntries: string[] = ['/agency']) {
   return render(
     <AuthProvider>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <AgencyDashboardPage />
       </MemoryRouter>
     </AuthProvider>,
@@ -54,6 +56,9 @@ it('6자리 기관 코드 폼을 제출하면 기관을 등록하고 대시보�
     if (url.includes('/api/organizations/me/recipients')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
     if (url.includes('/api/organizations/me/assignments')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
@@ -88,7 +93,7 @@ it('6자리 기관 코드 폼을 제출하면 기관을 등록하고 대시보�
   fireEvent.click(screen.getByRole('button', { name: '기관 등록하기' }));
 
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
-  expect(screen.getByText('기관 코드: KNU001')).toBeInTheDocument();
+  expect(screen.getByText(/기관 코드:/)).toHaveTextContent('KNU001');
   expect(fetchMock).toHaveBeenCalledWith('/api/organizations', expect.objectContaining({
     method: 'POST',
     body: JSON.stringify({ organizationCode: 'KNU001' }),
@@ -140,7 +145,7 @@ it('기관 등록 요청이 실패하면 온보딩 폼 내에 에러 메시지�
   expect(screen.getByText('소속 기관을 등록해 주세요')).toBeInTheDocument();
 });
 
-it('기관 대시보드에서 등록된 대상자와 지원사를 선택하여 배정하면 배정 목록이 갱신된다', async () => {
+it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하여 배정하면 배정 목록이 갱신된다', async () => {
   let assignmentsList = [
     { id: 10, organizationId: 1, careRecipientId: 100, supportWorkerId: 2, startDate: '2026-10-01', endDate: null, endedAt: null },
   ];
@@ -160,6 +165,9 @@ it('기관 대시보드에서 등록된 대상자와 지원사를 선택하여 �
         success: true,
         data: [{ id: 200, name: '김철수', careRecipientNumber: 'P-0002', birthDate: '2000-01-01', gender: 'MALE' }],
       }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
     if (url.includes('/api/organizations/me/assignments') && method === 'POST') {
       const newAssign = {
@@ -187,17 +195,21 @@ it('기관 대시보드에서 등록된 대상자와 지원사를 선택하여 �
     return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
   });
 
-  renderWithProviders();
+  renderWithProviders(['/agency?tab=assignments']);
 
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
   expect(screen.getByText('이용자 #100')).toBeInTheDocument();
 
-  // '배정하기' 버튼 클릭하여 모달 열기
-  fireEvent.click(screen.getByRole('button', { name: '배정하기' }));
+  // '+ 배정하기' 버튼 클릭하여 모달 열기
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+
+  // 검색 인풋으로 대상자 검색 및 선택 확인
+  const searchInput = screen.getByPlaceholderText('대상자 이름 또는 번호 검색…');
+  fireEvent.change(searchInput, { target: { value: '김철수' } });
 
   // 당사자 드롭다운 및 지원사 드롭다운 선택, 배정 시작일 입력
   fireEvent.change(screen.getByLabelText('돌봄 대상자'), { target: { value: '200' } });
-  fireEvent.change(screen.getByLabelText('돌봄지원사'), { target: { value: '2' } });
+  fireEvent.change(screen.getByLabelText('돌봄 지원사'), { target: { value: '2' } });
   fireEvent.change(screen.getByLabelText('배정 시작일'), { target: { value: '2026-10-20' } });
 
   // 배정 제출
@@ -247,6 +259,9 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
     if (url.includes('/api/organizations/me/recipients')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
     if (url.includes('/api/organizations/me/members')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
@@ -260,7 +275,7 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
     return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
   });
 
-  renderWithProviders();
+  renderWithProviders(['/agency?tab=assignments']);
 
   await screen.findByText('이용자 #100');
 
@@ -280,22 +295,32 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
   expect(await screen.findByText('종료됨')).toBeInTheDocument();
 });
 
-it('돌봄 대상자 등록 모달에서 신규 대상자를 등록할 수 있다', async () => {
-  let recipients = [
-    { id: 1, name: '기존대상자', careRecipientNumber: 'P-0001', birthDate: '2000-01-01', gender: 'MALE' },
+it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를 등록할 수 있다', async () => {
+  let guardians: OrganizationGuardian[] = [
+    { id: 1, guardianId: 10, name: '기존보호자', publicCode: 'P-0001', createdAt: '2026-10-01', careRecipients: [] },
   ];
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
     const method = init?.method ?? 'GET';
 
-    if (url.includes('/api/organizations/me/recipients') && method === 'POST') {
-      const created = { id: 2, name: '새대상자', careRecipientNumber: 'P-0002', birthDate: '1995-05-05', gender: 'FEMALE' };
-      recipients = [...recipients, created];
+    if (url.includes('/api/organizations/me/guardians') && method === 'POST') {
+      const created = {
+        id: 2,
+        guardianId: 20,
+        name: '박새봄보호자',
+        publicCode: 'P-9999',
+        createdAt: '2026-10-22',
+        careRecipients: [{ id: 1, name: '박당사', careRecipientNumber: 'R-001' }],
+      };
+      guardians = [...guardians, created];
       return new Response(JSON.stringify({ success: true, data: created }), { status: 201 });
     }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: guardians }), { status: 200 });
+    }
     if (url.includes('/api/organizations/me/recipients')) {
-      return new Response(JSON.stringify({ success: true, data: recipients }), { status: 200 });
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
     if (url.includes('/api/organizations/me/members')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
@@ -313,28 +338,29 @@ it('돌봄 대상자 등록 모달에서 신규 대상자를 등록할 수 있�
     return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
   });
 
-  renderWithProviders();
+  renderWithProviders(['/agency']);
 
-  await screen.findByText('기존대상자');
+  await screen.findByText('기존보호자');
 
-  // + 대상자 등록 버튼 클릭
-  fireEvent.click(screen.getByRole('button', { name: '+ 대상자 등록' }));
+  // + 보호자 등록 버튼 클릭
+  fireEvent.click(screen.getByRole('button', { name: '+ 보호자 등록' }));
 
-  // 이름 입력
-  fireEvent.change(screen.getByLabelText(/이름/), { target: { value: '새대상자' } });
-  fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
+  // 식별 코드 입력
+  fireEvent.change(screen.getByLabelText(/보호자 식별 코드/), { target: { value: 'P-9999' } });
+  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
 
   await waitFor(() => {
-    expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/recipients', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/guardians', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('"name":"새대상자"'),
+      body: JSON.stringify({ guardianCodeOrEmail: 'P-9999' }),
     }));
   });
 
-  expect(await screen.findByText('새대상자')).toBeInTheDocument();
+  expect(await screen.findByText('박새봄보호자')).toBeInTheDocument();
+  expect(screen.getByText(/박당사/)).toBeInTheDocument();
 });
 
-it('돌봄지원사 추가 모달에서 지원사를 추가할 수 있다', async () => {
+it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async () => {
   let members = [
     { id: 1, userId: 1, name: '기존지원사', publicCode: 'SW-001', status: 'ACTIVE' },
   ];
@@ -354,6 +380,9 @@ it('돌봄지원사 추가 모달에서 지원사를 추가할 수 있다', asyn
     if (url.includes('/api/organizations/me/recipients')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
     if (url.includes('/api/organizations/me/assignments')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
@@ -367,7 +396,7 @@ it('돌봄지원사 추가 모달에서 지원사를 추가할 수 있다', asyn
     return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
   });
 
-  renderWithProviders();
+  renderWithProviders(['/agency?tab=workers']);
 
   await screen.findByText('기존지원사');
 

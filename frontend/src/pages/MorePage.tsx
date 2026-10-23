@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient } from '../api/careRecipients';
 import type { CareRecipient } from '../types/careRecipient';
+import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -83,6 +84,7 @@ export function MorePage() {
   const { user, logout, selectedRecipientId } = useAuth();
   const navigate = useNavigate();
   const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
   const [recipientError, setRecipientError] = useState<string | null>(null);
@@ -157,11 +159,39 @@ export function MorePage() {
           </div>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 700, margin: '0 0 2px', fontSize: '1rem' }}>{user?.name ?? '—'}님</p>
-          <p className="muted" style={{ margin: 0 }}>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</p>
-          {user?.email && <p className="muted" style={{ margin: 0, overflowWrap: 'anywhere' }}>{user.email}</p>}
+          <button
+            type="button"
+            onClick={() => setShowUserModal(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              textAlign: 'left',
+              cursor: 'pointer',
+              font: 'inherit',
+              width: '100%',
+            }}
+            aria-label="내 프로필 정보 보기"
+          >
+            <p style={{ fontWeight: 700, margin: '0 0 2px', fontSize: '1rem', color: '#1a2533' }}>
+              {user?.name ?? '—'}님
+            </p>
+            <p className="muted" style={{ margin: 0 }}>
+              <span>{user ? (ROLE_LABEL[user.role] ?? user.role) : ''}</span>
+              <span style={{ fontSize: '0.8125rem', color: '#3CAB7E', marginLeft: '6px' }}>프로필 보기 ›</span>
+            </p>
+            {user?.email && (
+              <p className="muted" style={{ margin: 0, overflowWrap: 'anywhere' }}>
+                {user.email}
+              </p>
+            )}
+          </button>
         </div>
       </div>
+
+      {showUserModal && (
+        <UserProfileModal user={user} onClose={() => setShowUserModal(false)} />
+      )}
 
       {showRecipientModal && (
         <div

@@ -542,14 +542,10 @@ export function AdminDashboardPage() {
                     <p className={styles.statValue}>{stats.supportWorkers.toLocaleString()}</p>
                   </div>
                   <div className={styles.statCard}>
-                    <p className={styles.statLabel}>기관 담당자</p>
-                    <p className={styles.statValue}>{stats.institutions.toLocaleString()}</p>
-                  </div>
-                  <div className={styles.statCard}>
-                    <p className={styles.statLabel}>등록 기관 수</p>
+                    <p className={styles.statLabel}>등록 기관</p>
                     <p className={styles.statValue}>{stats.totalOrganizations.toLocaleString()}</p>
                   </div>
-                  <div className={`${styles.statCard} ${styles.highlight}`} style={{ gridColumn: 'span 2' }}>
+                  <div className={`${styles.statCard} ${styles.highlight}`}>
                     <p className={styles.statLabel}>총 생활기록</p>
                     <p className={styles.statValue}>{stats.totalRecords.toLocaleString()}건</p>
                   </div>
@@ -748,26 +744,30 @@ export function AdminDashboardPage() {
                         )}
                       </div>
                       <div className={styles.userDetails}>
-                        <div className={styles.userMeta}>
-                          <span>
-                            고유 코드 <span className={styles.userCode}>{r.careRecipientNumber}</span>
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.copyButton}
-                            onClick={() => { void handleCopy(r.careRecipientNumber); }}
-                            aria-label={`${r.name} 고유 코드 복사`}
-                          >
-                            {copiedCode === r.careRecipientNumber ? '복사됨!' : '복사'}
-                          </button>
-                          {r.organizationName && (
-                            <>
-                              <span>·</span>
-                              <span>소속: {r.organizationName}</span>
-                            </>
-                          )}
-                          <span>·</span>
-                          <span>{new Date(r.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+                        <div className={styles.cardMetaList}>
+                          <div className={styles.codeRow}>
+                            <span>고유 코드</span>
+                            <span className={styles.userCode}>{r.careRecipientNumber}</span>
+                            <button
+                              type="button"
+                              className={styles.copyButton}
+                              onClick={() => { void handleCopy(r.careRecipientNumber); }}
+                              aria-label={`${r.name} 고유 코드 복사`}
+                            >
+                              {copiedCode === r.careRecipientNumber ? '복사됨!' : '코드 복사'}
+                            </button>
+                          </div>
+                          <div className={styles.subMetaRow}>
+                            {r.organizationName ? (
+                              <span>
+                                연결 기관: <strong className={styles.metaHighlight}>{r.organizationName}</strong>
+                              </span>
+                            ) : (
+                              <span>연결 기관: <span style={{ color: 'var(--muted)' }}>미연결</span></span>
+                            )}
+                            <span>·</span>
+                            <span>{new Date(r.createdAt).toLocaleDateString('ko-KR')} 등록</span>
+                          </div>
                         </div>
                         {r.disabilityTypes && r.disabilityTypes.length > 0 && (
                           <div className={styles.tagList}>
@@ -962,9 +962,19 @@ export function AdminDashboardPage() {
                   <div key={u.id} className={styles.userCard}>
                     <div className={styles.userCardHeader}>
                       <span className={styles.userName}>{u.name}</span>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {u.organizationName && (
-                          <span className={`${styles.roleBadge} ${styles.orgBadge}`}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {u.role === 'SUPPORT_WORKER' && u.organizationName && (
+                          <span className={styles.orgBadgeWorker}>
+                            소속: {u.organizationName}
+                          </span>
+                        )}
+                        {u.role === 'GUARDIAN' && u.organizationName && (
+                          <span className={styles.orgBadgeLinked}>
+                            연계: {u.organizationName}
+                          </span>
+                        )}
+                        {u.role === 'INSTITUTION' && u.organizationName && (
+                          <span className={styles.orgBadge}>
                             {u.organizationName}
                           </span>
                         )}
@@ -975,11 +985,27 @@ export function AdminDashboardPage() {
                     </div>
                     <div className={styles.userDetails}>
                       <span className={styles.userEmail}>{u.email}</span>
-                      <div className={styles.userMeta}>
-                        <span>코드 <span className={styles.userCode}>{u.publicCode}</span></span>
-                        {u.phone && <span>· {u.phone}</span>}
-                        <span>·</span>
-                        <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
+                      <div className={styles.cardMetaList}>
+                        <div className={styles.codeRow}>
+                          <span>식별 코드</span>
+                          <span className={styles.userCode}>{u.publicCode}</span>
+                        </div>
+                        <div className={styles.subMetaRow}>
+                          {u.role === 'SUPPORT_WORKER' && (
+                            <>
+                              <span>소속: <strong className={styles.metaHighlight}>{u.organizationName ?? '미소속'}</strong></span>
+                              <span>·</span>
+                            </>
+                          )}
+                          {u.role === 'GUARDIAN' && (
+                            <>
+                              <span>연결 기관: <strong className={styles.metaHighlight}>{u.organizationName ?? '미연결'}</strong></span>
+                              <span>·</span>
+                            </>
+                          )}
+                          {u.phone && <span>{u.phone} ·</span>}
+                          <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
+                        </div>
                       </div>
                     </div>
                     <div className={styles.cardActions}>

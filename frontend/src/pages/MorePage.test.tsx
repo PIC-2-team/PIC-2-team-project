@@ -1,17 +1,8 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MorePage } from './MorePage';
-
-// Mock dialog methods globally
-HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) {
-  this.open = true;
-});
-
-HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) {
-  this.open = false;
-});
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -145,7 +136,7 @@ it('로그아웃 버튼을 클릭하면 로그아웃 확인 다이얼로그를 �
     </MemoryRouter>
   );
 
-  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  const logoutBtn = screen.getByRole('button', { name: '로그아웃' });
   fireEvent.click(logoutBtn);
 
   expect(await screen.findByText('로그아웃할까요?')).toBeInTheDocument();
@@ -159,14 +150,10 @@ it('다이얼로그 취소 버튼을 클릭하면 로그아웃하지 않는다',
     </MemoryRouter>
   );
 
-  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  const logoutBtn = screen.getByRole('button', { name: '로그아웃' });
   fireEvent.click(logoutBtn);
 
-  await waitFor(() => {
-    expect(screen.getByText('로그아웃할까요?')).toBeInTheDocument();
-  });
-
-  const cancelBtn = screen.getByRole('button', { name: '취소' });
+  const cancelBtn = await screen.findByRole('button', { name: '취소' });
   fireEvent.click(cancelBtn);
 
   expect(mockLogout).not.toHaveBeenCalled();
@@ -180,16 +167,12 @@ it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다',
     </MemoryRouter>
   );
 
-  const logoutBtn = screen.getAllByRole('button', { name: '로그아웃' })[0];
+  const logoutBtn = screen.getByRole('button', { name: '로그아웃' });
   fireEvent.click(logoutBtn);
 
-  await waitFor(() => {
-    expect(screen.getByText('로그아웃할까요?')).toBeInTheDocument();
-  });
-
-  // 두 개의 로그아웃 버튼이 있으므로 마지막 것 선택 (다이얼로그의 로그아웃 버튼)
+  // 두 개의 로그아웃 버튼이 있으므로 정확히 선택
   const logoutButtons = screen.getAllByRole('button', { name: '로그아웃' });
-  fireEvent.click(logoutButtons[logoutButtons.length - 1]);
+  fireEvent.click(logoutButtons[logoutButtons.length - 1]); // 다이얼로그의 로그아웃 버튼
 
   expect(mockLogout).toHaveBeenCalled();
   expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
@@ -229,4 +212,33 @@ it('회원 탈퇴는 준비 중으로 안내하고 API 호출이나 로그아웃
   expect(fetchSpy).not.toHaveBeenCalled();
   expect(mockLogout).not.toHaveBeenCalled();
   fetchSpy.mockRestore();
+});
+
+it('사용자 이름/역할 영역을 클릭하면 사용자 프로필 모달이 열린다', async () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const profileBtn = screen.getByRole('button', { name: '내 프로필 정보 보기' });
+  fireEvent.click(profileBtn);
+
+  expect(await screen.findByRole('heading', { name: /활동지원사 정보/ })).toBeInTheDocument();
+  expect(screen.getByText('홍길동 님')).toBeInTheDocument();
+  expect(screen.getAllByText('worker@test.com').length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: '확인' })).toBeInTheDocument();
+});
+
+it('서비스 섹션에 알림함 메뉴가 표시되고 클릭 시 /notifications로 이동한다', () => {
+  render(
+    <MemoryRouter>
+      <MorePage />
+    </MemoryRouter>
+  );
+
+  const notifItem = screen.getByText('알림함');
+  expect(notifItem).toBeInTheDocument();
+  fireEvent.click(notifItem);
+  expect(mockNavigate).toHaveBeenCalledWith('/notifications');
 });

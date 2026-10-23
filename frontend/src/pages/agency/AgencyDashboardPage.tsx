@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppShell } from '../../components/AppShell';
@@ -12,15 +12,21 @@ import {
   assignSupportWorker,
   endAssignment,
   getOrganizationRecipients,
-  createOrganizationRecipient,
-  updateOrganizationRecipient,
-  deleteOrganizationRecipient,
+  getOrganizationGuardians,
+  registerOrganizationGuardian,
+  removeOrganizationGuardian,
   addMember,
   updateMemberStatus,
   removeMember,
 } from '../../api/organizations';
 import { ApiError } from '../../api/client';
-import type { Organization, OrganizationMember, CareAssignment, OrganizationCareRecipient } from '../../types/agency';
+import type {
+  Organization,
+  OrganizationMember,
+  CareAssignment,
+  OrganizationCareRecipient,
+  OrganizationGuardian,
+} from '../../types/agency';
 
 type PageState =
   | { status: 'loading' }
@@ -32,65 +38,62 @@ type PageState =
       members: OrganizationMember[];
       assignments: CareAssignment[];
       recipients: OrganizationCareRecipient[];
+      guardians: OrganizationGuardian[];
     };
 
 export function AgencyDashboardPage() {
   const { user } = useAuth();
+  const [confirmation, setConfirmation] = useState<{
+    title: string; confirmLabel: string; action: () => Promise<void>;
+  } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const [orgCode, setOrgCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
 
+  const currentTab = searchParams.get('tab') || 'home';
+
+  // 돌봄 보호자 등록 모달 상태
+  const [showGuardianModal, setShowGuardianModal] = useState(false);
+  const [guardianCodeOrEmail, setGuardianCodeOrEmail] = useState('');
+  const [isRegisteringGuardian, setIsRegisteringGuardian] = useState(false);
+  const [guardianError, setGuardianError] = useState<string | null>(null);
+
   // 배정 모달 상태
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignCareRecipientId, setAssignCareRecipientId] = useState('');
+  const [recipientSearchQuery, setRecipientSearchQuery] = useState('');
   const [assignWorkerId, setAssignWorkerId] = useState('');
   const [assignStartDate, setAssignStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [assignEndDate, setAssignEndDate] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
 
-  // 돌봄 대상자 추가/수정 모달 상태
-  const [showRecipientModal, setShowRecipientModal] = useState(false);
-  const [editingRecipient, setEditingRecipient] = useState<OrganizationCareRecipient | null>(null);
-  const [recipientName, setRecipientName] = useState('');
-  const [recipientBirthDate, setRecipientBirthDate] = useState('2000-01-01');
-  const [recipientGender, setRecipientGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>('MALE');
-  const [recipientGrade, setRecipientGrade] = useState<string>('1');
-  const [isSavingRecipient, setIsSavingRecipient] = useState(false);
-  const [recipientError, setRecipientError] = useState<string | null>(null);
-
-  // 돌봄지원사 추가 모달 상태
+  // 돌봄 지원사 추가 모달 상태
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [newMemberUserId, setNewMemberUserId] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
-  // ConfirmDialog 상태
-  const [showEndAssignmentDialog, setShowEndAssignmentDialog] = useState(false);
-  const [endAssignmentTarget, setEndAssignmentTarget] = useState<{ id: number; label: string } | null>(null);
-  const [endAssignmentError, setEndAssignmentError] = useState<string | null>(null);
-
-  const [showDeleteRecipientDialog, setShowDeleteRecipientDialog] = useState(false);
-  const [deleteRecipientTarget, setDeleteRecipientTarget] = useState<OrganizationCareRecipient | null>(null);
-  const [deleteRecipientError, setDeleteRecipientError] = useState<string | null>(null);
-
-  const [showRemoveMemberDialog, setShowRemoveMemberDialog] = useState(false);
-  const [removeMemberTarget, setRemoveMemberTarget] = useState<OrganizationMember | null>(null);
-  const [removeMemberError, setRemoveMemberError] = useState<string | null>(null);
-
-  const [toggleMemberError, setToggleMemberError] = useState<string | null>(null);
-
   const fetchDashboardData = async () => {
     try {
-      const [org, members, assignments, recipients] = await Promise.all([
+      const [org, members, assignments, recipients, guardians] = await Promise.all([
         getMyOrganization(),
         getMembers(),
         getAssignments(),
         getOrganizationRecipients().catch(() => [] as OrganizationCareRecipient[]),
+        getOrganizationGuardians().catch(() => [] as OrganizationGuardian[]),
       ]);
-      setPage({ status: 'ok', org, members, assignments, recipients });
+      setPage({
+        status: 'ok',
+        org,
+        members: Array.isArray(members) ? members : [],
+        assignments: Array.isArray(assignments) ? assignments : [],
+        recipients: Array.isArray(recipients) ? recipients : [],
+        guardians: Array.isArray(guardians) ? guardians : [],
+      });
     } catch (e) {
       if (e instanceof ApiError && (e.status === 404 || e.code === 'ORGANIZATION_NOT_FOUND')) {
         setPage({ status: 'not_found' });
@@ -104,13 +107,23 @@ export function AgencyDashboardPage() {
     let active = true;
     void (async () => {
       try {
-        const [org, members, assignments, recipients] = await Promise.all([
+        const [org, members, assignments, recipients, guardians] = await Promise.all([
           getMyOrganization(),
           getMembers(),
           getAssignments(),
           getOrganizationRecipients().catch(() => [] as OrganizationCareRecipient[]),
+          getOrganizationGuardians().catch(() => [] as OrganizationGuardian[]),
         ]);
-        if (active) setPage({ status: 'ok', org, members, assignments, recipients });
+        if (active) {
+          setPage({
+            status: 'ok',
+            org,
+            members: Array.isArray(members) ? members : [],
+            assignments: Array.isArray(assignments) ? assignments : [],
+            recipients: Array.isArray(recipients) ? recipients : [],
+            guardians: Array.isArray(guardians) ? guardians : [],
+          });
+        }
       } catch (e) {
         if (!active) return;
         if (e instanceof ApiError && (e.status === 404 || e.code === 'ORGANIZATION_NOT_FOUND')) {
@@ -124,14 +137,6 @@ export function AgencyDashboardPage() {
       active = false;
     };
   }, []);
-
-  // tab=workers 파라미터가 있을 때 스크롤
-  useEffect(() => {
-    if (searchParams.get('tab') === 'workers') {
-      const el = document.getElementById('section-workers');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [searchParams, page.status]);
 
   const handleRegisterOrg = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,8 +154,50 @@ export function AgencyDashboardPage() {
     }
   };
 
+  // 돌봄 보호자 등록 모달 열기
+  const handleOpenGuardianModal = () => {
+    setGuardianCodeOrEmail('');
+    setGuardianError(null);
+    setShowGuardianModal(true);
+  };
+
+  // 돌봄 보호자 등록 제출
+  const handleRegisterGuardian = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = guardianCodeOrEmail.trim();
+    if (!query) {
+      setGuardianError('보호자 식별 코드 또는 이메일을 입력해 주세요.');
+      return;
+    }
+    setIsRegisteringGuardian(true);
+    setGuardianError(null);
+    try {
+      await registerOrganizationGuardian({ guardianCodeOrEmail: query });
+      setShowGuardianModal(false);
+      await fetchDashboardData();
+    } catch (err) {
+      setGuardianError(err instanceof Error ? err.message : '보호자 등록에 실패했습니다.');
+    } finally {
+      setIsRegisteringGuardian(false);
+    }
+  };
+
+  // 돌봄 보호자 연결 해제
+  const handleRemoveGuardian = (guardian: OrganizationGuardian) => {
+    setActionError(null);
+    setConfirmation({ title: `'${guardian.name}' 돌봄 보호자의 연결을 해제하시겠습니까?`, confirmLabel: '연결 해제', action: async () => {
+    try {
+      await removeOrganizationGuardian(guardian.guardianId);
+      await fetchDashboardData();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '보호자 연결 해제에 실패했습니다.');
+    }
+    } });
+  };
+
   // 배정 모달 열기
   const handleOpenAssignModal = () => {
+    setRecipientSearchQuery('');
     if (page.status === 'ok') {
       if (page.recipients.length > 0) {
         setAssignCareRecipientId(String(page.recipients[0].id));
@@ -175,7 +222,7 @@ export function AgencyDashboardPage() {
     const recipientIdNum = Number(assignCareRecipientId);
     const workerIdNum = Number(assignWorkerId);
     if (!recipientIdNum || !workerIdNum || !assignStartDate) {
-      setAssignError('돌봄 대상자와 돌봄지원사, 시작일을 모두 선택해 주세요.');
+      setAssignError('돌봄 대상자와 돌봄 지원사, 시작일을 모두 선택해 주세요.');
       return;
     }
     setIsAssigning(true);
@@ -198,165 +245,99 @@ export function AgencyDashboardPage() {
 
   // 배정 종료 처리
   const handleEndAssignment = (assignmentId: number, workerLabel: string) => {
-    setEndAssignmentTarget({ id: assignmentId, label: workerLabel });
-    setShowEndAssignmentDialog(true);
-  };
-
-  const handleEndAssignmentConfirm = async () => {
-    if (!endAssignmentTarget) return;
-    setShowEndAssignmentDialog(false);
-    setEndAssignmentError(null);
+    setActionError(null);
+    setConfirmation({ title: `'${workerLabel}' 지원사의 배정을 종료하시겠습니까? 종료 즉시 정보 접근이 차단됩니다.`, confirmLabel: '종료', action: async () => {
     try {
-      await endAssignment(endAssignmentTarget.id);
+      await endAssignment(assignmentId);
       await fetchDashboardData();
     } catch (err) {
-      setEndAssignmentError(err instanceof Error ? err.message : '배정 종료 처리에 실패했습니다.');
-    } finally {
-      setEndAssignmentTarget(null);
+      setActionError(err instanceof Error ? err.message : '배정 종료 처리에 실패했습니다.');
     }
+    } });
   };
 
-  // 돌봄 대상자 등록/수정 모달 열기
-  const handleOpenRecipientModal = (recipient?: OrganizationCareRecipient) => {
-    if (recipient) {
-      setEditingRecipient(recipient);
-      setRecipientName(recipient.name);
-      setRecipientBirthDate(recipient.birthDate);
-      setRecipientGender(recipient.gender || 'MALE');
-      setRecipientGrade(recipient.disabilityGrade ? String(recipient.disabilityGrade) : '1');
-    } else {
-      setEditingRecipient(null);
-      setRecipientName('');
-      setRecipientBirthDate('2000-01-01');
-      setRecipientGender('MALE');
-      setRecipientGrade('1');
-    }
-    setRecipientError(null);
-    setShowRecipientModal(true);
-  };
-
-  // 돌봄 대상자 저장
-  const handleSaveRecipient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recipientName.trim()) {
-      setRecipientError('이름을 입력해 주세요.');
-      return;
-    }
-    setIsSavingRecipient(true);
-    setRecipientError(null);
-    try {
-      if (editingRecipient) {
-        await updateOrganizationRecipient(editingRecipient.id, {
-          name: recipientName.trim(),
-          birthDate: recipientBirthDate,
-          gender: recipientGender,
-          disabilityGrade: recipientGrade ? Number(recipientGrade) : null,
-        });
-      } else {
-        await createOrganizationRecipient({
-          name: recipientName.trim(),
-          birthDate: recipientBirthDate,
-          gender: recipientGender,
-          disabilityGrade: recipientGrade ? Number(recipientGrade) : null,
-          disabilityTypes: ['INTELLECTUAL'],
-        });
-      }
-      setShowRecipientModal(false);
-      await fetchDashboardData();
-    } catch (err) {
-      setRecipientError(err instanceof Error ? err.message : '저장에 실패했습니다.');
-    } finally {
-      setIsSavingRecipient(false);
-    }
-  };
-
-  // 돌봄 대상자 삭제
-  const handleDeleteRecipient = (recipient: OrganizationCareRecipient) => {
-    setDeleteRecipientTarget(recipient);
-    setShowDeleteRecipientDialog(true);
-  };
-
-  const handleDeleteRecipientConfirm = async () => {
-    if (!deleteRecipientTarget) return;
-    setShowDeleteRecipientDialog(false);
-    setDeleteRecipientError(null);
-    try {
-      await deleteOrganizationRecipient(deleteRecipientTarget.id);
-      await fetchDashboardData();
-    } catch (err) {
-      setDeleteRecipientError(err instanceof Error ? err.message : '삭제에 실패했습니다.');
-    } finally {
-      setDeleteRecipientTarget(null);
-    }
-  };
-
-  // 돌봄지원사 추가
+  // 돌봄 지원사 추가 제출
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userIdNum = Number(newMemberUserId.trim());
-    if (!userIdNum) {
+    const uid = Number(newMemberUserId.trim());
+    if (!uid) {
       setMemberError('사용자 ID를 올바르게 입력해 주세요.');
       return;
     }
     setIsAddingMember(true);
     setMemberError(null);
     try {
-      await addMember(userIdNum);
+      await addMember(uid);
       setShowMemberModal(false);
-      setNewMemberUserId('');
       await fetchDashboardData();
     } catch (err) {
-      setMemberError(err instanceof Error ? err.message : '돌봄지원사 추가에 실패했습니다.');
+      setMemberError(err instanceof Error ? err.message : '지원사 추가에 실패했습니다.');
     } finally {
       setIsAddingMember(false);
     }
   };
 
-  // 돌봄지원사 상태 토글
-  const handleToggleMemberStatus = async (member: OrganizationMember) => {
+  // 돌봄 지원사 상태 변경 (활성/비활성)
+  const handleToggleMemberStatus = (member: OrganizationMember) => {
     const nextActive = member.status !== 'ACTIVE';
-    setToggleMemberError(null);
+    const actionLabel = nextActive ? '활성화' : '비활성화';
+    setActionError(null);
+    setConfirmation({ title: `'${member.name}' 지원사를 ${actionLabel} 처리하시겠습니까?`, confirmLabel: '확인', action: async () => {
     try {
       await updateMemberStatus(member.id, nextActive);
       await fetchDashboardData();
     } catch (err) {
-      setToggleMemberError(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
+      setActionError(err instanceof Error ? err.message : `상태 변경에 실패했습니다.`);
     }
+    } });
   };
 
-  // 돌봄지원사 삭제(소속 해제)
+  // 돌봄 지원사 삭제
   const handleRemoveMember = (member: OrganizationMember) => {
-    setRemoveMemberTarget(member);
-    setShowRemoveMemberDialog(true);
-  };
-
-  const handleRemoveMemberConfirm = async () => {
-    if (!removeMemberTarget) return;
-    setShowRemoveMemberDialog(false);
-    setRemoveMemberError(null);
+    setActionError(null);
+    setConfirmation({ title: `'${member.name}' 지원사를 기관 소속에서 삭제하시겠습니까?`, confirmLabel: '소속 해제', action: async () => {
     try {
-      await removeMember(removeMemberTarget.id);
+      await removeMember(member.id);
       await fetchDashboardData();
     } catch (err) {
-      setRemoveMemberError(err instanceof Error ? err.message : '소속 해제에 실패했습니다.');
-    } finally {
-      setRemoveMemberTarget(null);
+      setActionError(err instanceof Error ? err.message : '지원사 삭제에 실패했습니다.');
     }
+    } });
   };
 
-  return (
-    <AppShell role={user?.role} footer={<TabBar role={user?.role ?? 'INSTITUTION'} />}>
-      <main className="demo-page">
-        <div>
-          <p className="muted">{user?.name} 담당자님</p>
-          <h1>기관 대시보드</h1>
-        </div>
+  // 필터링된 돌봄 대상자 목록 (배정 모달용)
+  const filteredRecipients = useMemo(() => {
+    if (page.status !== 'ok') return [];
+    const query = recipientSearchQuery.trim().toLowerCase();
+    if (!query) return page.recipients;
+    return page.recipients.filter(
+      (r) =>
+        r.name.toLowerCase().includes(query) ||
+        (r.careRecipientNumber && r.careRecipientNumber.toLowerCase().includes(query)) ||
+        String(r.id).includes(query)
+    );
+  }, [page, recipientSearchQuery]);
 
-        {page.status === 'loading' && <p className="empty-state" role="status">불러오는 중…</p>}
-        {page.status === 'error' && <p className="error" role="alert">{page.message}</p>}
+  return (
+    <AppShell role={user?.role} footer={<TabBar />}>
+      <main className="demo-page" style={{ padding: '20px 16px 80px', maxWidth: 640, margin: '0 auto' }}>
+        {page.status === 'loading' && (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <p className="muted">기관 정보를 불러오는 중입니다…</p>
+          </div>
+        )}
+
+        {page.status === 'error' && (
+          <div className="demo-card" style={{ textAlign: 'center', padding: '32px 16px' }}>
+            <p className="error" role="alert" style={{ margin: '0 0 16px' }}>{page.message}</p>
+            <button type="button" className="btn" onClick={() => void fetchDashboardData()}>
+              다시 시도
+            </button>
+          </div>
+        )}
 
         {page.status === 'not_found' && (
-          <section className="demo-card">
+          <div className="demo-card" style={{ maxWidth: 440, margin: '40px auto', padding: '28px 20px' }}>
             <h2>소속 기관을 등록해 주세요</h2>
             <p className="muted">기관 대시보드를 이용하려면 슈퍼 어드민에서 발급받은 6자리 기관 코드를 등록해야 합니다.</p>
             <form className="demo-form" onSubmit={(e) => { void handleRegisterOrg(e); }}>
@@ -367,256 +348,377 @@ export function AgencyDashboardPage() {
                   value={orgCode}
                   onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
                   placeholder="예: KNU001"
-                  required
                   maxLength={6}
+                  required
                 />
               </label>
               {registerError && <p className="error" role="alert">{registerError}</p>}
-              <button type="submit" className="btn" disabled={isSubmitting || orgCode.trim().length !== 6}>
+              <button type="submit" className="btn" disabled={isSubmitting}>
                 {isSubmitting ? '등록 중…' : '기관 등록하기'}
               </button>
             </form>
-          </section>
+          </div>
         )}
 
         {page.status === 'ok' && (
           <>
-            <section className="demo-card">
-              <h2>{page.org.name}</h2>
-              <p className="muted">기관 코드: {page.org.organizationCode}</p>
-            </section>
-
-            {/* 돌봄 대상자 관리 섹션 */}
-            <section className="demo-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h2 style={{ margin: 0 }}>돌봄 대상자 ({page.recipients.length}명)</h2>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.88rem', padding: '6px 12px' }}
-                  onClick={() => handleOpenRecipientModal()}
-                >
-                  + 대상자 등록
-                </button>
+            {/* 기관 헤더 */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '1.4rem' }}>🏢</span>
+                <h2 style={{ margin: 0, fontSize: '1.3rem' }}>{page.org.name}</h2>
               </div>
+              <p className="muted" style={{ margin: '4px 0 0 32px', fontSize: '0.9rem' }}>
+                기관 코드: <strong>{page.org.organizationCode}</strong>
+              </p>
+            </div>
 
-              {page.recipients.length === 0 ? (
-                <p className="empty-state">등록된 돌봄 대상자가 없어요.</p>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {page.recipients.map((r) => (
-                    <li
-                      key={r.id}
-                      style={{
-                        padding: '10px 0',
-                        borderBottom: '1px solid var(--line)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <strong>{r.name}</strong>
-                        <span className="muted" style={{ marginLeft: 8, fontSize: '0.85rem' }}>
-                          {r.careRecipientNumber || `#${r.id}`} · {r.birthDate}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.78rem', padding: '4px 8px' }}
-                          onClick={() => handleOpenRecipientModal(r)}
-                        >
-                          수정
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
-                          onClick={() => handleDeleteRecipient(r)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {/* 돌봄지원사 관리 섹션 */}
-            <section id="section-workers" className="demo-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h2 style={{ margin: 0 }}>돌봄지원사 ({page.members.length}명)</h2>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.88rem', padding: '6px 12px' }}
-                  onClick={() => {
-                    setNewMemberUserId('');
-                    setMemberError(null);
-                    setShowMemberModal(true);
+            {/* TAB: 홈 대시보드 */}
+            {currentTab === 'home' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* 숫자 요약 통계 카드 */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 12,
                   }}
                 >
-                  + 지원사 추가
-                </button>
-              </div>
+                  <div
+                    className="demo-card"
+                    style={{
+                      padding: 16,
+                      borderRadius: 12,
+                      background: 'var(--surface-color, #f8fbf9)',
+                      border: '1px solid var(--line, #e2ece6)',
+                    }}
+                  >
+                    <span className="muted" style={{ fontSize: '0.82rem' }}>등록 돌봄 보호자</span>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4, color: '#2e7d32' }}>
+                      {page.guardians.length}명
+                    </div>
+                  </div>
 
-              {page.members.length === 0 ? (
-                <p className="empty-state">소속 돌봄지원사가 없어요.</p>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {page.members.map((m) => (
-                    <li
-                      key={m.id}
-                      style={{
-                        padding: '10px 0',
-                        borderBottom: '1px solid var(--line)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
+                  <div
+                    className="demo-card"
+                    style={{
+                      padding: 16,
+                      borderRadius: 12,
+                      background: 'var(--surface-color, #f8fbf9)',
+                      border: '1px solid var(--line, #e2ece6)',
+                    }}
+                  >
+                    <span className="muted" style={{ fontSize: '0.82rem' }}>관리 돌봄 대상자</span>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4, color: '#3CAB7E' }}>
+                      {page.recipients.length}명
+                    </div>
+                  </div>
+
+                  <div
+                    className="demo-card"
+                    style={{
+                      padding: 16,
+                      borderRadius: 12,
+                      background: 'var(--surface-color, #f8fbf9)',
+                      border: '1px solid var(--line, #e2ece6)',
+                    }}
+                  >
+                    <span className="muted" style={{ fontSize: '0.82rem' }}>소속 돌봄 지원사</span>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4, color: '#1976d2' }}>
+                      {page.members.length}명
+                    </div>
+                  </div>
+
+                  <div
+                    className="demo-card"
+                    style={{
+                      padding: 16,
+                      borderRadius: 12,
+                      background: 'var(--surface-color, #f8fbf9)',
+                      border: '1px solid var(--line, #e2ece6)',
+                    }}
+                  >
+                    <span className="muted" style={{ fontSize: '0.82rem' }}>진행 중 배정</span>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4, color: '#e67e22' }}>
+                      {page.assignments.filter((a) => !a.endedAt).length}건
+                    </div>
+                  </div>
+                </div>
+
+                {/* 돌봄 보호자 관리 섹션 */}
+                <section className="demo-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.15rem' }}>돌봄 보호자 ({page.guardians.length}명)</h2>
+                      <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>
+                        보호자를 등록하면 보호자가 앱에서 당사자를 직접 등록합니다.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.88rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
+                      onClick={handleOpenGuardianModal}
                     >
-                      <div>
-                        <strong>{m.name}</strong>
-                        <span className="muted" style={{ marginLeft: 8, fontSize: '0.85rem' }}>
-                          ({m.publicCode || `#${m.id}`})
-                        </span>
-                        <span
+                      + 보호자 등록
+                    </button>
+                  </div>
+
+                  {(page.guardians ?? []).length === 0 ? (
+                    <p className="empty-state">
+                      등록된 돌봄 보호자가 없어요. <strong>+ 보호자 등록</strong> 버튼을 눌러 보호자를 등록해 주세요.
+                    </p>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                      {(page.guardians ?? []).map((g) => (
+                        <li
+                          key={g.id}
                           style={{
-                            marginLeft: 8,
-                            fontSize: '0.75rem',
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            background: m.status === 'ACTIVE' ? '#e8f5e9' : '#f5f5f5',
-                            color: m.status === 'ACTIVE' ? '#2e7d32' : '#757575',
+                            padding: '12px 0',
+                            borderBottom: '1px solid var(--line, #eee)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
                           }}
                         >
-                          {m.status === 'ACTIVE' ? '활성' : '비활성'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.78rem', padding: '4px 8px' }}
-                          onClick={() => void handleToggleMemberStatus(m)}
-                        >
-                          {m.status === 'ACTIVE' ? '비활성화' : '활성화'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
-                          onClick={() => handleRemoveMember(m)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {/* 배정 현황 카드 */}
-            <section className="demo-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h2 style={{ margin: 0 }}>배정 현황 ({page.assignments.filter((a) => !a.endedAt).length}건 진행 중)</h2>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.88rem', padding: '6px 12px' }}
-                  onClick={handleOpenAssignModal}
-                >
-                  배정하기
-                </button>
-              </div>
-
-              {page.assignments.length === 0 ? (
-                <p className="empty-state">배정 내역이 없어요.</p>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {page.assignments.map((a) => {
-                    const isEnded = Boolean(a.endedAt);
-                    const worker = page.members.find((m) => m.userId === a.supportWorkerId || m.id === a.supportWorkerId);
-                    const workerLabel = worker ? `${worker.name} (#${a.supportWorkerId})` : `#${a.supportWorkerId}`;
-                    const recipient = page.recipients.find((r) => r.id === a.careRecipientId);
-                    const recipientLabel = recipient ? `${recipient.name} (#${a.careRecipientId})` : `이용자 #${a.careRecipientId}`;
-
-                    return (
-                      <li
-                        key={a.id}
-                        style={{
-                          padding: '12px',
-                          marginBottom: 8,
-                          borderRadius: 8,
-                          border: '1px solid var(--line)',
-                          background: isEnded ? '#fafafa' : '#fff',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <strong style={{ fontSize: '0.95rem' }}>{recipientLabel}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <strong>{g.name}</strong>
                               <span className="muted" style={{ fontSize: '0.85rem' }}>
-                                · 지원사 {workerLabel}
+                                ({g.publicCode || g.email || `#${g.guardianId}`})
                               </span>
                             </div>
-                            <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.8rem' }}>
-                              기간: {a.startDate} ~ {a.endDate || '종료일 없음'}
-                              {a.endedAt && ` (종료일시: ${a.endedAt.slice(0, 10)})`}
-                            </p>
+                            <div style={{ fontSize: '0.82rem', color: '#555', marginTop: 4 }}>
+                              {g.careRecipients && g.careRecipients.length > 0 ? (
+                                <span>
+                                  등록 당사자: {g.careRecipients.map((r) => r.name).join(', ')} ({g.careRecipients.length}명)
+                                </span>
+                              ) : (
+                                <span className="muted">아직 당사자를 등록하지 않음</span>
+                              )}
+                            </div>
                           </div>
                           <div>
-                            {isEnded ? (
-                              <span
-                                style={{
-                                  fontSize: '0.75rem',
-                                  padding: '2px 8px',
-                                  borderRadius: 4,
-                                  background: '#eee',
-                                  color: '#666',
-                                }}
-                              >
-                                종료됨
-                              </span>
-                            ) : (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span
-                                  style={{
-                                    fontSize: '0.75rem',
-                                    padding: '2px 8px',
-                                    borderRadius: 4,
-                                    background: '#e8f5e9',
-                                    color: '#2e7d32',
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  진행 중
-                                </span>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#c0392b' }}
-                                  onClick={() => handleEndAssignment(a.id, workerLabel)}
-                                >
-                                  배정 종료
-                                </button>
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
+                              onClick={() => void handleRemoveGuardian(g)}
+                            >
+                              연결 해제
+                            </button>
                           </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                {/* 관리 돌봄 대상자 목록 섹션 */}
+                <section className="demo-card">
+                  <div style={{ marginBottom: 12 }}>
+                    <h2 style={{ margin: 0, fontSize: '1.15rem' }}>돌봄 대상자 현황 ({page.recipients.length}명)</h2>
+                    <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>
+                      돌봄 보호자가 등록한 당사자 목록입니다. 이 목록의 대상자에게 지원사를 배정할 수 있습니다.
+                    </p>
+                  </div>
+
+                  {page.recipients.length === 0 ? (
+                    <p className="empty-state">
+                      등록된 돌봄 대상자가 없어요. 돌봄 보호자가 당사자를 등록하면 이곳에 자동으로 연동됩니다.
+                    </p>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                      {page.recipients.map((r) => (
+                        <li
+                          key={r.id}
+                          style={{
+                            padding: '10px 0',
+                            borderBottom: '1px solid var(--line, #eee)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <strong>{r.name}</strong>
+                            <span className="muted" style={{ marginLeft: 8, fontSize: '0.85rem' }}>
+                              {r.careRecipientNumber || `#${r.id}`} · {r.birthDate}
+                            </span>
+                          </div>
+                          <span className="badge" style={{ fontSize: '0.78rem' }}>관리 중</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
+            )}
+
+            {/* TAB: 돌봄 지원사 관리 */}
+            {currentTab === 'workers' && (
+              <section id="section-workers" className="demo-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.15rem' }}>돌봄 지원사 관리 ({page.members.length}명)</h2>
+                    <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>
+                      기관에 소속된 돌봄 지원사를 조회하고 활성화 상태를 관리합니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.88rem', padding: '6px 12px', whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      setNewMemberUserId('');
+                      setMemberError(null);
+                      setShowMemberModal(true);
+                    }}
+                  >
+                    + 지원사 추가
+                  </button>
+                </div>
+
+                {page.members.length === 0 ? (
+                  <p className="empty-state">소속 돌봄 지원사가 없어요.</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {page.members.map((m) => (
+                      <li
+                        key={m.id}
+                        style={{
+                          padding: '12px 0',
+                          borderBottom: '1px solid var(--line, #eee)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div>
+                          <strong>{m.name}</strong>
+                          <span className="muted" style={{ marginLeft: 8, fontSize: '0.85rem' }}>
+                            ({m.publicCode || `#${m.id}`})
+                          </span>
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: '0.78rem',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: m.status === 'ACTIVE' ? '#e8f5e9' : '#ffebee',
+                              color: m.status === 'ACTIVE' ? '#2e7d32' : '#c62828',
+                            }}
+                          >
+                            {m.status === 'ACTIVE' ? '활동 중' : '비활동'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+                            onClick={() => void handleToggleMemberStatus(m)}
+                          >
+                            {m.status === 'ACTIVE' ? '비활성화' : '활성화'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
+                            onClick={() => void handleRemoveMember(m)}
+                          >
+                            삭제
+                          </button>
                         </div>
                       </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
 
-            {/* 돌봄 대상자 추가/수정 모달 */}
-            {showRecipientModal && (
+            {/* TAB: 배정 */}
+            {currentTab === 'assignments' && (
+              <section className="demo-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.15rem' }}>돌봄 지원사 배정 ({page.assignments.length}건)</h2>
+                    <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.82rem' }}>
+                      돌봄 대상자에게 소속 돌봄 지원사를 1:1로 배정하고 관리합니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ fontSize: '0.88rem', padding: '6px 14px', whiteSpace: 'nowrap' }}
+                    onClick={handleOpenAssignModal}
+                  >
+                    + 배정하기
+                  </button>
+                </div>
+
+                {page.assignments.length === 0 ? (
+                  <p className="empty-state">현재 등록된 배정 내역이 없어요.</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {page.assignments.map((a) => {
+                      const recipient = page.recipients.find((r) => r.id === a.careRecipientId);
+                      const worker = page.members.find((m) => (m.userId ?? m.id) === a.supportWorkerId);
+                      const isEnded = Boolean(a.endedAt);
+                      const recipientLabel = recipient ? `${recipient.name} (#${recipient.id})` : `이용자 #${a.careRecipientId}`;
+                      const workerLabel = worker ? `${worker.name} (#${worker.userId ?? worker.id})` : `지원사 #${a.supportWorkerId}`;
+
+                      return (
+                        <li
+                          key={a.id}
+                          style={{
+                            padding: '12px 0',
+                            borderBottom: '1px solid var(--line, #eee)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            opacity: isEnded ? 0.6 : 1,
+                          }}
+                        >
+                          <div>
+                            <div>
+                              <strong>{recipientLabel}</strong>
+                              <span style={{ margin: '0 6px', color: '#999' }}>←</span>
+                              <span style={{ fontWeight: 600 }}>{workerLabel}</span>
+                            </div>
+                            <div className="muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>
+                              기간: {a.startDate} ~ {a.endDate || '종료일 미정'}
+                              {isEnded && (
+                                <span style={{ marginLeft: 8, color: '#c0392b', fontWeight: 600 }}>
+                                  (종료됨)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            {!isEnded ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.78rem', padding: '4px 8px', color: '#c0392b' }}
+                                onClick={() => void handleEndAssignment(a.id, workerLabel)}
+                              >
+                                배정 종료
+                              </button>
+                            ) : (
+                              <span className="muted" style={{ fontSize: '0.8rem' }}>종료됨</span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {/* 돌봄 보호자 등록 모달 */}
+            {showGuardianModal && (
               <div
                 style={{
                   position: 'fixed',
@@ -632,72 +734,43 @@ export function AgencyDashboardPage() {
                 <div
                   className="demo-card"
                   style={{
-                    maxWidth: 400,
+                    maxWidth: 420,
                     width: '100%',
                     background: '#fff',
                     borderRadius: 12,
                     padding: 20,
                   }}
                 >
-                  <h2 style={{ marginTop: 0, marginBottom: 16 }}>
-                    {editingRecipient ? '돌봄 대상자 수정' : '돌봄 대상자 등록'}
-                  </h2>
-                  <form className="demo-form" onSubmit={(e) => { void handleSaveRecipient(e); }}>
+                  <h2 style={{ marginTop: 0, marginBottom: 8 }}>돌봄 보호자 등록</h2>
+                  <p className="muted" style={{ fontSize: '0.85rem', marginTop: 0, marginBottom: 16 }}>
+                    보호자의 공개 식별 코드(예: P-XXXX) 또는 이메일을 입력하세요. 기관에 등록된 보호자가 앱에서 당사자를 등록하면 이곳에서 함께 관리할 수 있습니다.
+                  </p>
+                  <form className="demo-form" onSubmit={(e) => { void handleRegisterGuardian(e); }}>
                     <label>
-                      이름 (필수)
+                      보호자 식별 코드 또는 이메일
                       <input
                         type="text"
-                        value={recipientName}
-                        onChange={(e) => setRecipientName(e.target.value)}
-                        placeholder="예: 김철수"
+                        value={guardianCodeOrEmail}
+                        onChange={(e) => setGuardianCodeOrEmail(e.target.value)}
+                        placeholder="예: P-ABCD1234 또는 guardian@email.com"
                         required
+                        autoFocus
                       />
                     </label>
 
-                    <label style={{ marginTop: 12 }}>
-                      생년월일
-                      <input
-                        type="date"
-                        value={recipientBirthDate}
-                        onChange={(e) => setRecipientBirthDate(e.target.value)}
-                        required
-                      />
-                    </label>
-
-                    <label style={{ marginTop: 12 }}>
-                      성별
-                      <select
-                        value={recipientGender}
-                        onChange={(e) => setRecipientGender(e.target.value as 'MALE' | 'FEMALE' | 'OTHER')}
-                      >
-                        <option value="MALE">남성</option>
-                        <option value="FEMALE">여성</option>
-                        <option value="OTHER">기타</option>
-                      </select>
-                    </label>
-
-                    <label style={{ marginTop: 12 }}>
-                      장애 등급 (선택)
-                      <select value={recipientGrade} onChange={(e) => setRecipientGrade(e.target.value)}>
-                        <option value="1">1급 / 중증</option>
-                        <option value="2">2급</option>
-                        <option value="3">3급</option>
-                      </select>
-                    </label>
-
-                    {recipientError && <p className="error" role="alert">{recipientError}</p>}
+                    {guardianError && <p className="error" role="alert">{guardianError}</p>}
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                       <button
                         type="button"
                         className="btn btn-secondary"
                         style={{ flex: 1 }}
-                        onClick={() => setShowRecipientModal(false)}
+                        onClick={() => setShowGuardianModal(false)}
                       >
                         취소
                       </button>
-                      <button type="submit" className="btn" style={{ flex: 1 }} disabled={isSavingRecipient}>
-                        {isSavingRecipient ? '저장 중…' : '저장하기'}
+                      <button type="submit" className="btn" style={{ flex: 1 }} disabled={isRegisteringGuardian}>
+                        {isRegisteringGuardian ? '등록 중…' : '등록하기'}
                       </button>
                     </div>
                   </form>
@@ -705,7 +778,7 @@ export function AgencyDashboardPage() {
               </div>
             )}
 
-            {/* 돌봄지원사 추가 모달 */}
+            {/* 돌봄 지원사 추가 모달 */}
             {showMemberModal && (
               <div
                 style={{
@@ -729,7 +802,7 @@ export function AgencyDashboardPage() {
                     padding: 20,
                   }}
                 >
-                  <h2 style={{ marginTop: 0, marginBottom: 16 }}>돌봄지원사 추가</h2>
+                  <h2 style={{ marginTop: 0, marginBottom: 16 }}>돌봄 지원사 추가</h2>
                   <form className="demo-form" onSubmit={(e) => { void handleAddMember(e); }}>
                     <label>
                       지원사 사용자 ID (숫자)
@@ -761,7 +834,7 @@ export function AgencyDashboardPage() {
               </div>
             )}
 
-            {/* 배정하기 모달 (입력된 대상자/지원사 목록 중에서 드롭다운 선택) */}
+            {/* 배정하기 모달 */}
             {showAssignModal && (
               <div
                 style={{
@@ -778,43 +851,69 @@ export function AgencyDashboardPage() {
                 <div
                   className="demo-card"
                   style={{
-                    maxWidth: 400,
+                    maxWidth: 440,
                     width: '100%',
                     background: '#fff',
                     borderRadius: 12,
                     padding: 20,
                   }}
                 >
-                  <h2 style={{ marginTop: 0, marginBottom: 16 }}>돌봄지원사 배정</h2>
+                  <h2 style={{ marginTop: 0, marginBottom: 16 }}>돌봄 지원사 배정</h2>
                   <form className="demo-form" onSubmit={(e) => { void handleCreateAssignment(e); }}>
-                    <label>
-                      돌봄 대상자
-                      {page.recipients.length > 0 ? (
-                        <select
-                          value={assignCareRecipientId}
-                          onChange={(e) => setAssignCareRecipientId(e.target.value)}
-                          required
-                        >
-                          {page.recipients.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.name} ({r.careRecipientNumber || `#${r.id}`})
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={assignCareRecipientId}
-                          onChange={(e) => setAssignCareRecipientId(e.target.value)}
-                          placeholder="돌봄 대상자 ID 직접 입력"
-                          required
-                        />
-                      )}
-                    </label>
+                    {/* 돌봄 대상자 선택 영역 */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 4 }}>
+                        돌봄 대상자
+                      </label>
 
-                    <label style={{ marginTop: 12 }}>
-                      돌봄지원사
+                      {page.recipients.length > 0 ? (
+                        <>
+                          <input
+                            type="text"
+                            value={recipientSearchQuery}
+                            onChange={(e) => setRecipientSearchQuery(e.target.value)}
+                            placeholder="대상자 이름 또는 번호 검색…"
+                            style={{ marginBottom: 8, fontSize: '0.88rem' }}
+                          />
+
+                          <select
+                            aria-label="돌봄 대상자"
+                            value={assignCareRecipientId}
+                            onChange={(e) => setAssignCareRecipientId(e.target.value)}
+                            required
+                          >
+                            {filteredRecipients.length > 0 ? (
+                              filteredRecipients.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name} ({r.careRecipientNumber || `#${r.id}`})
+                                </option>
+                              ))
+                            ) : (
+                              <option disabled value="">검색 결과가 없습니다</option>
+                            )}
+                          </select>
+                        </>
+                      ) : (
+                        <div
+                          style={{
+                            padding: '12px 14px',
+                            background: '#fff3cd',
+                            border: '1px solid #ffeeba',
+                            borderRadius: 8,
+                            fontSize: '0.85rem',
+                            color: '#856404',
+                          }}
+                        >
+                          등록된 돌봄 대상자가 없습니다. 먼저 돌봄 보호자를 등록하고, 보호자가 당사자를 등록해야 지원사를 배정할 수 있습니다.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 돌봄 지원사 선택 영역 */}
+                    <label style={{ marginTop: 14 }}>
+                      돌봄 지원사
                       <select
+                        aria-label="돌봄 지원사"
                         value={assignWorkerId}
                         onChange={(e) => setAssignWorkerId(e.target.value)}
                         required
@@ -827,7 +926,7 @@ export function AgencyDashboardPage() {
                       </select>
                     </label>
 
-                    <label style={{ marginTop: 12 }}>
+                    <label style={{ marginTop: 14 }}>
                       배정 시작일
                       <input
                         type="date"
@@ -837,7 +936,7 @@ export function AgencyDashboardPage() {
                       />
                     </label>
 
-                    <label style={{ marginTop: 12 }}>
+                    <label style={{ marginTop: 14 }}>
                       배정 종료일 (선택)
                       <input
                         type="date"
@@ -849,7 +948,7 @@ export function AgencyDashboardPage() {
 
                     {assignError && <p className="error" role="alert">{assignError}</p>}
 
-                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
                       <button
                         type="button"
                         className="btn btn-secondary"
@@ -858,7 +957,12 @@ export function AgencyDashboardPage() {
                       >
                         취소
                       </button>
-                      <button type="submit" className="btn" style={{ flex: 1 }} disabled={isAssigning}>
+                      <button
+                        type="submit"
+                        className="btn"
+                        style={{ flex: 1 }}
+                        disabled={isAssigning || page.recipients.length === 0}
+                      >
                         {isAssigning ? '등록 중…' : '배정 등록'}
                       </button>
                     </div>
@@ -868,38 +972,11 @@ export function AgencyDashboardPage() {
             )}
           </>
         )}
-
-        {endAssignmentError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{endAssignmentError}</p>}
-        {deleteRecipientError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{deleteRecipientError}</p>}
-        {removeMemberError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{removeMemberError}</p>}
-        {toggleMemberError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{toggleMemberError}</p>}
-
-        <ConfirmDialog
-          open={showEndAssignmentDialog}
-          title="배정을 종료하시겠습니까?"
-          description="종료 즉시 정보 접근이 차단됩니다."
-          confirmLabel="종료"
-          variant="danger"
-          onConfirm={() => { void handleEndAssignmentConfirm(); }}
-          onCancel={() => { setShowEndAssignmentDialog(false); setEndAssignmentTarget(null); }}
-        />
-        <ConfirmDialog
-          open={showDeleteRecipientDialog}
-          title="대상자를 삭제하시겠습니까?"
-          description="기관 목록에서 연결이 해제됩니다."
-          confirmLabel="삭제"
-          variant="danger"
-          onConfirm={() => { void handleDeleteRecipientConfirm(); }}
-          onCancel={() => { setShowDeleteRecipientDialog(false); setDeleteRecipientTarget(null); }}
-        />
-        <ConfirmDialog
-          open={showRemoveMemberDialog}
-          title="지원사를 소속 해제하시겠습니까?"
-          confirmLabel="소속 해제"
-          variant="danger"
-          onConfirm={() => { void handleRemoveMemberConfirm(); }}
-          onCancel={() => { setShowRemoveMemberDialog(false); setRemoveMemberTarget(null); }}
-        />
+        {actionError && <p role="alert" className="error">{actionError}</p>}
+        <ConfirmDialog open={confirmation !== null} title={confirmation?.title ?? ''}
+          confirmLabel={confirmation?.confirmLabel} variant="danger"
+          onConfirm={() => { const action = confirmation?.action; setConfirmation(null); void action?.(); }}
+          onCancel={() => setConfirmation(null)} />
       </main>
     </AppShell>
   );

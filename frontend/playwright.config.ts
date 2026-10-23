@@ -6,11 +6,17 @@ const E2E_BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${E2E_PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
+  fullyParallel: true,
+  workers: process.env.CI ? 2 : undefined,
+  forbidOnly: !!process.env.CI,
+  reporter: [['list'], ['html', { open: 'never' }]],
   timeout: 30_000,
   use: {
     baseURL: E2E_BASE_URL,
     viewport: { width: 390, height: 844 },
     locale: 'ko-KR',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium' }],
   webServer: process.env.E2E_BASE_URL

@@ -12,7 +12,15 @@ export class ApiError extends Error {
   }
 }
 
-let _getToken: () => string | null = () => null;
+function getFallbackToken(): string | null {
+  try {
+    return localStorage.getItem('sam_token');
+  } catch {
+    return null;
+  }
+}
+
+let _getToken: () => string | null = getFallbackToken;
 let _tokenOverride: string | null | undefined;
 let _updateAccessToken: (token: string) => void = () => {};
 let _onUnauthorized: (() => void) | null = null;
@@ -42,7 +50,10 @@ function resolveUrl(path: string): string {
 }
 
 function currentToken() {
-  return _tokenOverride === undefined ? _getToken() : _tokenOverride;
+  if (_tokenOverride !== undefined) return _tokenOverride;
+  const token = _getToken();
+  if (token) return token;
+  return getFallbackToken();
 }
 
 function refreshAccessToken(): Promise<string | null> {

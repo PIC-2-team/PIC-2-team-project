@@ -29,7 +29,7 @@ export type RegisterRequest = {
   name: string;
   email: string;
   password: string;
-  phone?: string;
+  phone: string;
   role: 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
 };
 

@@ -47,7 +47,7 @@ it('화면 진입 시 당사자 이름, 보호자 직통 전달 안내 및 폼�
   expect(screen.getByRole('heading', { name: '돌봄 내용 수정 요청', level: 1 })).toBeInTheDocument();
   expect(await screen.findByText('김철수님')).toBeInTheDocument();
   expect(screen.getByText('보호자 직통 전달')).toBeInTheDocument();
-  expect(screen.getByText(/활동지원사님의 요청은 기관을 거치지 않고 돌봄 보호자에게 다이렉트로 전달됩니다/)).toBeInTheDocument();
+  expect(screen.getByText(/보호자에게 바로 전달됩니다/)).toBeInTheDocument();
   expect(screen.getByText(/\[식사\] 항목 관련 요청/)).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: '수정 요청 내용' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '수정 요청 보내기' })).toBeDisabled();
