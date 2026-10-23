@@ -78,6 +78,7 @@ export function RegisterPage() {
     <AppShell>
       <main className="demo-page">
         <div className="page-heading">
+          <button type="button" className="back" onClick={() => navigate(-1)} aria-label="뒤로가기">←</button>
           <h1>회원가입</h1>
         </div>
 
