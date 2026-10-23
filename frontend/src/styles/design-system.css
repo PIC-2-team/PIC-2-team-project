@@ -648,3 +648,40 @@
   font-size: 0.875rem;
   z-index: 150;
 }
+
+.install-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  background: #1a2533;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  z-index: 150;
+}
+
+.install-banner span {
+  flex: 1;
+}
+
+.install-banner button {
+  white-space: nowrap;
+  background: #3CAB7E;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.install-banner button[aria-label="닫기"] {
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 1rem;
+}
