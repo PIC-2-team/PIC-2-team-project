@@ -32,7 +32,7 @@ export function RecordFormPage() {
   const [transcript, setTranscript] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<RecordCategory>(initialCategory);
-  const [showInCareInfo, setShowInCareInfo] = useState(false);
+  const [showInCareInfo, setShowInCareInfo] = useState(returnToCareInfo);
   const [recording, setRecording] = useState(false);
   const [requestingMic, setRequestingMic] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -66,7 +66,7 @@ export function RecordFormPage() {
   const prepareDraft = (draft: { transcript: string; content: string; category: RecordCategory }) => {
     setTranscript(draft.transcript);
     setContent(draft.content);
-    setCategory(draft.category);
+    setCategory(returnToCareInfo ? initialCategory : draft.category);
     setStage('review');
   };
 
@@ -270,7 +270,7 @@ export function RecordFormPage() {
                   <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
                     {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? '정리하고 있어요…' : '녹음 시작하기'}
                   </button>
-                  <p className={styles.privacyNote}>녹음 파일은 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
+                  <p className={styles.privacyNote}>녹음 파일은 정리 후 삭제를 요청해요.<br />확인한 내용만 기록으로 저장돼요.</p>
                 </section>
               ) : (
                 <>

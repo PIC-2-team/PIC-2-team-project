@@ -26,17 +26,6 @@ const DISABILITY_MAP: Record<string, string> = {
   OTHER: '기타',
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  COMMUNICATION: '의사소통',
-  LIFESTYLE: '생활습관',
-  MEAL: '식사',
-  PREFERENCE: '선호·비선호',
-  CHALLENGING_BEHAVIOR: '도전행동',
-  HEALTH: '건강·복약',
-  EMERGENCY: '위기대처',
-  OTHER: '기타',
-};
-
 function formatDisability(type: string): string {
   return DISABILITY_MAP[type] ?? type;
 }
@@ -202,30 +191,6 @@ export function HomePage() {
           )}
         </div>
 
-        <div className={styles.careInfoSummarySection}>
-          <div className={styles.careInfoSummaryHeader}>
-            <span className={styles.careInfoSummaryTitle}>✨ 중요 돌봄 정보 요약</span>
-          </div>
-          {pinnedRecords.length > 0 ? (
-            <div className={styles.careInfoChips}>
-              {pinnedRecords.slice(0, 3).map((rec) => (
-                <div key={rec.id} className={styles.careInfoChip}>
-                  <span className={styles.careInfoChipCategory}>
-                    {CATEGORY_LABEL[rec.category] ?? rec.category}
-                  </span>
-                  <span className={styles.careInfoChipContent}>
-                    {rec.content}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyCareInfoHint}>
-              등록된 중요 돌봄 정보가 아직 없어요.
-            </p>
-          )}
-        </div>
-
         <div className={styles.recipientActions}>
           <button
             type="button"
@@ -291,7 +256,7 @@ export function HomePage() {
       {pinnedRecords.length > 0 && (
         <section className={styles.section} aria-labelledby="pinned-records-title">
           <div className={styles.sectionHeader}>
-            <h2 id="pinned-records-title" className={styles.sectionTitle}>📌 중요 생활기록</h2>
+            <h2 id="pinned-records-title" className={styles.sectionTitle}>📌 중요 돌봄 정보</h2>
           </div>
           <div className={styles.records}>
             {pinnedRecords.map(record => (
@@ -312,7 +277,7 @@ export function HomePage() {
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>
           <button
             className={styles.viewAll}
-            onClick={() => navigate('/records')}
+            onClick={() => navigate('/records?view=list')}
             type="button"
           >
             전체보기 ›

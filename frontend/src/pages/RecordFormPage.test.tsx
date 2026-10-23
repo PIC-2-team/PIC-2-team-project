@@ -312,7 +312,7 @@ it('돌봄정보에서 카테고리와 함께 진입 시 해당 카테고리가 
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '저녁 약을 제시간에 복용했습니다.' } });
   
   const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
-  fireEvent.click(showInCareInfo);
+  expect(showInCareInfo).toBeChecked();
 
   fireEvent.click(screen.getByRole('button', { name: '기록하기' }));
 

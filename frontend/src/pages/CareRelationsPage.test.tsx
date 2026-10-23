@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { CareRelationsPage } from './CareRelationsPage';
+import { ApiError } from '../api/client';
 import * as careRecipientsApi from '../api/careRecipients';
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -17,6 +18,35 @@ describe('CareRelationsPage', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('조회 API가 없으면 빈 관계 목록 대신 안내와 재시도를 표시한다', async () => {
+    const fetch = vi.spyOn(careRecipientsApi, 'getCareRelations')
+      .mockRejectedValueOnce(new ApiError('NOT_FOUND', '요청한 리소스를 찾을 수 없습니다.', 404))
+      .mockResolvedValueOnce({ careRecipientId: 42, organizations: [], assignments: [] });
+    const user = userEvent.setup();
+    render(<MemoryRouter><CareRelationsPage /></MemoryRouter>);
+    expect(await screen.findByRole('alert')).toHaveTextContent('돌봄 관계 조회 기능이 서버에 반영되지 않았어요.');
+    expect(screen.queryByText('아직 연결된 기관이 없습니다.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '다시 불러오기' }));
+    expect(await screen.findByText('아직 연결된 기관이 없습니다.')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('관계 조회 실패 후에도 기관 연결 요청을 전송할 수 있다', async () => {
+    vi.spyOn(careRecipientsApi, 'getCareRelations').mockRejectedValue(
+      new ApiError('NOT_FOUND', '요청한 리소스를 찾을 수 없습니다.', 404),
+    );
+    const request = vi.spyOn(careRecipientsApi, 'requestOrganizationLink').mockResolvedValue();
+    const user = userEvent.setup();
+    render(<MemoryRouter><CareRelationsPage /></MemoryRouter>);
+    await screen.findByRole('alert');
+    await user.type(screen.getByRole('textbox', { name: '연결할 기관 코드' }), 'new002');
+    await user.click(screen.getByRole('button', { name: '기관 연결 요청하기' }));
+    expect(request).toHaveBeenCalledWith(42, 'NEW002');
+    expect(await screen.findByRole('status')).toHaveTextContent('기관 연결 요청을 전송했습니다.');
+    expect(await screen.findByRole('textbox', { name: '연결할 기관 코드' })).toBeInTheDocument();
   });
 
   it('연결된 기관과 배정된 지원사 목록을 정상적으로 렌더링한다', async () => {
