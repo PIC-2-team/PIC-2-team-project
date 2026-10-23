@@ -38,3 +38,31 @@ it('전체 기록의 다음 페이지를 조회하고 필터 변경 시 첫 페�
   fireEvent.change(screen.getByRole('combobox', { name: '카테고리' }), { target: { value: 'MEAL' } });
   await waitFor(() => expect(list).toHaveBeenLastCalledWith(42, 'MEAL', 1));
 });
+
+it('목록 조회 실패는 기록 없음으로 표시하지 않는다', async () => {
+  vi.spyOn(recordsApi, 'getRecords').mockRejectedValue(new Error('네트워크 오류'));
+  render(<MemoryRouter initialEntries={['/records?view=list']}><DailyRecordPage /></MemoryRouter>);
+  expect(await screen.findByRole('alert')).toHaveTextContent('네트워크 오류');
+  expect(screen.queryByText('조회된 기록이 없어요.')).not.toBeInTheDocument();
+});
+
+it('필터 조회 실패 후 이전 필터의 페이지 탐색을 노출하지 않는다', async () => {
+  vi.spyOn(recordsApi, 'getRecords')
+    .mockResolvedValueOnce({ items: [], pagination: { page: 1, pageSize: 20, totalItems: 60, totalPages: 3 } })
+    .mockRejectedValueOnce(new Error('조회 실패'));
+  render(<MemoryRouter initialEntries={['/records?view=list']}><DailyRecordPage /></MemoryRouter>);
+  await screen.findByRole('navigation', { name: '기록 페이지' });
+  fireEvent.change(screen.getByRole('combobox', { name: '카테고리' }), { target: { value: 'HEALTH' } });
+  await screen.findByRole('alert');
+  expect(screen.queryByRole('navigation', { name: '기록 페이지' })).not.toBeInTheDocument();
+});
+
+it('조회 중에는 빈 목록 문구를 표시하지 않는다', async () => {
+  let resolve!: (value: Awaited<ReturnType<typeof recordsApi.getRecords>>) => void;
+  vi.spyOn(recordsApi, 'getRecords').mockReturnValue(new Promise(result => { resolve = result; }));
+  render(<MemoryRouter initialEntries={['/records?view=list']}><DailyRecordPage /></MemoryRouter>);
+  expect(screen.getByRole('status')).toBeInTheDocument();
+  expect(screen.queryByText('조회된 기록이 없어요.')).not.toBeInTheDocument();
+  resolve({ items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } });
+  expect(await screen.findByText('조회된 기록이 없어요.')).toBeInTheDocument();
+});

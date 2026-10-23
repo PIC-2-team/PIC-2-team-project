@@ -112,6 +112,7 @@ export function DailyRecordPage() {
     setIsLoading(true);
     setError(null);
     setMonthRecords([]);
+    setTotalPages(0);
     const request = listOnly
       ? getRecords(selectedRecipientId, category || undefined, page)
       : getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1, category || undefined);
@@ -215,7 +216,7 @@ export function DailyRecordPage() {
           </button>
         </div>
 
-        {selectedRecords.length === 0 ? (
+        {!isLoading && !error && (selectedRecords.length === 0 ? (
           <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>{listOnly ? '조회된 기록이 없어요.' : '이 날의 기록이 없어요.'}</p>
         ) : (
           <div className={styles.records}>
@@ -231,10 +232,10 @@ export function DailyRecordPage() {
               </Link>
             ))}
           </div>
-        )}
+        ))}
       </section>
 
-      {listOnly && totalPages > 1 && (
+      {listOnly && !isLoading && !error && totalPages > 1 && (
         <nav aria-label="기록 페이지" className={styles.pagination}>
           <button type="button" disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)}>이전</button>
           <span>{page} / {totalPages}</span>
