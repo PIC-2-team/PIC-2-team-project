@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import type { UserRole } from '../../types/user';
 import styles from './TabBar.module.css';
 
 type Tab = { to: string; label: string; icon: (active: boolean) => React.ReactNode };
@@ -74,8 +75,6 @@ const MORE_TAB: Tab = {
     </svg>
   ),
 };
-
-import type { UserRole } from '../../types/user';
 
 export default function TabBar({ role, unreadCount }: { role?: UserRole; unreadCount?: number } = {}) {
   const { user } = useAuth();

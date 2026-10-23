@@ -323,6 +323,7 @@ export function AdminDashboardPage() {
 
   // 3. 기관 삭제
   const handleDeleteOrg = (org: AdminOrganization) => {
+    setDeleteOrgError(null);
     setDeleteOrgTarget(org);
     setShowDeleteOrgDialog(true);
   };
@@ -422,6 +423,8 @@ export function AdminDashboardPage() {
 
   // 7. 사용자 삭제
   const handleDeleteUser = (u: AdminUserSummary) => {
+    setSelfDeleteError(null);
+    setDeleteUserError(null);
     if (user?.id === u.id) {
       setSelfDeleteError('현재 로그인된 관리자 본인 계정은 삭제할 수 없습니다.');
       return;
