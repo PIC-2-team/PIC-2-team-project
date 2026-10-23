@@ -56,7 +56,6 @@ it('필수 동의가 빠지면 제출할 수 없다', () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch');
   renderConsentPage();
   selectRoleAndGoToConsent();
-
   fireEvent.click(screen.getAllByRole('checkbox', { name: /필수/ })[0]);
   const submit = screen.getByRole('button', { name: '동의하고 시작하기' });
   expect(submit).toBeDisabled();
@@ -115,4 +114,46 @@ it('동의 API가 실패하면 이동하지 않고 재시도를 허용한다', a
   expect(await screen.findByRole('alert')).toHaveTextContent('동의 처리 중 오류가 발생했어요. 다시 시도해주세요.');
   expect(screen.queryByRole('heading', { name: '회원가입 화면' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '동의하고 시작하기' })).toBeEnabled();
+});
+
+it('상세 보기 버튼을 누르면 수집 항목·이용 목적·보유 기간이 펼쳐진다', () => {
+  renderConsentPage();
+  selectRoleAndGoToConsent();
+
+  // 상세 패널이 초기에는 없어야 함
+  expect(screen.queryByText('수집 항목')).not.toBeInTheDocument();
+
+  // 첫 번째 항목(기본 개인정보) 상세 보기 토글 클릭
+  fireEvent.click(screen.getByRole('button', { name: /기본 개인정보.*상세 보기/ }));
+
+  expect(screen.getByText('수집 항목')).toBeInTheDocument();
+  expect(screen.getByText('이용 목적')).toBeInTheDocument();
+  expect(screen.getByText('보유·이용 기간')).toBeInTheDocument();
+  expect(screen.getByText('동의 거부 권리')).toBeInTheDocument();
+  expect(screen.getByText('거부 시 불이익')).toBeInTheDocument();
+});
+
+it('같은 항목 상세 보기 버튼을 다시 누르면 접힌다', () => {
+  renderConsentPage();
+  selectRoleAndGoToConsent();
+
+  const toggleBtn = screen.getByRole('button', { name: /기본 개인정보.*상세 보기/ });
+  fireEvent.click(toggleBtn);
+  expect(screen.getByText('수집 항목')).toBeInTheDocument();
+
+  fireEvent.click(toggleBtn);
+  expect(screen.queryByText('수집 항목')).not.toBeInTheDocument();
+});
+
+it('다른 항목 상세 보기를 열면 이전 항목은 닫힌다', () => {
+  renderConsentPage();
+  selectRoleAndGoToConsent();
+
+  fireEvent.click(screen.getByRole('button', { name: /기본 개인정보.*상세 보기/ }));
+  expect(screen.getByText('수집 항목')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /건강·복약.*상세 보기/ }));
+  // 두 번째 항목 상세가 열리고, 첫 번째 항목 상세 중복 없이 하나만 존재
+  expect(screen.getAllByText('수집 항목')).toHaveLength(1);
+  expect(screen.getByText('제3자 제공')).toBeInTheDocument();
 });
