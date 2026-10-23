@@ -151,7 +151,8 @@ it('보호자가 삭제 버튼을 누르고 확인하면 deleteRecord 호출 후
     deletedAt: '2026-10-22T12:30:00Z',
     restoreUntil: '2026-11-21T12:30:00Z',
   });
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
 
   render(
     <MemoryRouter initialEntries={['/records/101']}>
@@ -163,6 +164,7 @@ it('보호자가 삭제 버튼을 누르고 확인하면 deleteRecord 호출 후
 
   const deleteBtn = await screen.findByRole('button', { name: '삭제' });
   fireEvent.click(deleteBtn);
+  fireEvent.click(screen.getByRole('alertdialog').querySelectorAll('button')[1]);
 
   await waitFor(() => {
     expect(deleteSpy).toHaveBeenCalledWith(42, 101);
@@ -299,4 +301,19 @@ it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 �
 
   expect(await screen.findByText(/#1차 수정 · 이활동 \(활동지원사\)/)).toBeInTheDocument();
   expect(screen.getByText('식사 1차 변경 기록')).toBeInTheDocument();
+});
+
+it('기록 삭제는 브라우저 confirm 대신 인앱 확인창을 사용한다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
+    <Route path="/records/:id" element={<RecordDetailPage />} />
+  </Routes></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: '삭제' }));
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '취소' }));
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 });

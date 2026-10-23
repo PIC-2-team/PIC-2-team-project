@@ -312,7 +312,7 @@ it('돌봄정보에서 카테고리와 함께 진입 시 해당 카테고리가 
   fireEvent.change(screen.getByLabelText('기록할 내용'), { target: { value: '저녁 약을 제시간에 복용했습니다.' } });
   
   const showInCareInfo = screen.getByRole('checkbox', { name: '돌봄정보에도 표시' });
-  fireEvent.click(showInCareInfo);
+  expect(showInCareInfo).toBeChecked();
 
   fireEvent.click(screen.getByRole('button', { name: '기록하기' }));
 
@@ -322,4 +322,30 @@ it('돌봄정보에서 카테고리와 함께 진입 시 해당 카테고리가 
     category: 'HEALTH',
     pinned: true,
   }));
+});
+
+it('녹음 중에 경과 시간 타이머가 표시된다', async () => {
+  class MockRecorder {
+    static isTypeSupported() { return true; }
+    state = 'inactive';
+    mimeType = 'audio/webm';
+    ondataavailable: ((event: BlobEvent) => void) | null = null;
+    onstop: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    start() { this.state = 'recording'; }
+    stop() {
+      this.ondataavailable?.({ data: new Blob(['audio'], { type: this.mimeType }) } as BlobEvent);
+      this.state = 'inactive';
+      this.onstop?.();
+    }
+  }
+  vi.stubGlobal('MediaRecorder', MockRecorder);
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) },
+  });
+  renderPage();
+  fireEvent.click(screen.getByRole('button', { name: '녹음 시작하기' }));
+  await screen.findByRole('button', { name: '녹음 마치기' });
+  expect(screen.getByRole('timer')).toBeInTheDocument();
 });

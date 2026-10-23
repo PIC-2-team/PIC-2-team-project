@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getRecordsByMonth } from '../api/records';
+import { getRecords, getRecordsByMonth } from '../api/records';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+const CATEGORY_LABEL: Record<RecordCategory, string> = {
+  COMMUNICATION: '의사소통', LIFESTYLE: '생활습관', MEAL: '식사',
+  PREFERENCE: '선호·비선호', CHALLENGING_BEHAVIOR: '도전행동',
+  HEALTH: '건강·복약', EMERGENCY: '위기대처', OTHER: '기타',
+};
 
 const CATEGORY_COLOR: Record<RecordCategory, string> = {
   COMMUNICATION: '#e8f5ee',
@@ -84,6 +91,11 @@ function getWeekdayLabel(year: number, month: number, day: number) {
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listOnly = searchParams.get('view') === 'list';
+  const [category, setCategory] = useState<RecordCategory | ''>('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [today] = useState(() => {
     const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -91,6 +103,7 @@ export function DailyRecordPage() {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [showAllDayRecords, setShowAllDayRecords] = useState(false);
   const [monthRecords, setMonthRecords] = useState<DailyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,20 +112,28 @@ export function DailyRecordPage() {
     if (!selectedRecipientId) return;
     let isCurrent = true;
     setIsLoading(true);
+    setShowAllDayRecords(false);
     setError(null);
     setMonthRecords([]);
-    getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1)
-      .then(res => { if (isCurrent) setMonthRecords(res.items); })
+    setTotalPages(0);
+    const request = listOnly
+      ? getRecords(selectedRecipientId, category || undefined, page)
+      : getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1, category || undefined);
+    request.then(res => {
+      if (isCurrent) { setMonthRecords(res.items); setTotalPages(res.pagination.totalPages); }
+    })
       .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록 불러오기 실패'); })
       .finally(() => { if (isCurrent) setIsLoading(false); });
     return () => { isCurrent = false; };
-  }, [selectedRecipientId, viewYear, viewMonth]);
+  }, [selectedRecipientId, viewYear, viewMonth, listOnly, category, page]);
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
 
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
-  const selectedRecords = monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
+  const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
+  const visibleRecords = listOnly || showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
+  const hasMore = !listOnly && !showAllDayRecords && selectedRecords.length > 3;
   const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
   const canWrite = user?.role === 'GUARDIAN';
@@ -130,17 +151,19 @@ export function DailyRecordPage() {
   return (
     <div className="demo-page">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1>생활기록</h1>
-        <button className={styles.filterButton} type="button">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <line x1="2" y1="4" x2="14" y2="4" stroke="#4a5568" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="4" y1="8" x2="12" y2="8" stroke="#4a5568" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="6" y1="12" x2="10" y2="12" stroke="#4a5568" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          필터
-        </button>
+        <h1>{listOnly ? '돌봄 기록 목록' : '생활기록'}</h1>
       </div>
 
+      <div className={styles.categoryFilter}>
+        <select aria-label="카테고리" value={category} onChange={event => {
+          setCategory(event.target.value as RecordCategory | ''); setPage(1);
+        }}>
+          <option value="">전체</option>
+          {Object.entries(CATEGORY_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+      </div>
+
+      {!listOnly && (
       <section className="demo-card accent" aria-label="월별 캘린더">
         <div className="calendar-heading">
           <button onClick={prevMonth} type="button" aria-label="이전 달">‹</button>
@@ -178,28 +201,30 @@ export function DailyRecordPage() {
         </div>
       </section>
 
-      {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+      )}
+
+      {isLoading && <div role="status" aria-label="기록을 불러오는 중" data-testid="loading-skeleton"><Skeleton height={56} count={3} /></div>}
       {error && <p className="error" role="alert">{error}</p>}
 
       <section>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
           <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
-            {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
+            {listOnly ? '전체 기록' : `${viewMonth + 1}월 ${selectedDay}일 (${getWeekdayLabel(viewYear, viewMonth, selectedDay)})`}
           </h2>
           <button
             className={styles.viewAll}
             type="button"
-            onClick={() => navigate('/records')}
+            onClick={() => { setPage(1); setSearchParams(listOnly ? {} : { view: 'list' }); }}
           >
-            더보기 ›
+            {listOnly ? '달력 보기' : '더보기 ›'}
           </button>
         </div>
 
-        {selectedRecords.length === 0 ? (
-          <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 기록이 없어요.</p>
+        {!isLoading && !error && (selectedRecords.length === 0 ? (
+          <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>{listOnly ? '조회된 기록이 없어요.' : '이 날의 기록이 없어요.'}</p>
         ) : (
           <div className={styles.records}>
-            {selectedRecords.map(record => (
+            {visibleRecords.map(record => (
               <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
                 <div
                   className={styles.recordIcon}
@@ -210,11 +235,22 @@ export function DailyRecordPage() {
                 <p className={styles.recordContent}>{record.content}</p>
               </Link>
             ))}
+            {hasMore && <button type="button" className={styles.viewAll} onClick={() => setShowAllDayRecords(true)}>
+              기록 펼치기 ({selectedRecords.length - 3}개 더)
+            </button>}
           </div>
-        )}
+        ))}
       </section>
 
-      {canWrite && (
+      {listOnly && !isLoading && !error && totalPages > 1 && (
+        <nav aria-label="기록 페이지" className={styles.pagination}>
+          <button type="button" disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)}>이전</button>
+          <span>{page} / {totalPages}</span>
+          <button type="button" disabled={page >= totalPages || isLoading} onClick={() => setPage(p => p + 1)}>다음</button>
+        </nav>
+      )}
+
+      {canWrite && !listOnly && (
         <button
           className={`btn ${styles.recordButton}`}
           type="button"

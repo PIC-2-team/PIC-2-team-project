@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
@@ -6,6 +6,7 @@ import { getTodayRecords, getRecordSuggestions } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './HomePage.module.css';
@@ -23,17 +24,6 @@ const DISABILITY_MAP: Record<string, string> = {
   AUTISM: '자폐성 장애',
   BRAIN_LESION: '뇌병변장애',
   DEVELOPMENTAL: '발달장애',
-  OTHER: '기타',
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  COMMUNICATION: '의사소통',
-  LIFESTYLE: '생활습관',
-  MEAL: '식사',
-  PREFERENCE: '선호·비선호',
-  CHALLENGING_BEHAVIOR: '도전행동',
-  HEALTH: '건강·복약',
-  EMERGENCY: '위기대처',
   OTHER: '기타',
 };
 
@@ -62,9 +52,10 @@ type PageState =
   | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
-  const { user, setSelectedRecipient } = useAuth();
+  const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const requestRef = useRef(0);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
@@ -78,15 +69,19 @@ export function HomePage() {
       navigate('/agency', { replace: true });
       return;
     }
+    setPage({ status: 'loading' });
+    const requests = requestRef;
+    const requestId = ++requests.current;
     const load = async () => {
       try {
         const recipients = await listCareRecipients();
-        const first = recipients[0] ?? null;
+        if (requestId !== requestRef.current) return;
+        const first = recipients.find(recipient => recipient.id === selectedRecipientId) ?? recipients[0] ?? null;
         if (!first) {
           setPage({ status: 'empty' });
           return;
         }
-        setSelectedRecipient(first.id);
+        if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
         const [records, overview, suggestionsRes] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
@@ -94,6 +89,7 @@ export function HomePage() {
             ? getRecordSuggestions(first.id, 'PENDING').catch(() => null)
             : Promise.resolve(null),
         ]);
+        if (requestId !== requestRef.current) return;
         if (suggestionsRes?.items) {
           setPendingSuggestionCount(suggestionsRes.items.length);
         }
@@ -104,13 +100,19 @@ export function HomePage() {
           pinnedRecords: overview.pinnedRecords ?? [],
         });
       } catch (e) {
+        if (requestId !== requestRef.current) return;
         setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
       }
     };
     void load();
-  }, [user?.role, navigate, setSelectedRecipient]);
+    return () => { requests.current++; };
+  }, [user?.role, selectedRecipientId, navigate, setSelectedRecipient]);
 
-  if (page.status === 'loading') return <div className="demo-page status-page"><p className="empty-state" role="status">불러오는 중…</p></div>;
+  if (page.status === 'loading') return (
+    <div className="demo-page status-page" data-testid="loading-skeleton">
+      <Skeleton height={80} count={2} />
+    </div>
+  );
   if (page.status === 'error') return <div className="demo-page status-page"><p className="error" role="alert">{page.message}</p></div>;
   if (page.status === 'empty') {
     const isSupportWorker = user?.role === 'SUPPORT_WORKER';
@@ -202,30 +204,6 @@ export function HomePage() {
           )}
         </div>
 
-        <div className={styles.careInfoSummarySection}>
-          <div className={styles.careInfoSummaryHeader}>
-            <span className={styles.careInfoSummaryTitle}>✨ 중요 돌봄 정보 요약</span>
-          </div>
-          {pinnedRecords.length > 0 ? (
-            <div className={styles.careInfoChips}>
-              {pinnedRecords.slice(0, 3).map((rec) => (
-                <div key={rec.id} className={styles.careInfoChip}>
-                  <span className={styles.careInfoChipCategory}>
-                    {CATEGORY_LABEL[rec.category] ?? rec.category}
-                  </span>
-                  <span className={styles.careInfoChipContent}>
-                    {rec.content}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyCareInfoHint}>
-              등록된 중요 돌봄 정보가 아직 없어요.
-            </p>
-          )}
-        </div>
-
         <div className={styles.recipientActions}>
           <button
             type="button"
@@ -291,7 +269,7 @@ export function HomePage() {
       {pinnedRecords.length > 0 && (
         <section className={styles.section} aria-labelledby="pinned-records-title">
           <div className={styles.sectionHeader}>
-            <h2 id="pinned-records-title" className={styles.sectionTitle}>📌 중요 생활기록</h2>
+            <h2 id="pinned-records-title" className={styles.sectionTitle}>📌 중요 돌봄 정보</h2>
           </div>
           <div className={styles.records}>
             {pinnedRecords.map(record => (
@@ -312,7 +290,7 @@ export function HomePage() {
           <h2 className={styles.sectionTitle}>오늘의 기록</h2>
           <button
             className={styles.viewAll}
-            onClick={() => navigate('/records')}
+            onClick={() => navigate('/records?view=list')}
             type="button"
           >
             전체보기 ›

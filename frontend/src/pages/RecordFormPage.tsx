@@ -6,6 +6,10 @@ import { useAuth } from '../contexts/AuthContext';
 import type { RecordCategory } from '../types/record';
 import styles from './RecordFormPage.module.css';
 
+function formatTimer(sec: number): string {
+  return `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
+}
+
 const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'COMMUNICATION', label: '의사소통' }, { id: 'LIFESTYLE', label: '생활습관' },
   { id: 'MEAL', label: '식사' }, { id: 'PREFERENCE', label: '선호·비선호' },
@@ -32,8 +36,9 @@ export function RecordFormPage() {
   const [transcript, setTranscript] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<RecordCategory>(initialCategory);
-  const [showInCareInfo, setShowInCareInfo] = useState(false);
+  const [showInCareInfo, setShowInCareInfo] = useState(returnToCareInfo);
   const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [requestingMic, setRequestingMic] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,6 +51,12 @@ export function RecordFormPage() {
   const mountedRef = useRef(false);
   const discardRecordingRef = useRef(false);
   const durationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!recording) { setElapsed(0); return; }
+    const id = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [recording]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -66,7 +77,7 @@ export function RecordFormPage() {
   const prepareDraft = (draft: { transcript: string; content: string; category: RecordCategory }) => {
     setTranscript(draft.transcript);
     setContent(draft.content);
-    setCategory(draft.category);
+    setCategory(returnToCareInfo ? initialCategory : draft.category);
     setStage('review');
   };
 
@@ -266,11 +277,12 @@ export function RecordFormPage() {
                 <section className={styles.voicePanel}>
                   <div className={styles.micIcon} aria-hidden="true">{recording ? '●' : '🎙'}</div>
                   <h2>{recording ? '말씀해 주세요' : '오늘 있었던 일을 들려주세요'}</h2>
+                  {recording && <span role="timer" className={styles.timer}>{formatTimer(elapsed)}</span>}
                   <p className={styles.voiceGuide}>{recording ? '녹음을 마치면 내용을 정리해요.' : '녹음한 음성은 글로 정리하고 유형을 분류해요.'}</p>
                   <button className={recording ? styles.stopButton : styles.recordButton} type="button" disabled={processing || requestingMic || (orphanedMediaId !== null && !recording) || cleanupPending} onClick={() => recording ? stopRecording() : void startRecording()}>
                     {recording ? '녹음 마치기' : orphanedMediaId !== null ? '먼저 녹음 파일을 삭제해 주세요' : requestingMic ? '마이크 권한 확인 중…' : processing ? '정리하고 있어요…' : '녹음 시작하기'}
                   </button>
-                  <p className={styles.privacyNote}>녹음 파일은 정리 후 삭제를 요청해요. 확인한 내용만 기록으로 저장돼요.</p>
+                  <p className={styles.privacyNote}>녹음 파일은 정리 후 삭제를 요청해요.<br />확인한 내용만 기록으로 저장돼요.</p>
                 </section>
               ) : (
                 <>

@@ -27,7 +27,7 @@ export function AdminTabBar({
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M3 3v18h18"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -38,7 +38,7 @@ export function AdminTabBar({
             width="3"
             height="7"
             rx="1"
-            fill={active ? '#3CAB7E' : '#8a9ab0'}
+            fill={active ? '#3CAB7E' : '#6b7e95'}
           />
           <rect
             x="12"
@@ -46,7 +46,7 @@ export function AdminTabBar({
             width="3"
             height="11"
             rx="1"
-            fill={active ? '#3CAB7E' : '#8a9ab0'}
+            fill={active ? '#3CAB7E' : '#6b7e95'}
           />
           <rect
             x="17"
@@ -54,7 +54,7 @@ export function AdminTabBar({
             width="3"
             height="5"
             rx="1"
-            fill={active ? '#3CAB7E' : '#8a9ab0'}
+            fill={active ? '#3CAB7E' : '#6b7e95'}
           />
         </svg>
       ),
@@ -66,20 +66,20 @@ export function AdminTabBar({
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M3 21h18"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
           />
           <path
             d="M5 21V7l8-4v18"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <path
             d="M13 10l6 3v8"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -89,7 +89,7 @@ export function AdminTabBar({
             y1="9"
             x2="9"
             y2="9.01"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -98,7 +98,7 @@ export function AdminTabBar({
             y1="13"
             x2="9"
             y2="13.01"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -107,7 +107,7 @@ export function AdminTabBar({
             y1="17"
             x2="9"
             y2="17.01"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -121,7 +121,7 @@ export function AdminTabBar({
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -130,19 +130,19 @@ export function AdminTabBar({
             cx="9"
             cy="7"
             r="4"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
           />
           <path
             d="M23 21v-2a4 4 0 00-3-3.87"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <path
             d="M16 3.13a4 4 0 010 7.75"
-            stroke={active ? '#3CAB7E' : '#8a9ab0'}
+            stroke={active ? '#3CAB7E' : '#6b7e95'}
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -155,9 +155,9 @@ export function AdminTabBar({
       label: '더보기',
       icon: (active) => (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="5" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
-          <circle cx="12" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
-          <circle cx="19" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#8a9ab0'} />
+          <circle cx="5" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#6b7e95'} />
+          <circle cx="12" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#6b7e95'} />
+          <circle cx="19" cy="12" r="1.8" fill={active ? '#3CAB7E' : '#6b7e95'} />
         </svg>
       ),
     },

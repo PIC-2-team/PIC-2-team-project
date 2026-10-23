@@ -11,6 +11,7 @@ import {
   getRecordSuggestions,
   type RecordSuggestion,
 } from '../api/records';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -53,6 +54,7 @@ export function RecordDetailPage() {
 
   // 기록 삭제 상태
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // 수정 제안 상태 (활동지원사용)
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -116,7 +118,7 @@ export function RecordDetailPage() {
 
   const handleDelete = async () => {
     if (!selectedRecipientId || !id) return;
-    if (!window.confirm('기록을 삭제하시겠습니까?')) return;
+    setShowDeleteDialog(false);
     setIsDeleting(true);
     setError(null);
     try {
@@ -167,6 +169,9 @@ export function RecordDetailPage() {
 
   return (
     <AppShell role={user?.role}>
+      <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
+        description="삭제 후 되돌릴 수 없습니다." confirmLabel="삭제" variant="danger"
+        onConfirm={() => { void handleDelete(); }} onCancel={() => setShowDeleteDialog(false)} />
       <main className="demo-page">
         <div className="page-heading">
           <button type="button" className="back" onClick={() => navigate(-1)} aria-label="뒤로가기">←</button>
@@ -317,7 +322,7 @@ export function RecordDetailPage() {
                       type="button"
                       className="btn secondary danger"
                       disabled={isDeleting}
-                      onClick={() => { void handleDelete(); }}
+                      onClick={() => setShowDeleteDialog(true)}
                     >
                       {isDeleting ? '삭제 중…' : '삭제'}
                     </button>

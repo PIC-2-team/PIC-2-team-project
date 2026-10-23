@@ -3,6 +3,7 @@
   flex-direction: column;
   padding: 16px 20px 32px;
   min-height: 100%;
+  background: #fff;
   gap: 16px;
   max-width: 390px;
   margin: 0 auto;
@@ -198,4 +199,28 @@
   padding: 10px 14px;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.retryButton {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid #c53030;
+  border-radius: 10px;
+  background: white;
+  color: #c53030;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cardHeader {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:global(.large-text) .infoBanner,
+:global(.large-text) .cardMeta,
+:global(.large-text) .emptyCard,
+:global(.large-text) .formLabel {
+  font-size: 1rem;
 }
