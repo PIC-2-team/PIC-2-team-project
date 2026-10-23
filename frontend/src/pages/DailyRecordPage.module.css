@@ -224,3 +224,34 @@
 
 .recordCard { text-decoration: none; }
 .recordContent { min-width: 0; overflow-wrap: anywhere; }
+
+.categoryFilter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.categoryFilter select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #3cab7e;
+  border-radius: 10px;
+  background: white;
+  color: #1a2533;
+  font: inherit;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pagination button {
+  min-height: 44px;
+  padding: 8px 16px;
+}

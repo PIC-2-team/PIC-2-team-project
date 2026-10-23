@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getCareInfoOverview } from '../api/careInfo';
 import { getRecordsByCategory } from '../api/records';
 import type { CareInfoCategory } from '../types/careInfo';
 import styles from './CareInfoPage.module.css';
@@ -129,31 +128,30 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
-  const [recordCounts, setRecordCounts] = useState<Record<string, number>>({});
+  const [recordCounts, setRecordCounts] = useState<Record<string, number | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
     let isCurrent = true;
+    setRecordCounts({});
     setIsLoading(true);
     setError(null);
-
-    void getCareInfoOverview(selectedRecipientId).catch(() => null);
 
     Promise.all(
       CATEGORIES.map(async cat => {
         try {
-          const res = await getRecordsByCategory(selectedRecipientId, cat.id as any, 1, 1);
-          return { id: cat.id, count: res.pagination?.totalItems ?? res.items.length };
+          const res = await getRecordsByCategory(selectedRecipientId, cat.id, 1, 1);
+          return { id: cat.id, count: res.pagination.totalItems };
         } catch {
-          return { id: cat.id, count: 0 };
+          return { id: cat.id, count: null };
         }
       })
     )
       .then(results => {
         if (!isCurrent) return;
-        const counts: Record<string, number> = {};
+        const counts: Record<string, number | null> = {};
         results.forEach(r => { counts[r.id] = r.count; });
         setRecordCounts(counts);
       })
@@ -186,7 +184,7 @@ export function CareInfoPage() {
             <span className={styles.cardBottom}>
               <span className={styles.cardLabel}>{cat.label}</span>
               {recordCounts[cat.id] !== undefined && (
-                <span className={styles.cardCount}>{recordCounts[cat.id]}개</span>
+                <span className={styles.cardCount}>{recordCounts[cat.id] === null ? '조회 실패' : `${recordCounts[cat.id]}개`}</span>
               )}
               <span className={styles.chevron} aria-hidden="true">&gt;</span>
             </span>

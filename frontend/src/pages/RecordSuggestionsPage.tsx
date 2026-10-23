@@ -8,6 +8,7 @@ import {
   type RecordSuggestion,
 } from '../api/records';
 import type { CareRecipient } from '../types/careRecipient';
+import { AppShell } from '../components/AppShell';
 import styles from './RecordSuggestionsPage.module.css';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -35,7 +36,7 @@ function formatDateTime(isoString?: string): string {
 
 export function RecordSuggestionsPage() {
   const navigate = useNavigate();
-  const { selectedRecipientId } = useAuth();
+  const { selectedRecipientId, user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'PENDING' | 'PROCESSED'>('PENDING');
   const [recipients, setRecipients] = useState<CareRecipient[]>([]);
@@ -121,6 +122,7 @@ export function RecordSuggestionsPage() {
   };
 
   return (
+    <AppShell role={user?.role}>
     <div className={styles.container}>
       <header className={styles.header}>
         <button
@@ -292,5 +294,6 @@ export function RecordSuggestionsPage() {
         )}
       </main>
     </div>
+    </AppShell>
   );
 }

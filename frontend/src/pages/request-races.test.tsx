@@ -47,7 +47,7 @@ it('카테고리 클릭 시 해당 카테고리 상세 페이지로 이동하며
   const prefButton = await screen.findByRole('button', { name: /선호·비선호/ });
   fireEvent.click(prefButton);
   expect(mockNavigate).toHaveBeenCalledWith('/care-info/PREFERENCE');
-  expect(overview).toHaveBeenCalledTimes(1);
+  expect(overview).not.toHaveBeenCalled();
 });
 
 it.each(['success', 'error'] as const)('월 변경 후 이전 요청의 %s를 무시한다', async result => {

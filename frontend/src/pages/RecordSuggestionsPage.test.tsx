@@ -155,6 +155,15 @@ describe('RecordSuggestionsPage', () => {
     );
   }
 
+  it('공통 상단바와 큰 글씨 기능을 제공한다', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: '수정 제안 검토' });
+    expect(screen.getByRole('link', { name: '삶결' })).toHaveAttribute('href', '/home');
+    const toggle = screen.getByRole('button', { name: '큰 글씨 모드 전환' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('기본으로 검토 대기 탭이 선택되고 수정 제안 카드가 렌더링된다', async () => {
     renderPage();
 

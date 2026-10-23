@@ -145,7 +145,7 @@ it('당사자 전환의 이전 응답이 늦게 도착해도 마지막 선택과
   expect(screen.queryByText('둘째 당사자 기록')).not.toBeInTheDocument();
 });
 
-it('보호자 사용자는 오늘의 기록과 중요 생활기록을 함께 확인한다', async () => {
+it('보호자 사용자는 중요 돌봄 정보를 중복 없이 오늘의 기록과 함께 확인한다', async () => {
   vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
     { id: 42, name: '홍길동', createdAt: '2026-10-10' } as any,
   ]);
@@ -161,9 +161,9 @@ it('보호자 사용자는 오늘의 기록과 중요 생활기록을 함께 확
 
   renderHomePage({ id: 3, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
 
-  expect(await screen.findByRole('heading', { name: /중요 생활기록/ })).toBeInTheDocument();
-  expect(screen.getAllByText('중요: 특정 약 복용 주의')[0]).toBeInTheDocument();
-  expect(screen.getByText('✨ 중요 돌봄 정보 요약')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: /중요 돌봄 정보/ })).toBeInTheDocument();
+  expect(screen.getAllByText('중요: 특정 약 복용 주의')).toHaveLength(1);
+  expect(screen.queryByText('✨ 중요 돌봄 정보 요약')).not.toBeInTheDocument();
   expect(screen.getByText('돌봄 당사자')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /오늘의 기록/ })).toBeInTheDocument();
   expect(screen.getByText('오늘 점심 잘 먹음')).toBeInTheDocument();

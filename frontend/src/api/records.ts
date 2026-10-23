@@ -9,11 +9,22 @@ export function getTodayRecords(recipientId: number): Promise<DailyRecord[]> {
 export function getRecordsByMonth(
   recipientId: number,
   year: number,
-  month: number
+  month: number,
+  category?: RecordCategory
 ): Promise<PaginatedData<DailyRecord>> {
+  const query = category ? `&category=${category}` : '';
   return apiRequest(
-    `/api/care-recipients/${recipientId}/records?year=${year}&month=${month}&pageSize=100`
+    `/api/care-recipients/${recipientId}/records?year=${year}&month=${month}&pageSize=100${query}`
   );
+}
+
+export function getRecords(
+  recipientId: number,
+  category?: RecordCategory,
+  page = 1,
+): Promise<PaginatedData<DailyRecord>> {
+  const filter = category ? `&category=${category}` : '';
+  return apiRequest(`/api/care-recipients/${recipientId}/records?page=${page}&pageSize=20${filter}`);
 }
 
 export function getRecordsByCategory(
