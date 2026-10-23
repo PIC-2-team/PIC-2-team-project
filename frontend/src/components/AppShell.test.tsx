@@ -36,3 +36,16 @@ it('online 이벤트 발생 시 오프라인 배너가 사라진다', () => {
   act(() => { window.dispatchEvent(new Event('online')); });
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
+
+it('beforeinstallprompt 이벤트 발생 시 홈 화면 추가 배너가 표시된다', () => {
+  render(<MemoryRouter><AppShell><p>콘텐츠</p></AppShell></MemoryRouter>);
+  act(() => { window.dispatchEvent(new Event('beforeinstallprompt')); });
+  expect(screen.getByRole('button', { name: /홈 화면에 추가/ })).toBeInTheDocument();
+});
+
+it('홈 화면 추가 배너 닫기 클릭 시 배너가 사라진다', () => {
+  render(<MemoryRouter><AppShell><p>콘텐츠</p></AppShell></MemoryRouter>);
+  act(() => { window.dispatchEvent(new Event('beforeinstallprompt')); });
+  fireEvent.click(screen.getByRole('button', { name: /닫기/ }));
+  expect(screen.queryByRole('button', { name: /홈 화면에 추가/ })).not.toBeInTheDocument();
+});
