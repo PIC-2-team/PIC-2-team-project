@@ -441,8 +441,8 @@ it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 Confir
     return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
   });
 
-  renderWithProviders();
-  await screen.findByText('이용자 #100');
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByText(/이용자 #100/);
 
   fireEvent.click(screen.getByRole('button', { name: '배정 종료' }));
 
