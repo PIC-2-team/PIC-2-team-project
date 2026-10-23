@@ -74,6 +74,7 @@
 
 .cardBottom {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -88,6 +89,7 @@
 }
 
 .cardCount {
+  white-space: nowrap;
   font-size: 0.75rem;
   font-weight: 600;
   color: #3cab7e;
