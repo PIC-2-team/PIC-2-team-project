@@ -48,4 +48,3 @@ it('state에 consentTicket이나 role이 없으면 /consent로 이동한다', ()
 
   expect(mockNavigate).toHaveBeenCalledWith('/consent', { replace: true });
 });
-
