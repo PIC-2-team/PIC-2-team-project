@@ -23,6 +23,7 @@ import {
 } from '../api/admin';
 import { AppShell } from '../components/AppShell';
 import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import styles from './AdminDashboardPage.module.css';
 
 type Stats = {
@@ -139,6 +140,18 @@ export function AdminDashboardPage() {
   } | null>(null);
   const [recordsList, setRecordsList] = useState<AdminRecordSummary[] | null>(null);
   const [recordsLoading, setRecordsLoading] = useState(false);
+
+  // ConfirmDialog state
+  const [showDeleteOrgDialog, setShowDeleteOrgDialog] = useState(false);
+  const [deleteOrgTarget, setDeleteOrgTarget] = useState<AdminOrganization | null>(null);
+  const [deleteOrgError, setDeleteOrgError] = useState<string | null>(null);
+  const [orgEditError, setOrgEditError] = useState<string | null>(null);
+  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<AdminUserSummary | null>(null);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+  const [userEditError, setUserEditError] = useState<string | null>(null);
+  const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
     void fetchStats();
@@ -302,22 +315,30 @@ export function AdminDashboardPage() {
       setEditingOrg(null);
       await fetchOrganizations();
     } catch (err) {
-      alert(err instanceof Error ? err.message : '기관 수정에 실패했습니다.');
+      setOrgEditError(err instanceof Error ? err.message : '기관 수정에 실패했습니다.');
     } finally {
       setIsSubmittingOrgEdit(false);
     }
   };
 
   // 3. 기관 삭제
-  const handleDeleteOrg = async (org: AdminOrganization) => {
-    if (!window.confirm(`'${org.name}' 기관을 정말 삭제하시겠습니까?\n소속 멤버 및 당사자 연결 데이터가 함께 정리됩니다.`)) {
-      return;
-    }
+  const handleDeleteOrg = (org: AdminOrganization) => {
+    setDeleteOrgError(null);
+    setDeleteOrgTarget(org);
+    setShowDeleteOrgDialog(true);
+  };
+
+  const handleDeleteOrgConfirm = async () => {
+    if (!deleteOrgTarget) return;
+    setShowDeleteOrgDialog(false);
+    setDeleteOrgError(null);
     try {
-      await deleteAdminOrganization(org.id);
+      await deleteAdminOrganization(deleteOrgTarget.id);
       await Promise.all([fetchOrganizations(), fetchStats(), fetchUsers()]);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '기관 삭제에 실패했습니다.');
+      setDeleteOrgError(err instanceof Error ? err.message : '기관 삭제에 실패했습니다.');
+    } finally {
+      setDeleteOrgTarget(null);
     }
   };
 
@@ -329,7 +350,7 @@ export function AdminDashboardPage() {
       const records = await getAdminOrganizationRecords(org.id);
       setRecordsList(records);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '기록을 불러오지 못했습니다.');
+      setError(err instanceof Error ? err.message : '기록을 불러오지 못했습니다.');
     } finally {
       setRecordsLoading(false);
     }
@@ -394,26 +415,35 @@ export function AdminDashboardPage() {
       setEditingUser(null);
       await Promise.all([fetchUsers(), fetchStats(), fetchOrganizations()]);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '사용자 수정에 실패했습니다.');
+      setUserEditError(err instanceof Error ? err.message : '사용자 수정에 실패했습니다.');
     } finally {
       setIsSubmittingUserEdit(false);
     }
   };
 
   // 7. 사용자 삭제
-  const handleDeleteUser = async (u: AdminUserSummary) => {
+  const handleDeleteUser = (u: AdminUserSummary) => {
+    setSelfDeleteError(null);
+    setDeleteUserError(null);
     if (user?.id === u.id) {
-      alert('현재 로그인된 관리자 본인 계정은 삭제할 수 없습니다.');
+      setSelfDeleteError('현재 로그인된 관리자 본인 계정은 삭제할 수 없습니다.');
       return;
     }
-    if (!window.confirm(`'${u.name}' (${u.email}) 사용자를 정말 삭제할까요?`)) {
-      return;
-    }
+    setDeleteUserTarget(u);
+    setShowDeleteUserDialog(true);
+  };
+
+  const handleDeleteUserConfirm = async () => {
+    if (!deleteUserTarget) return;
+    setShowDeleteUserDialog(false);
+    setDeleteUserError(null);
     try {
-      await deleteAdminUser(u.id);
+      await deleteAdminUser(deleteUserTarget.id);
       await Promise.all([fetchUsers(), fetchStats(), fetchOrganizations()]);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '사용자 삭제에 실패했습니다.');
+      setDeleteUserError(err instanceof Error ? err.message : '사용자 삭제에 실패했습니다.');
+    } finally {
+      setDeleteUserTarget(null);
     }
   };
 
@@ -425,14 +455,18 @@ export function AdminDashboardPage() {
       const records = await getAdminUserRecords(u.id);
       setRecordsList(records);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '기록을 불러오지 못했습니다.');
+      setError(err instanceof Error ? err.message : '기록을 불러오지 못했습니다.');
     } finally {
       setRecordsLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    if (!window.confirm('로그아웃할까요?')) return;
+  const handleLogout = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutDialog(false);
     await logout();
     navigate('/login', { replace: true });
   };
@@ -804,7 +838,6 @@ export function AdminDashboardPage() {
                   className={styles.codeCopyBtn}
                   onClick={() => {
                     void navigator.clipboard.writeText(createdOrgBanner.code);
-                    alert(`기관 코드 '${createdOrgBanner.code}'가 클립보드에 복사되었습니다.`);
                   }}
                 >
                   코드 복사
@@ -852,7 +885,7 @@ export function AdminDashboardPage() {
                       <button
                         type="button"
                         className={`${styles.btnAction} ${styles.btnActionDanger}`}
-                        onClick={() => { void handleDeleteOrg(org); }}
+                        onClick={() => { handleDeleteOrg(org); }}
                       >
                         삭제
                       </button>
@@ -993,7 +1026,7 @@ export function AdminDashboardPage() {
                       <button
                         type="button"
                         className={`${styles.btnAction} ${styles.btnActionDanger}`}
-                        onClick={() => { void handleDeleteUser(u); }}
+                        onClick={() => { handleDeleteUser(u); }}
                       >
                         삭제
                       </button>
@@ -1402,6 +1435,38 @@ export function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {orgEditError && <p role="alert" className={styles.errorBanner}>{orgEditError}</p>}
+      {deleteOrgError && <p role="alert" className={styles.errorBanner}>{deleteOrgError}</p>}
+      {userEditError && <p role="alert" className={styles.errorBanner}>{userEditError}</p>}
+      {selfDeleteError && <p role="alert" className={styles.errorBanner}>{selfDeleteError}</p>}
+      {deleteUserError && <p role="alert" className={styles.errorBanner}>{deleteUserError}</p>}
+
+      <ConfirmDialog
+        open={showDeleteOrgDialog}
+        title={`'${deleteOrgTarget?.name}' 기관을 정말 삭제하시겠습니까?`}
+        description="소속 멤버 및 당사자 연결 데이터가 함께 정리됩니다."
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => { void handleDeleteOrgConfirm(); }}
+        onCancel={() => { setShowDeleteOrgDialog(false); setDeleteOrgTarget(null); }}
+      />
+      <ConfirmDialog
+        open={showDeleteUserDialog}
+        title={`'${deleteUserTarget?.name}' 사용자를 정말 삭제할까요?`}
+        description={deleteUserTarget ? `${deleteUserTarget.email}` : undefined}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => { void handleDeleteUserConfirm(); }}
+        onCancel={() => { setShowDeleteUserDialog(false); setDeleteUserTarget(null); }}
+      />
+      <ConfirmDialog
+        open={showLogoutDialog}
+        title="로그아웃할까요?"
+        confirmLabel="로그아웃"
+        onConfirm={() => { void handleLogoutConfirm(); }}
+        onCancel={() => setShowLogoutDialog(false)}
+      />
     </AppShell>
   );
 }

@@ -52,6 +52,28 @@ it('INSTITUTION 사용자는 /home 접근 시 /agency로 리다이렉트된다',
   expect(mockNavigate).toHaveBeenCalledWith('/agency', { replace: true });
 });
 
+it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표시하지 않는다', async () => {
+  const setSelectedRecipient = vi.fn();
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '보호자', role: 'GUARDIAN' } as User,
+    token: 'tok', selectedRecipientId: 2, setSelectedRecipient,
+    login: vi.fn(), loginWithGoogle: vi.fn(), setAuth: vi.fn(), logout: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '첫 당사자' }, { id: 2, name: '선택한 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  const today = vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([
+    { id: 2, content: '선택한 당사자의 기록', category: 'MEAL', recordedAt: '2026-10-23T00:00:00Z' },
+  ]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } });
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+  expect(await screen.findByText('선택한 당사자의 기록')).toBeInTheDocument();
+  expect(today).toHaveBeenCalledWith(2);
+  expect(setSelectedRecipient).not.toHaveBeenCalledWith(1);
+  expect(screen.queryByRole('combobox', { name: '당사자 선택' })).not.toBeInTheDocument();
+});
+
 it('보호자 사용자는 중요 돌봄 정보를 중복 없이 오늘의 기록과 함께 확인한다', async () => {
   vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
     { id: 42, name: '홍길동', createdAt: '2026-10-10' } as any,

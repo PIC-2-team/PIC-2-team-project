@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
@@ -6,6 +6,7 @@ import { getTodayRecords, getRecordSuggestions } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
 import type { CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './HomePage.module.css';
@@ -51,9 +52,10 @@ type PageState =
   | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
-  const { user, setSelectedRecipient } = useAuth();
+  const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const requestRef = useRef(0);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
@@ -67,15 +69,19 @@ export function HomePage() {
       navigate('/agency', { replace: true });
       return;
     }
+    setPage({ status: 'loading' });
+    const requests = requestRef;
+    const requestId = ++requests.current;
     const load = async () => {
       try {
         const recipients = await listCareRecipients();
-        const first = recipients[0] ?? null;
+        if (requestId !== requestRef.current) return;
+        const first = recipients.find(recipient => recipient.id === selectedRecipientId) ?? recipients[0] ?? null;
         if (!first) {
           setPage({ status: 'empty' });
           return;
         }
-        setSelectedRecipient(first.id);
+        if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
         const [records, overview, suggestionsRes] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
@@ -83,6 +89,7 @@ export function HomePage() {
             ? getRecordSuggestions(first.id, 'PENDING').catch(() => null)
             : Promise.resolve(null),
         ]);
+        if (requestId !== requestRef.current) return;
         if (suggestionsRes?.items) {
           setPendingSuggestionCount(suggestionsRes.items.length);
         }
@@ -93,13 +100,19 @@ export function HomePage() {
           pinnedRecords: overview.pinnedRecords ?? [],
         });
       } catch (e) {
+        if (requestId !== requestRef.current) return;
         setPage({ status: 'error', message: e instanceof Error ? e.message : '불러오기 실패' });
       }
     };
     void load();
-  }, [user?.role, navigate, setSelectedRecipient]);
+    return () => { requests.current++; };
+  }, [user?.role, selectedRecipientId, navigate, setSelectedRecipient]);
 
-  if (page.status === 'loading') return <div className="demo-page status-page"><p className="empty-state" role="status">불러오는 중…</p></div>;
+  if (page.status === 'loading') return (
+    <div className="demo-page status-page" data-testid="loading-skeleton">
+      <Skeleton height={80} count={2} />
+    </div>
+  );
   if (page.status === 'error') return <div className="demo-page status-page"><p className="error" role="alert">{page.message}</p></div>;
   if (page.status === 'empty') {
     const isSupportWorker = user?.role === 'SUPPORT_WORKER';

@@ -563,7 +563,7 @@
 }
 .calendar-grid > span {
   font-size: 0.75rem;
-  color: #8a9ab0;
+  color: var(--muted);
   font-weight: 500;
   padding: 0.25rem 0;
 }
@@ -636,3 +636,53 @@
 .app-shell input, .app-shell select, .app-shell textarea { font-family: inherit; }
 .app-shell button:disabled { cursor: not-allowed; }
 .app-shell p { overflow-wrap: anywhere; }
+
+.offline-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  background: #e05555;
+  color: #fff;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  z-index: 150;
+}
+
+.install-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  background: #1a2533;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  z-index: 150;
+}
+
+.install-banner span {
+  flex: 1;
+}
+
+.install-banner button {
+  white-space: nowrap;
+  background: #3CAB7E;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.install-banner button[aria-label="닫기"] {
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 1rem;
+}

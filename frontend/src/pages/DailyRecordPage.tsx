@@ -5,6 +5,7 @@ import { getRecords, getRecordsByMonth } from '../api/records';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
+import { Skeleton } from '../components/Skeleton/Skeleton';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -102,6 +103,7 @@ export function DailyRecordPage() {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [showAllDayRecords, setShowAllDayRecords] = useState(false);
   const [monthRecords, setMonthRecords] = useState<DailyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,7 @@ export function DailyRecordPage() {
     if (!selectedRecipientId) return;
     let isCurrent = true;
     setIsLoading(true);
+    setShowAllDayRecords(false);
     setError(null);
     setMonthRecords([]);
     setTotalPages(0);
@@ -129,6 +132,8 @@ export function DailyRecordPage() {
 
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
   const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
+  const visibleRecords = listOnly || showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
+  const hasMore = !listOnly && !showAllDayRecords && selectedRecords.length > 3;
   const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
   const canWrite = user?.role === 'GUARDIAN';
@@ -149,15 +154,14 @@ export function DailyRecordPage() {
         <h1>{listOnly ? '돌봄 기록 목록' : '생활기록'}</h1>
       </div>
 
-      <label className={styles.categoryFilter}>
-        카테고리
+      <div className={styles.categoryFilter}>
         <select aria-label="카테고리" value={category} onChange={event => {
           setCategory(event.target.value as RecordCategory | ''); setPage(1);
         }}>
-          <option value="">전체 카테고리</option>
+          <option value="">전체</option>
           {Object.entries(CATEGORY_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
-      </label>
+      </div>
 
       {!listOnly && (
       <section className="demo-card accent" aria-label="월별 캘린더">
@@ -199,7 +203,7 @@ export function DailyRecordPage() {
 
       )}
 
-      {isLoading && <p className="muted" role="status">불러오는 중…</p>}
+      {isLoading && <div role="status" aria-label="기록을 불러오는 중" data-testid="loading-skeleton"><Skeleton height={56} count={3} /></div>}
       {error && <p className="error" role="alert">{error}</p>}
 
       <section>
@@ -220,7 +224,7 @@ export function DailyRecordPage() {
           <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>{listOnly ? '조회된 기록이 없어요.' : '이 날의 기록이 없어요.'}</p>
         ) : (
           <div className={styles.records}>
-            {selectedRecords.map(record => (
+            {visibleRecords.map(record => (
               <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
                 <div
                   className={styles.recordIcon}
@@ -231,6 +235,9 @@ export function DailyRecordPage() {
                 <p className={styles.recordContent}>{record.content}</p>
               </Link>
             ))}
+            {hasMore && <button type="button" className={styles.viewAll} onClick={() => setShowAllDayRecords(true)}>
+              기록 펼치기 ({selectedRecords.length - 3}개 더)
+            </button>}
           </div>
         ))}
       </section>
