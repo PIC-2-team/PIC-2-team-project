@@ -144,7 +144,7 @@ export function CareInfoPage() {
 
     Promise.all([
       getCareInfoOverview(selectedRecipientId),
-      getRecords(selectedRecipientId, undefined, 1, 100),
+      getRecords(selectedRecipientId, undefined, 1, 100), // 백엔드 pageSize 상한
     ])
       .then(([overview, recordsRes]) => {
         if (!isCurrent) return;
