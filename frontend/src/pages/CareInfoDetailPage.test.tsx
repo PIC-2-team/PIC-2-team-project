@@ -192,3 +192,26 @@ it('잘못된 카테고리에서 정상 카테고리로 이동해도 Hook 순서
   fireEvent.click(screen.getByRole('link', { name: '정상 카테고리로 이동' }));
   expect(await screen.findByRole('heading', { name: '식사', level: 1 })).toBeInTheDocument();
 });
+
+
+it('생활습관 2개와 다른 카테고리 1개가 반환되어도 생활습관 기록만 표시하고 센다', async () => {
+  vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
+    items: [
+      { id: 1, content: '아침 산책을 했습니다.', category: 'LIFESTYLE', recordedAt: '2026-10-23T03:00:00Z', pinned: false } as any,
+      { id: 2, content: '식사를 잘 했습니다.', category: 'MEAL', recordedAt: '2026-10-22T03:00:00Z', pinned: true } as any,
+      { id: 3, content: '식사 후 산책을 했습니다.', category: 'LIFESTYLE', recordedAt: '2026-10-21T03:00:00Z', pinned: true } as any,
+    ],
+    pagination: { page: 1, pageSize: 100, totalItems: 3, totalPages: 1 },
+  });
+  vi.spyOn(careInfoApi, 'getCareInfoByCategory').mockRejectedValue(new Error('Not found'));
+  render(
+    <MemoryRouter initialEntries={['/care-info/LIFESTYLE']}>
+      <Routes><Route path="/care-info/:categoryId" element={<CareInfoDetailPage />} /></Routes>
+    </MemoryRouter>
+  );
+  expect(await screen.findByText('아침 산책을 했습니다.')).toBeInTheDocument();
+  expect(screen.getByText('전체 기록 (2)')).toBeInTheDocument();
+  expect(screen.queryByText('전체 기록 (3)')).not.toBeInTheDocument();
+  expect(screen.queryByText('식사를 잘 했습니다.')).not.toBeInTheDocument();
+  expect(screen.getAllByText('식사 후 산책을 했습니다.')).toHaveLength(2);
+});

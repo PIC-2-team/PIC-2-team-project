@@ -192,8 +192,9 @@ export default function CareInfoDetailPage() {
     ]).then(([recResult, infoResult]) => {
       if (!isCurrent) return;
       if (recResult.status === 'fulfilled') {
-        setRecords(recResult.value.items ?? []);
-        setTotalCount(recResult.value.items?.length ?? 0);
+        const categoryRecords = (recResult.value.items ?? []).filter(record => record.category === meta.normalizedCategory);
+        setRecords(categoryRecords);
+        setTotalCount(categoryRecords.length);
       } else {
         setError(recResult.reason instanceof Error ? recResult.reason.message : '기록을 불러오지 못했어요.');
       }
