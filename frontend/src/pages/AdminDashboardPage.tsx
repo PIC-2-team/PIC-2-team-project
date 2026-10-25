@@ -963,20 +963,8 @@ export function AdminDashboardPage() {
                     <div className={styles.userCardHeader}>
                       <span className={styles.userName}>{u.name}</span>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {u.role === 'SUPPORT_WORKER' && u.organizationName && (
-                          <span className={styles.orgBadgeWorker}>
-                            소속: {u.organizationName}
-                          </span>
-                        )}
-                        {u.role === 'GUARDIAN' && u.organizationName && (
-                          <span className={styles.orgBadgeLinked}>
-                            연계: {u.organizationName}
-                          </span>
-                        )}
-                        {u.role === 'INSTITUTION' && u.organizationName && (
-                          <span className={styles.orgBadge}>
-                            {u.organizationName}
-                          </span>
+                        {u.organizationName && (
+                          <span className={styles.orgBadge}>{u.organizationName}</span>
                         )}
                         <span className={getRoleBadgeClass(u.role)}>
                           {ROLE_LABELS[u.role] ?? u.role}
@@ -991,18 +979,8 @@ export function AdminDashboardPage() {
                           <span className={styles.userCode}>{u.publicCode}</span>
                         </div>
                         <div className={styles.subMetaRow}>
-                          {u.role === 'SUPPORT_WORKER' && (
-                            <>
-                              <span>소속: <strong className={styles.metaHighlight}>{u.organizationName ?? '미소속'}</strong></span>
-                              <span>·</span>
-                            </>
-                          )}
-                          {u.role === 'GUARDIAN' && (
-                            <>
-                              <span>연결 기관: <strong className={styles.metaHighlight}>{u.organizationName ?? '미연결'}</strong></span>
-                              <span>·</span>
-                            </>
-                          )}
+                          {u.role === 'SUPPORT_WORKER' && !u.organizationName && <span>미소속 ·</span>}
+                          {u.role === 'GUARDIAN' && !u.organizationName && <span>미연결 ·</span>}
                           {u.phone && <span>{u.phone} ·</span>}
                           <span>{new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</span>
                         </div>
