@@ -165,7 +165,7 @@ export function CareInfoPage() {
       {isLoading && <p className="muted" role="status">불러오는 중…</p>}
       {error && <p className="error" role="alert">{error}</p>}
 
-      <div className={styles.grid}>
+      <div className={styles.grid} role="group" aria-label="돌봄정보 카테고리">
         {CATEGORIES.map(cat => {
           const count = pinnedCountByCategory[cat.id] ?? 0;
           return (
