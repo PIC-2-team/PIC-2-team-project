@@ -1,5 +1,5 @@
 import { AppShell } from '../components/AppShell';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { submitConsent } from '../api/auth';
 import styles from './ConsentPage.module.css';
@@ -55,6 +55,13 @@ export function ConsentPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const consentItems = selectedRole ? CONSENT_ITEMS_BY_ROLE[selectedRole] : [];
   const allRequiredChecked = consentItems
@@ -182,7 +189,7 @@ export function ConsentPage() {
                 </label>
               ))}
 
-              <button className={styles.termsRow} type="button">
+              <button className={styles.termsRow} type="button" onClick={() => setToast('준비 중입니다.')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <rect x="3" y="2" width="14" height="16" rx="2" stroke="#8a9ab0" strokeWidth="1.5" />
                   <line x1="6" y1="7" x2="14" y2="7" stroke="#8a9ab0" strokeWidth="1.5" strokeLinecap="round" />
@@ -215,6 +222,7 @@ export function ConsentPage() {
             </div>
           </>
         )}
+        {toast && <div role="status" style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(26,37,51,0.88)', color: 'white', padding: '10px 20px', borderRadius: 20, fontSize: '0.9rem', whiteSpace: 'nowrap', zIndex: 2000, pointerEvents: 'none' }}>{toast}</div>}
       </div>
     </AppShell>
   );

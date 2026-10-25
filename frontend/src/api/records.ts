@@ -173,10 +173,11 @@ export function getRecordSuggestions(
   recipientId: number,
   status: RecordSuggestionStatus = 'PENDING',
   page = 1,
-  pageSize = 20
+  pageSize = 20,
+  recordId?: number
 ): Promise<PaginatedData<RecordSuggestion>> {
   return apiRequest(
-    `/api/care-recipients/${recipientId}/record-suggestions?status=${status}&page=${page}&pageSize=${pageSize}`
+    `/api/care-recipients/${recipientId}/record-suggestions?status=${status}&page=${page}&pageSize=${pageSize}${recordId === undefined ? '' : `&recordId=${recordId}`}`
   );
 }
 

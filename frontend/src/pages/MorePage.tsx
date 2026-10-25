@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getCareRecipient } from '../api/careRecipients';
+import { getCareRecipient, listCareRecipients } from '../api/careRecipients';
 import type { CareRecipient } from '../types/careRecipient';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
@@ -16,6 +16,8 @@ type MenuItem = {
   label: string;
   value?: string;
   to?: string;
+  href?: string;
+  pending?: boolean;
 };
 
 type MenuSection = {
@@ -28,15 +30,15 @@ const BASE_MENU_SECTIONS: MenuSection[] = [
     title: '서비스',
     items: [
       { label: '알림함', to: '/notifications' },
-      { label: '서비스 이용약관' },
-      { label: '개인정보처리방침' },
-      { label: '오픈소스 라이선스' },
+      { label: '서비스 이용약관', pending: true },
+      { label: '개인정보처리방침', pending: true },
+      { label: '오픈소스 라이선스', pending: true },
     ],
   },
   {
     title: '지원',
     items: [
-      { label: '문의하기' },
+      { label: '문의하기', href: 'mailto:contact@samgyeol.com' },
       { label: '앱 버전', value: '1.0.0' },
     ],
   },
@@ -79,14 +81,31 @@ function LogoutConfirmDialog({
 }
 
 export function MorePage() {
-  const { user, logout, selectedRecipientId } = useAuth();
+  const { user, logout, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
+  const [recipients, setRecipients] = useState<CareRecipient[]>([]);
+  const [recipientListError, setRecipientListError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.role !== 'GUARDIAN' && user?.role !== 'SUPPORT_WORKER') return;
+    let active = true;
+    listCareRecipients().then(items => { if (active) setRecipients(items); })
+      .catch(() => { if (active) setRecipientListError('당사자 목록을 불러오지 못했어요. 화면을 다시 열어 주세요.'); });
+    return () => { active = false; };
+  }, [user?.role]);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [recipient, setRecipient] = useState<CareRecipient | null>(null);
   const [loadingRecipient, setLoadingRecipient] = useState(false);
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     if (showRecipientModal && selectedRecipientId) {
@@ -179,6 +198,22 @@ export function MorePage() {
           </button>
         </div>
       </div>
+
+      {recipientListError && <p role="alert" className="error">{recipientListError}</p>}
+      {recipients.length > 1 && (
+        <section className="demo-card">
+          <h2>당사자 전환</h2>
+          <p className="muted">선택한 당사자의 홈, 생활기록, 돌봄정보를 확인합니다.</p>
+          <select aria-label="당사자 선택" value={selectedRecipientId ?? ''}
+            onChange={event => {
+              const id = Number(event.target.value);
+              if (recipients.some(item => item.id === id)) setSelectedRecipient(id);
+            }}>
+            {selectedRecipientId === null && <option value="" disabled>당사자를 선택해 주세요</option>}
+            {recipients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </section>
+      )}
 
       {showUserModal && (
         <UserProfileModal user={user} onClose={() => setShowUserModal(false)} />
@@ -281,6 +316,8 @@ export function MorePage() {
                 style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '16px 20px' }}
                 onClick={() => {
                   if (item.to) navigate(item.to);
+                  else if (item.href) window.open(item.href, '_blank', 'noopener,noreferrer');
+                  else if (item.pending) setToast('준비 중입니다.');
                 }}
               >
                 <span>{item.label}</span>
@@ -303,12 +340,23 @@ export function MorePage() {
         로그아웃
       </button>
 
+      <button
+        type="button"
+        className="btn secondary"
+        style={{ color: '#e05555', borderColor: '#f5c6c4', marginTop: '0.5rem' }}
+        onClick={() => setToast('회원 탈퇴 기능은 준비 중입니다.')}
+      >
+        회원 탈퇴
+      </button>
+
       {showLogoutDialog && (
         <LogoutConfirmDialog
           onConfirm={handleLogoutConfirm}
           onCancel={() => setShowLogoutDialog(false)}
         />
       )}
+
+      {toast && <div role="status" className={styles.toast}>{toast}</div>}
     </div>
   );
 }

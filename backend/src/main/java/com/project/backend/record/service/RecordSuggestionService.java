@@ -59,10 +59,12 @@ public class RecordSuggestionService {
 
     @Transactional(readOnly = true)
     public PaginatedData<RecordSuggestionResponse> list(Long userId, Long careRecipientId,
-                                                         RecordSuggestionStatus status, int page, int pageSize) {
+                                                         RecordSuggestionStatus status, int page, int pageSize, Long recordId) {
         access.verifyGuardian(userId, careRecipientId);
         Pageable pageable = pageable(page, pageSize);
-        Page<RecordSuggestion> result = suggestions.findByCareRecipientIdAndStatus(careRecipientId, status, pageable);
+        Page<RecordSuggestion> result = recordId == null
+                ? suggestions.findByCareRecipientIdAndStatus(careRecipientId, status, pageable)
+                : suggestions.findByCareRecipientIdAndRecordIdAndStatus(careRecipientId, recordId, status, pageable);
         Map<Long, User> authors = users.findAllById(result.stream().map(RecordSuggestion::getSuggestedById)
                 .collect(Collectors.toSet())).stream().collect(Collectors.toMap(User::getId, Function.identity()));
         return new PaginatedData<>(result.stream().map(item -> RecordSuggestionResponse.of(item,

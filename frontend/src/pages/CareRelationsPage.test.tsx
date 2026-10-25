@@ -34,6 +34,21 @@ describe('CareRelationsPage', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('관계 조회 실패 후에도 기관 연결 요청을 전송할 수 있다', async () => {
+    vi.spyOn(careRecipientsApi, 'getCareRelations').mockRejectedValue(
+      new ApiError('NOT_FOUND', '요청한 리소스를 찾을 수 없습니다.', 404),
+    );
+    const request = vi.spyOn(careRecipientsApi, 'requestOrganizationLink').mockResolvedValue();
+    const user = userEvent.setup();
+    render(<MemoryRouter><CareRelationsPage /></MemoryRouter>);
+    await screen.findByRole('alert');
+    await user.type(screen.getByRole('textbox', { name: '연결할 기관 코드' }), 'new002');
+    await user.click(screen.getByRole('button', { name: '기관 연결 요청하기' }));
+    expect(request).toHaveBeenCalledWith(42, 'NEW002');
+    expect(await screen.findByRole('status')).toHaveTextContent('기관 연결 요청을 전송했습니다.');
+    expect(await screen.findByRole('textbox', { name: '연결할 기관 코드' })).toBeInTheDocument();
+  });
+
   it('연결된 기관과 배정된 지원사 목록을 정상적으로 렌더링한다', async () => {
     vi.spyOn(careRecipientsApi, 'getCareRelations').mockResolvedValue({
       careRecipientId: 42,

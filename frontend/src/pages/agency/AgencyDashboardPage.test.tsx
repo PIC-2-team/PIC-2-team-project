@@ -1,12 +1,18 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { AgencyDashboardPage } from './AgencyDashboardPage';
 import { setTokenProvider } from '../../api/client';
 
+import * as organizationsApi from '../../api/organizations';
 import type { OrganizationGuardian } from '../../types/agency';
+
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+});
 
 afterEach(() => {
   cleanup();
@@ -198,7 +204,7 @@ it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하
   renderWithProviders(['/agency?tab=assignments']);
 
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
-  expect(screen.getByText('이용자 #100')).toBeInTheDocument();
+  expect(screen.getByText(/이용자 #100/)).toBeInTheDocument();
 
   // '+ 배정하기' 버튼 클릭하여 모달 열기
   fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
@@ -222,13 +228,13 @@ it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하
     }));
   });
 
-  expect(await screen.findByText('김철수 (#200)')).toBeInTheDocument();
-  expect(screen.getAllByText(/이지원 \(#2\)/).length).toBeGreaterThanOrEqual(1);
+  expect(await screen.findByText(/김철수/)).toBeInTheDocument();
+  expect(screen.getAllByText(/이지원/).length).toBeGreaterThanOrEqual(1);
 });
 
-it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 종료한다', async () => {
+it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 종료하고 배정 기록 탭에서 확인된다', async () => {
   let ended = false;
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
+
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
@@ -255,13 +261,19 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
       }), { status: 200 });
     }
     if (url.includes('/api/organizations/me/recipients')) {
-      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 100, name: '김삼결', careRecipientNumber: 'R-2026-001' }],
+      }), { status: 200 });
     }
     if (url.includes('/api/organizations/me/guardians')) {
       return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
     }
     if (url.includes('/api/organizations/me/members')) {
-      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 2, userId: 2, name: '테스트 요양사', publicCode: 'S-V9DGQ9IJ', status: 'ACTIVE' }],
+      }), { status: 200 });
     }
     if (url.includes('/api/organizations/me')) {
       return new Response(JSON.stringify({
@@ -275,10 +287,13 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
 
   renderWithProviders(['/agency?tab=assignments']);
 
-  await screen.findByText('이용자 #100');
+  // 고유 코드 표기 확인
+  await screen.findByText('김삼결 (R-2026-001)');
+  expect(screen.getByText('테스트 요양사 (S-V9DGQ9IJ)')).toBeInTheDocument();
 
   const endBtn = screen.getByRole('button', { name: '배정 종료' });
   fireEvent.click(endBtn);
+  fireEvent.click(screen.getByRole('alertdialog').querySelectorAll('button')[1]);
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/assignments/10/end', expect.objectContaining({
@@ -286,12 +301,20 @@ it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 �
     }));
   });
 
+  // 배정이 종료되면 현황 탭에서는 사라짐
+  await waitFor(() => {
+    expect(screen.queryByRole('button', { name: '배정 종료' })).not.toBeInTheDocument();
+  });
+
+  // 배정 기록 탭으로 이동 시 종료된 항목 확인
+  fireEvent.click(screen.getByRole('button', { name: /배정 기록/ }));
   expect(await screen.findByText('종료됨')).toBeInTheDocument();
+  expect(screen.getByText('김삼결 (R-2026-001)')).toBeInTheDocument();
 });
 
 it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를 등록할 수 있다', async () => {
   let guardians: OrganizationGuardian[] = [
-    { id: 1, guardianId: 10, name: '기존보호자', publicCode: 'P-0001', createdAt: '2026-10-01', careRecipients: [] },
+    { id: 1, guardianId: 10, name: '기존보호자', phone: '01011112222', publicCode: 'P-0001', createdAt: '2026-10-01', careRecipients: [] },
   ];
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -303,6 +326,7 @@ it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를
         id: 2,
         guardianId: 20,
         name: '박새봄보호자',
+        phone: '01099998888',
         publicCode: 'P-9999',
         createdAt: '2026-10-22',
         careRecipients: [{ id: 1, name: '박당사', careRecipientNumber: 'R-001' }],
@@ -339,14 +363,14 @@ it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를
   // + 보호자 등록 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 보호자 등록' }));
 
-  // 식별 코드 입력
-  fireEvent.change(screen.getByLabelText(/보호자 식별 코드/), { target: { value: 'P-9999' } });
+  // 전화번호 입력
+  fireEvent.change(screen.getByLabelText(/보호자 전화번호/), { target: { value: '010-9999-8888' } });
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/guardians', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ guardianCodeOrEmail: 'P-9999' }),
+      body: JSON.stringify({ phone: '010-9999-8888' }),
     }));
   });
 
@@ -397,16 +421,123 @@ it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async 
   // + 지원사 추가 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 지원사 추가' }));
 
-  // 사용자 ID 입력
-  fireEvent.change(screen.getByLabelText(/지원사 사용자 ID/), { target: { value: '20' } });
+  // 지원사 성명 입력
+  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '새지원사' } });
   fireEvent.click(screen.getByRole('button', { name: '추가하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/members', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ userId: 20 }),
+      body: JSON.stringify({ name: '새지원사' }),
     }));
   });
 
   expect(await screen.findByText('새지원사')).toBeInTheDocument();
+});
+
+it('홈 대시보드의 돌봄 대상자 현황에서 당사자를 등록한 돌봄 보호자 정보가 함께 표시된다', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+
+    if (url.includes('/api/organizations/me/recipients')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [
+          {
+            id: 1,
+            name: '김삼결',
+            careRecipientNumber: 'R-TEST0001',
+            birthDate: '2010-05-15',
+            guardianName: '테스트 보호자',
+            guardianPhone: '010-0000-0001',
+          },
+        ],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [
+          {
+            id: 10,
+            guardianId: 20,
+            name: '테스트 보호자',
+            phone: '010-0000-0001',
+            careRecipients: [{ id: 1, name: '김삼결' }],
+          },
+        ],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' },
+      }), { status: 200 });
+    }
+
+    return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+  });
+
+  renderWithProviders(['/agency']);
+
+  // 당사자 정보 확인 (이름과 고유번호 분리)
+  await screen.findByText('김삼결');
+  expect(screen.getByText('(R-TEST0001)')).toBeInTheDocument();
+
+  // 등록한 보호자 정보가 함께 렌더링되는지 확인
+  expect(screen.getByText(/보호자: 테스트 보호자 \(010-0000-0001\)/)).toBeInTheDocument();
+});
+
+it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 ConfirmDialog가 표시된다', async () => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+    const url = String(input);
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 10, organizationId: 1, careRecipientId: 100, supportWorkerId: 2, startDate: '2026-10-01', endDate: null, endedAt: null }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/recipients')) return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 2, userId: 2, name: '이지원', publicCode: 'SW-001', status: 'ACTIVE' }],
+      }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me')) return new Response(JSON.stringify({ success: true, data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' } }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+  });
+
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByText(/이용자 #100/);
+
+  fireEvent.click(screen.getByRole('button', { name: '배정 종료' }));
+
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+});
+
+it('지원사 수정 카드에서 이름과 전화번호를 변경하여 저장한다', async () => {
+  vi.spyOn(organizationsApi, 'getMyOrganization').mockResolvedValue({ id: 1, name: '예시 기관', organizationCode: 'ABC123' } as any);
+  vi.spyOn(organizationsApi, 'getMembers').mockResolvedValue([{ id: 2, userId: 2, name: '기존 지원사', phone: '010-0000-0000', status: 'ACTIVE' }] as any);
+  vi.spyOn(organizationsApi, 'getAssignments').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationRecipients').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationGuardians').mockResolvedValue([]);
+  const update = vi.spyOn(organizationsApi, 'updateMember').mockResolvedValue({ id: 2, name: '수정 지원사' } as any);
+  renderWithProviders(['/agency?tab=workers']);
+  fireEvent.click(await screen.findByRole('button', { name: '수정' }));
+  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '수정 지원사' } });
+  fireEvent.change(screen.getByLabelText(/연락처/), { target: { value: '010-1234-5678' } });
+  fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
+  await waitFor(() => expect(update).toHaveBeenCalledWith(2, { name: '수정 지원사', phone: '010-1234-5678' }));
 });

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { MorePage } from './MorePage';
+import * as recipientsApi from '../api/careRecipients';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -20,6 +21,8 @@ let mockUser: { id: number; name: string; email: string; role: string } | null =
   role: 'SUPPORT_WORKER',
 };
 
+const mockSetSelectedRecipient = vi.fn();
+
 let mockSelectedRecipientId: number | null = null;
 let mockLogout = vi.fn();
 
@@ -28,10 +31,12 @@ vi.mock('../contexts/AuthContext', () => ({
     user: mockUser,
     logout: mockLogout,
     selectedRecipientId: mockSelectedRecipientId,
+    setSelectedRecipient: mockSetSelectedRecipient,
   }),
 }));
 
 beforeEach(() => {
+  vi.spyOn(recipientsApi, 'listCareRecipients').mockResolvedValue([]);
   mockUser = {
     id: 1,
     name: '홍길동',
@@ -47,6 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 it('활동지원사 로그인 시 돌봄 협업 섹션과 돌봄 내용 수정 요청 메뉴가 표시된다', () => {
@@ -178,6 +184,42 @@ it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다',
   expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
 });
 
+it('서비스 이용약관 클릭 시 role=status 토스트에 "준비 중입니다." 텍스트가 나타난다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '서비스 이용약관' }));
+  expect(screen.getByRole('status')).toHaveTextContent('준비 중입니다.');
+});
+
+it('개인정보처리방침 클릭 시 준비 중 토스트가 표시된다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '개인정보처리방침' }));
+  expect(screen.getByRole('status')).toHaveTextContent('준비 중입니다.');
+});
+
+it('문의하기 클릭 시 window.open이 mailto: URL로 호출된다', () => {
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '문의하기' }));
+  expect(openSpy).toHaveBeenCalledWith(expect.stringMatching(/^mailto:/), '_blank', 'noopener,noreferrer');
+});
+
+it('회원 탈퇴 버튼이 로그아웃 버튼 아래에 표시된다', () => {
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  const withdrawBtn = screen.getByRole('button', { name: /회원 탈퇴/ });
+  expect(withdrawBtn).toBeInTheDocument();
+});
+
+it('회원 탈퇴는 준비 중으로 안내하고 API 호출이나 로그아웃을 하지 않는다', () => {
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }));
+  expect(screen.getByRole('status')).toHaveTextContent('회원 탈퇴 기능은 준비 중입니다.');
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(mockLogout).not.toHaveBeenCalled();
+  fetchSpy.mockRestore();
+});
+
 it('사용자 이름/역할 영역을 클릭하면 사용자 프로필 모달이 열린다', async () => {
   render(
     <MemoryRouter>
@@ -205,4 +247,17 @@ it('서비스 섹션에 알림함 메뉴가 표시되고 클릭 시 /notificatio
   expect(notifItem).toBeInTheDocument();
   fireEvent.click(notifItem);
   expect(mockNavigate).toHaveBeenCalledWith('/notifications');
+});
+
+it('더보기에서 당사자 전환 시 공통 선택 상태를 변경한다', async () => {
+  mockSelectedRecipientId = 1;
+  vi.spyOn(recipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '김민준' }, { id: 2, name: '이서연' },
+  ] as Awaited<ReturnType<typeof recipientsApi.listCareRecipients>>);
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+  const select = await screen.findByRole('combobox', { name: '당사자 선택' });
+  expect(select).toHaveValue('1');
+  fireEvent.change(select, { target: { value: '2' } });
+  expect(mockSetSelectedRecipient).toHaveBeenCalledWith(2);
+  expect(mockNavigate).not.toHaveBeenCalled();
 });

@@ -164,39 +164,41 @@ export function CareRelationsPage() {
               <div className={styles.emptyCard}>현재 배정된 활동지원사가 없습니다.</div>
             )}
           </section>
-
-          {/* 신규 기관 연결 요청 폼 */}
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>새 기관 연결 요청</h2>
-            <form className={styles.linkForm} onSubmit={handleRequestLink}>
-              <label className={styles.formLabel}>
-                기관 코드 입력
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="예: KNU001"
-                  value={orgCode}
-                  onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
-                  required
-                  disabled={submitting}
-                  aria-label="연결할 기관 코드"
-                />
-                <span className={styles.inputHint}>
-                  연결하고자 하는 복지관 또는 돌봄 기관의 코드를 입력하세요.
-                </span>
-              </label>
-
-              <button
-                type="submit"
-                className={styles.btnPrimary}
-                disabled={!orgCode.trim() || submitting}
-              >
-                {submitting ? '요청 보내는 중…' : '기관 연결 요청하기'}
-              </button>
-            </form>
-          </section>
         </>
       ) : null}
+
+      {/* 신규 기관 연결 요청 폼 */}
+      {!loading && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>새 기관 연결 요청</h2>
+          <form className={styles.linkForm} onSubmit={handleRequestLink}>
+            <label className={styles.formLabel}>
+              기관 코드 입력
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="예: KNU001"
+                value={orgCode}
+                onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                required
+                disabled={submitting}
+                aria-label="연결할 기관 코드"
+              />
+              <span className={styles.inputHint}>
+                연결하고자 하는 복지관 또는 돌봄 기관의 코드를 입력하세요.
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={!orgCode.trim() || submitting}
+            >
+              {submitting ? '요청 보내는 중…' : '기관 연결 요청하기'}
+            </button>
+          </form>
+        </section>
+      )}
     </div>
     </AppShell>
   );

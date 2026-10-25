@@ -149,15 +149,11 @@ public class AuthService {
     @Transactional(readOnly = true)
     public FindEmailResponse findEmail(FindEmailRequest request) {
         String cleanInputPhone = normalizePhone(request.phone());
-        String formattedPhone = formatPhone(cleanInputPhone);
-
-        User user = userRepository.findByPhone(formattedPhone)
-                .or(() -> userRepository.findByPhone(cleanInputPhone))
+        User user = userRepository.findByName(request.name().trim()).stream()
+                .filter(candidate -> candidate.getPhone() != null
+                        && normalizePhone(candidate.getPhone()).equals(cleanInputPhone))
+                .findFirst()
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다."));
-
-        if (!user.getName().trim().equals(request.name().trim())) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "일치하는 회원 정보를 찾을 수 없습니다.");
-        }
 
         return new FindEmailResponse(maskEmail(user.getEmail()));
     }

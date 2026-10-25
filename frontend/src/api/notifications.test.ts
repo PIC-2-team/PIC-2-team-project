@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as client from './client';
 import {
   getNotifications,
@@ -66,4 +66,13 @@ describe('notifications API', () => {
     });
     expect(res.updatedCount).toBe(5);
   });
+});
+
+afterEach(() => { vi.restoreAllMocks(); });
+
+it('미읽음 개수 응답 객체에서 숫자를 추출한다', async () => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true, data: { unreadCount: 3 },
+  }), { status: 200 }));
+  expect(await getUnreadNotificationCount()).toBe(3);
 });

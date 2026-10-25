@@ -206,3 +206,18 @@
   border-radius: 6px;
 }
 
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 37, 51, 0.88);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  z-index: 2000;
+  pointer-events: none;
+}
+

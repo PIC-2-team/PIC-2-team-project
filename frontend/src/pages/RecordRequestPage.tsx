@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { createRecordRequest, getMyRecordRequests, cancelRecordRequest } from '../api/records';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { RecordRequestItem } from '../types/record';
 import styles from './RecordRequestPage.module.css';
 
@@ -23,6 +24,9 @@ export function RecordRequestPage() {
   const [history, setHistory] = useState<RecordRequestItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
@@ -90,18 +94,24 @@ export function RecordRequestPage() {
     }
   };
 
-  const handleCancel = async (requestId: number) => {
-    if (!selectedRecipientId) return;
-    if (!window.confirm('요청을 취소할까요?')) return;
+  const handleCancel = (requestId: number) => {
+    setCancelTarget(requestId);
+    setShowCancelDialog(true);
+  };
 
-    setCancellingId(requestId);
+  const handleCancelConfirm = async () => {
+    if (!selectedRecipientId || cancelTarget === null) return;
+    setShowCancelDialog(false);
+    setCancellingId(cancelTarget);
+    setCancelError(null);
     try {
-      await cancelRecordRequest(selectedRecipientId, requestId);
+      await cancelRecordRequest(selectedRecipientId, cancelTarget);
       await loadHistory();
     } catch (e) {
-      alert(e instanceof Error ? e.message : '요청 취소에 실패했어요.');
+      setCancelError(e instanceof Error ? e.message : '요청 취소에 실패했어요.');
     } finally {
       setCancellingId(null);
+      setCancelTarget(null);
     }
   };
 
@@ -260,7 +270,7 @@ export function RecordRequestPage() {
                       type="button"
                       className={styles.cancelButton}
                       disabled={cancellingId === item.id}
-                      onClick={() => void handleCancel(item.id)}
+                      onClick={() => handleCancel(item.id)}
                     >
                       {cancellingId === item.id ? '취소 중…' : '요청 취소'}
                     </button>
@@ -270,6 +280,16 @@ export function RecordRequestPage() {
             ))}
           </div>
         )}
+        {cancelError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{cancelError}</p>}
+        <ConfirmDialog
+          open={showCancelDialog}
+          title="요청을 취소할까요?"
+          confirmLabel="확인"
+          cancelLabel="닫기"
+          variant="danger"
+          onConfirm={() => { void handleCancelConfirm(); }}
+          onCancel={() => { setShowCancelDialog(false); setCancelTarget(null); }}
+        />
       </div>
     </div>
   );

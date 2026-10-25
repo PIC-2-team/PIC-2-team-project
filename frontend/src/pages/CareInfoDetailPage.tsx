@@ -174,6 +174,7 @@ export default function CareInfoDetailPage() {
   const meta = CATEGORY_META[categoryId];
 
   const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [showAllRecords, setShowAllRecords] = useState(false);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [careInfo, setCareInfo] = useState<CareInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -241,6 +242,9 @@ export default function CareInfoDetailPage() {
   };
 
   const pinned = records.filter(r => r.pinned);
+  const ALL_RECORD_LIMIT = 5;
+  const visibleRecords = showAllRecords ? records : records.slice(0, ALL_RECORD_LIMIT);
+  const hasMoreRecords = !showAllRecords && records.length > ALL_RECORD_LIMIT;
   const hasCareInfoContent = careInfo && (typeof careInfo.content === 'string' ? careInfo.content.length > 0 : careInfo.content != null);
 
   return (
@@ -292,15 +296,9 @@ export default function CareInfoDetailPage() {
           </section>
         )}
 
-        <section className={styles.pinnedSection}>
-          <p className={styles.sectionLabel}>📌 중요 정보</p>
-          {pinned.length === 0 ? (
-            <div className="empty-state" style={{ padding: '1.25rem 0', textAlign: 'center' }}>
-              <p style={{ margin: 0, color: '#8a9ab0', fontSize: '0.875rem' }}>
-                아직 등록된 {meta.label} 중요 정보가 없어요.
-              </p>
-            </div>
-          ) : (
+        {pinned.length > 0 && (
+          <section className={styles.pinnedSection}>
+            <p className={styles.sectionLabel}>📌 중요 정보</p>
             <div className={styles.list}>
               {pinned.map(item => (
                 <ItemCard
@@ -316,7 +314,40 @@ export default function CareInfoDetailPage() {
                 />
               ))}
             </div>
+          </section>
+        )}
+
+        <section className={styles.allSection}>
+          <p className={styles.sectionLabel}>전체 기록 ({totalCount})</p>
+          {records.length === 0 && !isLoading && (
+            <div className="empty-state">
+              <p>아직 등록된 {meta.label} 기록이 없어요.</p>
+            </div>
           )}
+          <div className={styles.list}>
+            {visibleRecords.map(item => (
+              <ItemCard
+                key={item.id}
+                item={{
+                  id: item.id,
+                  content: item.content,
+                  pinned: item.pinned ?? false,
+                  updatedAt: toSeoulDateKey(item.recordedAt),
+                }}
+                onTogglePin={() => void togglePin(item.id, item.pinned ?? false)}
+                canPin={isGuardian}
+              />
+            ))}
+            {hasMoreRecords && (
+              <button
+                type="button"
+                className={styles.loadMore}
+                onClick={() => setShowAllRecords(true)}
+              >
+                더 보기 ({records.length - ALL_RECORD_LIMIT}개 더)
+              </button>
+            )}
+          </div>
         </section>
       </div>
 

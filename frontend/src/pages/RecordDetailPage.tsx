@@ -11,6 +11,7 @@ import {
   getRecordSuggestions,
   type RecordSuggestion,
 } from '../api/records';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -53,6 +54,7 @@ export function RecordDetailPage() {
 
   // 기록 삭제 상태
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // 수정 제안 상태 (활동지원사용)
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -68,6 +70,7 @@ export function RecordDetailPage() {
 
   // 해당 기록에 대한 대기 중인 활동지원사 수정 제안 목록
   const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
+  const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -94,15 +97,16 @@ export function RecordDetailPage() {
       .finally(() => { if (isCurrent) setRevisionsLoading(false); });
 
     if (user?.role === 'GUARDIAN') {
-      // 첫 페이지(최대 20건)만 조회 후 클라이언트 필터 — PENDING 제안이 20건 초과 시 누락 가능
       // TODO: 백엔드에 /records/{id}/suggestions 엔드포인트 추가 시 교체
-      getRecordSuggestions(selectedRecipientId, 'PENDING')
+      getRecordSuggestions(selectedRecipientId, 'PENDING', 1, 20, recordId)
         .then(res => {
           if (!isCurrent) return;
-          const matches = (res?.items ?? []).filter(item => item.recordId === recordId);
-          setPendingSuggestions(matches);
+          setPendingSuggestions(res?.items ?? []);
+          setPendingSuggestionCount(res?.pagination.totalItems ?? 0);
         })
-        .catch(() => { if (isCurrent) setPendingSuggestions([]); });
+        .catch(() => {
+          if (isCurrent) { setPendingSuggestions([]); setPendingSuggestionCount(0); }
+        });
     }
     return () => { isCurrent = false; };
   }, [id, selectedRecipientId, user?.role]);
@@ -123,7 +127,7 @@ export function RecordDetailPage() {
 
   const handleDelete = async () => {
     if (!selectedRecipientId || !id) return;
-    if (!window.confirm('기록을 삭제하시겠습니까?')) return;
+    setShowDeleteDialog(false);
     setIsDeleting(true);
     setError(null);
     try {
@@ -174,6 +178,9 @@ export function RecordDetailPage() {
 
   return (
     <AppShell role={user?.role}>
+      <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
+        description="삭제 후 되돌릴 수 없습니다." confirmLabel="삭제" variant="danger"
+        onConfirm={() => { void handleDelete(); }} onCancel={() => setShowDeleteDialog(false)} />
       <main className="demo-page">
         <div className="page-heading">
           <button type="button" className="back" onClick={() => navigate(-1)} aria-label="뒤로가기">←</button>
@@ -262,7 +269,7 @@ export function RecordDetailPage() {
               </>
             ) : (
               <>
-                {user?.role === 'GUARDIAN' && pendingSuggestions.length > 0 && (
+                {user?.role === 'GUARDIAN' && pendingSuggestionCount > 0 && (
                   <aside
                     aria-label="활동지원사 수정 제안"
                     style={{
@@ -275,7 +282,7 @@ export function RecordDetailPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>
-                        📢 활동지원사의 수정 제안이 {pendingSuggestions.length}건 있어요
+                        📢 활동지원사의 수정 제안이 {pendingSuggestionCount}건 있어요
                       </strong>
                       <Link
                         to="/record-suggestions"
@@ -324,7 +331,7 @@ export function RecordDetailPage() {
                       type="button"
                       className="btn secondary danger"
                       disabled={isDeleting}
-                      onClick={() => { void handleDelete(); }}
+                      onClick={() => setShowDeleteDialog(true)}
                     >
                       {isDeleting ? '삭제 중…' : '삭제'}
                     </button>
