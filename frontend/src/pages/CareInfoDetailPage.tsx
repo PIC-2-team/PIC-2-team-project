@@ -331,7 +331,7 @@ export default function CareInfoDetailPage() {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M10 4v12M4 10h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
-            기록하기
+            중요 정보 기록하기
           </button>
         ) : user?.role === 'SUPPORT_WORKER' ? (
           <button

@@ -85,3 +85,18 @@ export type OrganizationGuardian = {
     careRecipientNumber: string;
   }[];
 };
+
+export type OrganizationGuardian = {
+  id: number;
+  guardianId: number;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  publicCode?: string | null;
+  createdAt: string;
+  careRecipients: {
+    id: number;
+    name: string;
+    careRecipientNumber: string;
+  }[];
+};

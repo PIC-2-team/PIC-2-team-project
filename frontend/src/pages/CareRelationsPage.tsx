@@ -6,10 +6,12 @@ import {
   requestOrganizationLink,
   type CareRelationsResponse,
 } from '../api/careRecipients';
+import { AppShell } from '../components/AppShell';
+import { ApiError } from '../api/client';
 import styles from './CareRelationsPage.module.css';
 
 export function CareRelationsPage() {
-  const { selectedRecipientId } = useAuth();
+  const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -21,13 +23,16 @@ export function CareRelationsPage() {
 
   const fetchRelations = useCallback(async () => {
     if (!selectedRecipientId) return;
+    setData(null);
     setLoading(true);
     setError(null);
     try {
       const res = await getCareRelations(selectedRecipientId);
       setData(res);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '돌봄 관계 정보를 불러오지 못했습니다.');
+      setError(e instanceof ApiError && e.status === 404 && e.code === 'NOT_FOUND'
+        ? '돌봄 관계 조회 기능이 서버에 반영되지 않았어요. 잠시 후 다시 시도해 주세요.'
+        : e instanceof Error ? e.message : '돌봄 관계 정보를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -58,6 +63,7 @@ export function CareRelationsPage() {
   };
 
   return (
+    <AppShell role={user?.role}>
     <div className={styles.container}>
       <header className={styles.header}>
         <button
@@ -77,7 +83,8 @@ export function CareRelationsPage() {
 
       {error && (
         <div role="alert" className={styles.alertError}>
-          {error}
+          <p>{error}</p>
+          {!loading && !data && <button type="button" className={styles.retryButton} onClick={() => void fetchRelations()}>다시 불러오기</button>}
         </div>
       )}
 
@@ -91,7 +98,7 @@ export function CareRelationsPage() {
         <div className={styles.emptyCard}>
           <p>돌봄 관계 정보를 불러오는 중입니다…</p>
         </div>
-      ) : (
+      ) : data ? (
         <>
           {/* 소속 기관 섹션 */}
           <section className={styles.section}>
@@ -189,7 +196,8 @@ export function CareRelationsPage() {
             </form>
           </section>
         </>
-      )}
+      ) : null}
     </div>
+    </AppShell>
   );
 }

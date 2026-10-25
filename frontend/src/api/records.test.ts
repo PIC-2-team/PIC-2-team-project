@@ -7,6 +7,7 @@ import {
   getMyRecordRequests,
   cancelRecordRequest,
   getRecordRevisions,
+  getRecordsByMonth,
 } from './records';
 import { setTokenProvider } from './client';
 
@@ -120,6 +121,22 @@ it('특정 기록의 수정 이력을 조회한다', async () => {
   expect(res.items[0].changedBy.name).toBe('이활동');
   expect(fetchMock).toHaveBeenCalledWith(
     '/api/care-recipients/42/records/100/revisions?page=1&pageSize=20',
+    expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+    })
+  );
+});
+
+it('카테고리가 전달되면 getRecordsByMonth에 category 쿼리를 포함하여 요청한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true,
+    data: { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } },
+  })));
+  setTokenProvider(() => 'test-token');
+
+  await getRecordsByMonth(42, 2026, 10, 'MEAL');
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/care-recipients/42/records?year=2026&month=10&pageSize=100&category=MEAL',
     expect.objectContaining({
       headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
     })

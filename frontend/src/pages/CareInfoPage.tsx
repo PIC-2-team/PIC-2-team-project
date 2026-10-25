@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareInfoOverview } from '../api/careInfo';
-import { getRecordsByCategory } from '../api/records';
 import type { CareInfoCategory } from '../types/careInfo';
 import styles from './CareInfoPage.module.css';
 
@@ -129,33 +128,25 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
 export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
-  const [recordCounts, setRecordCounts] = useState<Record<string, number>>({});
+  const [pinnedCountByCategory, setPinnedCountByCategory] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
     let isCurrent = true;
+    setPinnedCountByCategory({});
     setIsLoading(true);
     setError(null);
 
-    void getCareInfoOverview(selectedRecipientId).catch(() => null);
-
-    Promise.all(
-      CATEGORIES.map(async cat => {
-        try {
-          const res = await getRecordsByCategory(selectedRecipientId, cat.id as any, 1, 1);
-          return { id: cat.id, count: res.pagination?.totalItems ?? res.items.length };
-        } catch {
-          return { id: cat.id, count: 0 };
-        }
-      })
-    )
-      .then(results => {
+    getCareInfoOverview(selectedRecipientId)
+      .then(overview => {
         if (!isCurrent) return;
         const counts: Record<string, number> = {};
-        results.forEach(r => { counts[r.id] = r.count; });
-        setRecordCounts(counts);
+        for (const record of overview.pinnedRecords ?? []) {
+          counts[record.category] = (counts[record.category] ?? 0) + 1;
+        }
+        setPinnedCountByCategory(counts);
       })
       .catch(e => {
         if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패');
@@ -174,24 +165,29 @@ export function CareInfoPage() {
       {isLoading && <p className="muted" role="status">불러오는 중…</p>}
       {error && <p className="error" role="alert">{error}</p>}
 
-      <div className={styles.grid} role="group" aria-label="돌봄정보 카테고리">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            type="button"
-            className={styles.card}
-            onClick={() => navigate(`/care-info/${cat.id}`)}
-          >
-            <span className={styles.iconWrap} style={{ background: cat.bg }}>{cat.icon}</span>
-            <span className={styles.cardBottom}>
-              <span className={styles.cardLabel}>{cat.label}</span>
-              {recordCounts[cat.id] !== undefined && (
-                <span className={styles.cardCount}>{recordCounts[cat.id]}개</span>
+      <div className={styles.grid}>
+        {CATEGORIES.map(cat => {
+          const count = pinnedCountByCategory[cat.id] ?? 0;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              className={styles.card}
+              onClick={() => navigate(`/care-info/${cat.id}`)}
+              aria-label={`${cat.label} 상세 보기`}
+            >
+              <span className={styles.iconWrap} style={{ background: cat.bg }}>
+                {cat.icon}
+              </span>
+              <span className={styles.label}>{cat.label}</span>
+              {count > 0 && (
+                <span className={styles.badge} aria-label={`중요 정보 ${count}개`}>
+                  📌 {count}
+                </span>
               )}
-              <span className={styles.chevron} aria-hidden="true">&gt;</span>
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
