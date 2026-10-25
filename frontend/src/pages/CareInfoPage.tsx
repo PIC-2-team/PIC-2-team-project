@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareInfoOverview } from '../api/careInfo';
+import { getRecords } from '../api/records';
 import type { CareInfoCategory } from '../types/careInfo';
 import styles from './CareInfoPage.module.css';
 
@@ -129,6 +130,7 @@ export function CareInfoPage() {
   const { selectedRecipientId } = useAuth();
   const navigate = useNavigate();
   const [pinnedCountByCategory, setPinnedCountByCategory] = useState<Record<string, number>>({});
+  const [recordCountByCategory, setRecordCountByCategory] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,17 +138,27 @@ export function CareInfoPage() {
     if (!selectedRecipientId) return;
     let isCurrent = true;
     setPinnedCountByCategory({});
+    setRecordCountByCategory({});
     setIsLoading(true);
     setError(null);
 
-    getCareInfoOverview(selectedRecipientId)
-      .then(overview => {
+    Promise.all([
+      getCareInfoOverview(selectedRecipientId),
+      getRecords(selectedRecipientId, undefined, 1, 1000),
+    ])
+      .then(([overview, recordsRes]) => {
         if (!isCurrent) return;
-        const counts: Record<string, number> = {};
+        const pinnedCounts: Record<string, number> = {};
         for (const record of overview.pinnedRecords ?? []) {
-          counts[record.category] = (counts[record.category] ?? 0) + 1;
+          pinnedCounts[record.category] = (pinnedCounts[record.category] ?? 0) + 1;
         }
-        setPinnedCountByCategory(counts);
+        setPinnedCountByCategory(pinnedCounts);
+
+        const recordCounts: Record<string, number> = {};
+        for (const record of recordsRes.items) {
+          recordCounts[record.category] = (recordCounts[record.category] ?? 0) + 1;
+        }
+        setRecordCountByCategory(recordCounts);
       })
       .catch(e => {
         if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패');
@@ -167,7 +179,8 @@ export function CareInfoPage() {
 
       <div className={styles.grid} role="group" aria-label="돌봄정보 카테고리">
         {CATEGORIES.map(cat => {
-          const count = pinnedCountByCategory[cat.id] ?? 0;
+          const pinnedCount = pinnedCountByCategory[cat.id] ?? 0;
+          const totalCount = recordCountByCategory[cat.id] ?? 0;
           return (
             <button
               key={cat.id}
@@ -180,9 +193,12 @@ export function CareInfoPage() {
                 {cat.icon}
               </span>
               <span className={styles.label}>{cat.label}</span>
-              {count > 0 && (
-                <span className={styles.badge} aria-label={`중요 정보 ${count}개`}>
-                  📌 {count}
+              {totalCount > 0 && (
+                <span className={styles.countLabel}>{totalCount}개</span>
+              )}
+              {pinnedCount > 0 && (
+                <span className={styles.badge} aria-label={`중요 정보 ${pinnedCount}개`}>
+                  📌 {pinnedCount}
                 </span>
               )}
             </button>
