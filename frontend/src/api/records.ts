@@ -22,9 +22,10 @@ export function getRecords(
   recipientId: number,
   category?: RecordCategory,
   page = 1,
+  pageSize = 20,
 ): Promise<PaginatedData<DailyRecord>> {
   const filter = category ? `&category=${category}` : '';
-  return apiRequest(`/api/care-recipients/${recipientId}/records?page=${page}&pageSize=20${filter}`);
+  return apiRequest(`/api/care-recipients/${recipientId}/records?page=${page}&pageSize=${pageSize}${filter}`);
 }
 
 export function getRecordsByCategory(
