@@ -144,7 +144,7 @@ export function CareInfoPage() {
 
     Promise.all([
       getCareInfoOverview(selectedRecipientId),
-      getRecords(selectedRecipientId, undefined, 1, 1000),
+      getRecords(selectedRecipientId, undefined, 1, 100),
     ])
       .then(([overview, recordsRes]) => {
         if (!isCurrent) return;
