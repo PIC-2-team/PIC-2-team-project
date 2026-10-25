@@ -270,9 +270,11 @@ export default function CareInfoDetailPage() {
           <div className={styles.bannerText}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h2 className={styles.bannerTitle}>{meta.label}</h2>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: meta.color, background: 'white', padding: '2px 8px', borderRadius: '12px' }}>
-                전체 기록 {totalCount}개
-              </span>
+              {totalCount > 0 && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: meta.color, background: 'white', padding: '2px 8px', borderRadius: '12px' }}>
+                  전체 기록 {totalCount}개
+                </span>
+              )}
             </div>
             <p className={styles.bannerDesc}>{meta.desc}</p>
           </div>
