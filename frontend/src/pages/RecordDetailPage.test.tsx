@@ -272,6 +272,7 @@ it('현재 기록의 제안이 한 페이지를 넘으면 전체 대기 건수�
   expect(await screen.findByText(/활동지원사의 수정 제안이 21건 있어요/)).toBeInTheDocument();
 });
 
+
 it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 내역이 표시된다', async () => {
   vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
   vi.spyOn(recordsApi, 'getRecordRevisions').mockResolvedValue({

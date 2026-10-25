@@ -25,13 +25,75 @@
   align-items: center;
   gap: 0.375rem;
   background: #edf0f3;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 20px;
   padding: 0.5rem 0.875rem;
   font-size: 0.8125rem;
   color: #4a5568;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterButton:hover {
+  background: #e2e8f0;
+}
+
+.filterButtonActive {
+  background: #e8f5ee;
+  border-color: #3CAB7E;
+  color: #2e8b57;
+  font-weight: 700;
+}
+
+.filterCountBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3CAB7E;
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* Active filter bar */
+.activeFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.activeFilterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  background: #f0f7f3;
+  border: 1px solid #3CAB7E;
+  border-radius: 14px;
+  font-size: 0.75rem;
+  color: #2e8b57;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activeFilterChip:hover {
+  background: #e1f2e9;
+}
+
+.resetAllButton {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.25rem;
 }
 
 /* Calendar */
