@@ -57,7 +57,7 @@ it('식사(MEAL) 카테고리 진입 시 중요 정보만 표시하고 전체 �
   expect(screen.getAllByText('점심 식사로 된장국을 잘 먹었습니다.').length).toBeGreaterThan(0);
   expect(screen.getByText('아침 식사 후 간식을 섭취했습니다.')).toBeInTheDocument();
   expect(screen.getByText('📌 중요 정보')).toBeInTheDocument();
-  expect(screen.getByText('전체 기록 2개')).toBeInTheDocument();
+  expect(screen.getByText('전체 기록 (2)')).toBeInTheDocument();
 });
 
 it('보호자가 핀 토글 클릭 시 pinRecord API를 호출하고 고정 상태를 반영한다', async () => {
