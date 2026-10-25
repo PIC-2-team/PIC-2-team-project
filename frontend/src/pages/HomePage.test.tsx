@@ -74,6 +74,7 @@ it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표�
   expect(screen.queryByRole('combobox', { name: '당사자 선택' })).not.toBeInTheDocument();
 });
 
+
 it('보호자 사용자는 중요 돌봄 정보를 중복 없이 오늘의 기록과 함께 확인한다', async () => {
   vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
     { id: 42, name: '홍길동', createdAt: '2026-10-10' } as any,

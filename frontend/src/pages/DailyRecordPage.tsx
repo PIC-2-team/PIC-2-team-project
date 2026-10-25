@@ -214,7 +214,7 @@ export function DailyRecordPage() {
           <button
             className={styles.viewAll}
             type="button"
-            onClick={() => { setPage(1); setSearchParams(listOnly ? {} : { view: 'list' }); }}
+            onClick={() => { setPage(1); setCategory(''); setSearchParams(listOnly ? {} : { view: 'list' }); }}
           >
             {listOnly ? '달력 보기' : '더보기 ›'}
           </button>

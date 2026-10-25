@@ -1,5 +1,5 @@
 import { AppShell } from '../components/AppShell';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -72,34 +72,43 @@ export function RecordDetailPage() {
   const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
   const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   useEffect(() => {
     if (!selectedRecipientId || !id) {
       setIsLoading(false);
       return;
     }
+    let isCurrent = true;
     const recordId = Number(id);
     getRecord(selectedRecipientId, recordId)
-      .then(setRecord)
-      .catch(e => setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'))
-      .finally(() => setIsLoading(false));
+      .then(res => { if (isCurrent) setRecord(res); })
+      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'); })
+      .finally(() => { if (isCurrent) setIsLoading(false); });
 
     setRevisionsLoading(true);
     getRecordRevisions(selectedRecipientId, recordId)
-      .then(res => setRevisions(res?.items ?? []))
-      .catch(() => setRevisions([]))
-      .finally(() => setRevisionsLoading(false));
+      .then(res => { if (isCurrent) setRevisions(res?.items ?? []); })
+      .catch(() => { if (isCurrent) setRevisions([]); })
+      .finally(() => { if (isCurrent) setRevisionsLoading(false); });
 
     if (user?.role === 'GUARDIAN') {
+      // TODO: 백엔드에 /records/{id}/suggestions 엔드포인트 추가 시 교체
       getRecordSuggestions(selectedRecipientId, 'PENDING', 1, 20, recordId)
         .then(res => {
+          if (!isCurrent) return;
           setPendingSuggestions(res?.items ?? []);
           setPendingSuggestionCount(res?.pagination.totalItems ?? 0);
         })
         .catch(() => {
-          setPendingSuggestions([]);
-          setPendingSuggestionCount(0);
+          if (isCurrent) { setPendingSuggestions([]); setPendingSuggestionCount(0); }
         });
     }
+    return () => { isCurrent = false; };
   }, [id, selectedRecipientId, user?.role]);
 
   const startEditing = () => {
@@ -143,7 +152,7 @@ export function RecordDetailPage() {
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
       getRecordRevisions(selectedRecipientId, Number(id))
-        .then(res => setRevisions(res?.items ?? []))
+        .then(res => { if (isMountedRef.current) setRevisions(res?.items ?? []); })
         .catch(() => {});
     } catch (e) {
       setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
