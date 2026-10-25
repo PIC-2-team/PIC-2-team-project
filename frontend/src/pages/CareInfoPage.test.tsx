@@ -10,7 +10,7 @@ vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientI
 
 const emptyRecordsResult = {
   items: [],
-  pagination: { page: 1, pageSize: 1000, totalItems: 0, totalPages: 1 },
+  pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 1 },
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -51,7 +51,7 @@ it('카테고리별 기록 개수를 카드에 표시한다', async () => {
       { id: 2, content: '두 번째', category: 'COMMUNICATION', recordedAt: '2026-10-02T00:00:00Z' },
       { id: 3, content: '세 번째', category: 'MEAL', recordedAt: '2026-10-03T00:00:00Z' },
     ],
-    pagination: { page: 1, pageSize: 1000, totalItems: 3, totalPages: 1 },
+    pagination: { page: 1, pageSize: 100, totalItems: 3, totalPages: 1 },
   });
 
   render(<MemoryRouter><CareInfoPage /></MemoryRouter>);
