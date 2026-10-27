@@ -54,7 +54,7 @@ public class OrganizationService {
         if (owner.getRole() != UserRole.INSTITUTION) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "기관 계정만 기관을 등록할 수 있습니다.");
         }
-        if (organizationRepository.findByOwnerId(ownerId).isPresent()) {
+        if (organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_EXISTS", "이미 기관을 보유하고 있습니다.");
         }
 
@@ -74,7 +74,7 @@ public class OrganizationService {
         if (owner.getRole() != UserRole.INSTITUTION) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "기관 계정만 기관을 생성할 수 있습니다.");
         }
-        if (organizationRepository.findByOwnerId(ownerId).isPresent()) {
+        if (organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_EXISTS", "이미 기관을 보유하고 있습니다.");
         }
 
@@ -391,7 +391,7 @@ public class OrganizationService {
     }
 
     private Organization findOrgByOwner(Long ownerId) {
-        return organizationRepository.findByOwnerId(ownerId)
+        return organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
     }
 
