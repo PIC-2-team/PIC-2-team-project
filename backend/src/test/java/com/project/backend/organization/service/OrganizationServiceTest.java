@@ -58,7 +58,7 @@ class OrganizationServiceTest {
     void register_INSTITUTION_사용자가_유효한_6자리_코드로_기관_등록() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.empty());
 
         Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(null).build();
         ReflectionTestUtils.setField(org, "id", 10L);
@@ -86,7 +86,7 @@ class OrganizationServiceTest {
     void register_이미_기관_보유한_사용자는_CONFLICT_예외() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(
                 Organization.builder().ownerId(1L).name("기존기관").organizationCode("ORG101").build()
         ));
 
@@ -99,7 +99,7 @@ class OrganizationServiceTest {
     void register_존재하지_않는_기관코드는_NOT_FOUND_예외() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.empty());
         given(organizationRepository.findByOrganizationCode("NOT999")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> organizationService.register(1L, new RegisterOrganizationRequest("NOT999")))
@@ -111,7 +111,7 @@ class OrganizationServiceTest {
     void register_이미_다른_담당자가_등록한_기관코드는_CONFLICT_예외() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.empty());
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.empty());
 
         Organization org = Organization.builder().name("선점기관").organizationCode("OCC001").ownerId(99L).build();
         given(organizationRepository.findByOrganizationCode("OCC001")).willReturn(Optional.of(org));
@@ -125,7 +125,7 @@ class OrganizationServiceTest {
     void getMembers_기관_소유자가_멤버_목록_조회() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
 
         OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
         ReflectionTestUtils.setField(member, "id", 50L);
@@ -144,7 +144,7 @@ class OrganizationServiceTest {
     void updateMemberStatus_비활성화_요청시_INACTIVE로_변경() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
 
         OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
         ReflectionTestUtils.setField(member, "id", 50L);
@@ -162,7 +162,7 @@ class OrganizationServiceTest {
     void addMember_지원사_이름으로_추가시_자동_고유코드_발급_및_멤버_등록() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
 
         given(publicCodeGenerator.generate(UserRole.SUPPORT_WORKER)).willReturn("S-NEW1234");
         given(userRepository.save(any())).willAnswer(inv -> {
@@ -188,7 +188,7 @@ class OrganizationServiceTest {
     void getLinkRequests_기관_소유자가_연결_요청_목록_조회() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
 
         OrganizationRecipientLink link = OrganizationRecipientLink.builder()
                 .organizationId(10L).careRecipientId(100L).requestedById(2L).build();
@@ -205,7 +205,7 @@ class OrganizationServiceTest {
     void registerGuardian_기관이_보호자_전화번호로_등록시_링크_생성_및_기존_당사자_자동_연결() {
         Organization org = Organization.builder().ownerId(1L).name("테스트기관").organizationCode("ORG123").build();
         ReflectionTestUtils.setField(org, "id", 10L);
-        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
 
         User guardian = guardianUser(2L);
         given(userRepository.findByPhone("010-1234-5678")).willReturn(Optional.of(guardian));
