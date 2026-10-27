@@ -14,6 +14,16 @@ import {
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
 
+function parseRecordContent(content: string): string {
+  if (content.trimStart().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(content) as { content?: string };
+      if (typeof parsed.content === 'string') return parsed.content;
+    } catch { /* fall through */ }
+  }
+  return content;
+}
+
 const CATEGORY_LABEL: Record<string, string> = {
   COMMUNICATION: '의사소통',
   LIFESTYLE: '생활습관',
@@ -321,15 +331,15 @@ export function RecordDetailPage() {
                     {new Date(record.recordedAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </time>
                   <span className="tag">{CATEGORY_LABEL[record.category] ?? record.category}</span>
-                  <p className="record-content">{record.content}</p>
+                  <p className="record-content">{parseRecordContent(record.content)}</p>
                 </article>
                 {actionMsg && <p role="status" className="hint">{actionMsg}</p>}
                 {user?.role === 'GUARDIAN' && (
                   <div className="actions">
-                    <button type="button" className="btn secondary" onClick={startEditing}>수정</button>
+                    <button type="button" className="btn secondary" style={{ color: '#1a2533' }} onClick={startEditing}>수정</button>
                     <button
                       type="button"
-                      className="btn secondary danger"
+                      className="btn danger"
                       disabled={isDeleting}
                       onClick={() => setShowDeleteDialog(true)}
                     >
@@ -372,14 +382,20 @@ export function RecordDetailPage() {
                 <section style={{ marginTop: '1.5rem' }} aria-labelledby="revisions-heading">
                   <button
                     type="button"
-                    className="btn secondary"
                     style={{
                       width: '100%',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '0.625rem 1rem',
+                      padding: '0.75rem 1rem',
                       fontSize: '0.9rem',
+                      fontWeight: 600,
+                      background: '#e8f5ee',
+                      border: '1.5px solid #3CAB7E',
+                      borderRadius: showRevisions ? '12px 12px 0 0' : '12px',
+                      color: '#23694c',
+                      cursor: 'pointer',
+                      textAlign: 'left',
                     }}
                     onClick={() => setShowRevisions(!showRevisions)}
                     aria-expanded={showRevisions}
@@ -388,17 +404,21 @@ export function RecordDetailPage() {
                     <span id="revisions-heading">
                       수정 내역 및 이력 {revisions.length > 0 ? `(${revisions.length}건)` : ''}
                     </span>
-                    <span aria-hidden="true">{showRevisions ? '▲ 접기' : '▼ 펼치기'}</span>
+                    <span aria-hidden="true">{showRevisions ? '▲' : '▼'}</span>
                   </button>
 
                   {showRevisions && (
                     <div
                       id="revisions-list"
                       style={{
-                        marginTop: '0.75rem',
+                        border: '1.5px solid #3CAB7E',
+                        borderTop: 'none',
+                        borderRadius: '0 0 12px 12px',
+                        padding: '0.75rem',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.625rem',
+                        background: '#fff',
                       }}
                     >
                       {revisionsLoading ? (
