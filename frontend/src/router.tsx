@@ -5,6 +5,7 @@ import { RequireRecipient } from './components/RequireRecipient';
 import { RequireRole } from './components/RequireRole';
 import { ConsentPage } from './pages/ConsentPage';
 import { LoginPage } from './pages/LoginPage';
+import { DemoEntryPage } from './pages/DemoEntryPage';
 import { HomePage } from './pages/HomePage';
 import { DailyRecordPage } from './pages/DailyRecordPage';
 import { RecordFormPage } from './pages/RecordFormPage';
@@ -25,7 +26,7 @@ import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LoginPage /> },
+  { path: '/', element: <DemoEntryPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/consent', element: <ConsentPage /> },
   { path: '/register', element: <RegisterPage /> },
