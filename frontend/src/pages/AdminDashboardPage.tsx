@@ -468,7 +468,7 @@ export function AdminDashboardPage() {
   const handleLogoutConfirm = async () => {
     setShowLogoutDialog(false);
     await logout();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const getRoleBadgeClass = (role: string) => {
