@@ -138,7 +138,7 @@ public class InformationRequestService {
 
     private Organization organization(Long userId) {
         requireRole(userId, UserRole.INSTITUTION);
-        return organizations.findByOwnerId(userId).orElseThrow(this::forbidden);
+        return organizations.findFirstByOwnerIdOrderByIdAsc(userId).orElseThrow(this::forbidden);
     }
 
     private InformationRequest requestForUpdate(Long id) {

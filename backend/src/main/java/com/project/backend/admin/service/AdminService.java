@@ -369,7 +369,7 @@ public class AdminService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
 
         // 기관 소유자 해제
-        organizationRepository.findByOwnerId(id).ifPresent(org -> org.assignOwner(null));
+        organizationRepository.findFirstByOwnerIdOrderByIdAsc(id).ifPresent(org -> org.assignOwner(null));
 
         // 소속 멤버십 삭제
         List<OrganizationMember> memberships = organizationMemberRepository.findByUserIdAndStatus(id, OrganizationMemberStatus.ACTIVE);
