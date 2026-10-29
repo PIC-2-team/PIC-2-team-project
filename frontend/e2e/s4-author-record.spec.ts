@@ -54,6 +54,36 @@ test.describe('S4 — 작성자 본인 기록 관리', () => {
       await expect(page).toHaveURL('/records');
     });
 
+    test(`${user.name}는 본인이 삭제한 기록을 목록에서 복원할 수 있다`, async ({ page }) => {
+      await openRecord(page, user, user);
+      let restored = false;
+      await page.route(/\/api\/care-recipients\/\d+\/records\?/, route => route.fulfill({
+        json: { success: true, data: { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } } },
+      }));
+      await page.route(/\/api\/care-recipients\/\d+\/records\/deleted\?/, route => route.fulfill({
+        json: { success: true, data: {
+          items: restored ? [] : [{ id: RECORD_ID, content: '오늘 점심을 먹었어요.', category: 'MEAL',
+            recordedAt: new Date().toISOString(), deletedAt: new Date().toISOString(),
+            restoreUntil: new Date(Date.now() + 30 * 86400000).toISOString() }],
+          pagination: { page: 1, pageSize: 20, totalItems: restored ? 0 : 1, totalPages: restored ? 0 : 1 },
+        } },
+      }));
+      await page.route(/\/api\/care-recipients\/\d+\/records\/10\/restore$/, route => {
+        restored = true;
+        return route.fulfill({ json: { success: true, data: { id: RECORD_ID } } });
+      });
+
+      await page.getByRole('button', { name: '삭제', exact: true }).click();
+      await page.getByRole('alertdialog', { name: '기록을 삭제할까요?' }).getByRole('button', { name: '삭제' }).click();
+      await expect(page).toHaveURL('/records');
+      await page.getByRole('link', { name: '삭제된 기록 보기' }).click();
+      await expect(page.getByText('오늘 점심을 먹었어요.')).toBeVisible();
+      const restoreRequest = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith(`/records/${RECORD_ID}/restore`));
+      await page.getByRole('button', { name: '복원' }).click();
+      await restoreRequest;
+      await expect(page.getByText('복원할 수 있는 기록이 없어요.')).toBeVisible();
+    });
+
     test(`${user.name}는 다른 작성자의 기록을 수정·삭제할 수 없다`, async ({ page }) => {
       const author = user.role === 'GUARDIAN' ? TEST_USERS.worker : TEST_USERS.guardian;
       await openRecord(page, user, author);

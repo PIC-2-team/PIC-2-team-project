@@ -1,4 +1,4 @@
-import type { DailyRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRevision } from '../types/record';
+import type { DailyRecord, DeletedRecord, CreateRecordPayload, UpdateRecordPayload, RecordCategory, RecordRevision } from '../types/record';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
@@ -71,6 +71,14 @@ export function deleteRecord(
   return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}`, {
     method: 'DELETE',
   });
+}
+
+export function getDeletedRecords(recipientId: number, page = 1): Promise<PaginatedData<DeletedRecord>> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/deleted?page=${page}&pageSize=20`);
+}
+
+export function restoreRecord(recipientId: number, recordId: number): Promise<DailyRecord> {
+  return apiRequest(`/api/care-recipients/${recipientId}/records/${recordId}/restore`, { method: 'POST' });
 }
 
 export function createRecord(

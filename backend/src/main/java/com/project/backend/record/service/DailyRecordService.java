@@ -105,6 +105,22 @@ public class DailyRecordService {
         return response(record);
     }
 
+    @Transactional(readOnly = true)
+    public PaginatedData<DeletedRecordResponse> deleted(Long userId, Long recipientId, int page, int pageSize) {
+        access.verifyCreate(userId, recipientId);
+        Instant now = clock.instant();
+        Pageable pageable = pageable(page, pageSize, "deletedAt");
+        Page<DailyRecord> result = records.findAll((root, query, cb) -> cb.and(
+                cb.equal(root.get("careRecipientId"), recipientId),
+                cb.equal(root.get("authorId"), userId),
+                cb.isNotNull(root.get("deletedAt")),
+                cb.greaterThan(root.get("deletedAt"), now.minus(RESTORE_WINDOW))), pageable);
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, null);
+        return new PaginatedData<>(result.stream()
+                .map(record -> DeletedRecordResponse.of(record, record.getDeletedAt().plus(RESTORE_WINDOW)))
+                .toList(), pagination(result));
+    }
+
     public RecordResponse pin(Long userId, Long recipientId, Long recordId, boolean pinned) {
         access.verifyGuardian(userId, recipientId);
         DailyRecord record = active(find(recipientId, recordId, true));

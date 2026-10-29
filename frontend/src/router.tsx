@@ -7,6 +7,7 @@ import { ConsentPage } from './pages/ConsentPage';
 import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import { DailyRecordPage } from './pages/DailyRecordPage';
+import { DeletedRecordsPage } from './pages/DeletedRecordsPage';
 import { RecordFormPage } from './pages/RecordFormPage';
 import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
             element: <RequireRecipient />,
             children: [
               { path: '/records', element: <DailyRecordPage /> },
+              {
+                element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER']} />,
+                children: [{ path: '/records/deleted', element: <DeletedRecordsPage /> }],
+              },
               { path: '/care-info', element: <CareInfoPage /> },
             ],
           },

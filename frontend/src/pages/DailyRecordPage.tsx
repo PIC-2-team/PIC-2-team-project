@@ -251,13 +251,16 @@ export function DailyRecordPage() {
       )}
 
       {canWrite && (
-        <button
-          className={`btn ${styles.recordButton}`}
-          type="button"
-          onClick={() => navigate('/records/new')}
-        >
-          기록하기
-        </button>
+        <>
+          <Link to="/records/deleted" className={styles.viewAll}>삭제된 기록 보기</Link>
+          <button
+            className={`btn ${styles.recordButton}`}
+            type="button"
+            onClick={() => navigate('/records/new')}
+          >
+            기록하기
+          </button>
+        </>
       )}
     </div>
   );

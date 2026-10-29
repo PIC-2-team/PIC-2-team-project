@@ -141,7 +141,7 @@ export function RecordDetailPage() {
   return (
     <AppShell role={user?.role}>
       <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
-        description="삭제 후 되돌릴 수 없습니다." confirmLabel="삭제" variant="danger"
+        description="삭제 후 30일 동안 기록 목록에서 복원할 수 있습니다." confirmLabel="삭제" variant="danger"
         onConfirm={() => { void handleDelete(); }} onCancel={() => setShowDeleteDialog(false)} />
       <main className="demo-page">
         <div className="page-heading">

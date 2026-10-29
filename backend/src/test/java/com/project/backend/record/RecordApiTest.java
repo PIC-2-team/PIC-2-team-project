@@ -216,6 +216,31 @@ class RecordApiTest {
     }
 
     @Test
+    void deletedListShowsOnlyOwnRestorableRecordsAndSupportsPagination() throws Exception {
+        long guardianRecord = create(guardian, "보호자 기록", "2026-10-14T03:00:00Z");
+        long workerRecord = create(worker, "지원사 기록", "2026-10-14T03:00:00Z");
+        perform(delete(base + "/records/" + guardianRecord), guardian).andExpect(status().isOk());
+        perform(delete(base + "/records/" + workerRecord), worker).andExpect(status().isOk());
+
+        perform(get(base + "/records/deleted?pageSize=1"), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(guardianRecord))
+                .andExpect(jsonPath("$.data.items[0].restoreUntil").value("2026-11-13T03:00:00Z"));
+        perform(get(base + "/records/deleted"), worker)
+                .andExpect(jsonPath("$.data.items[0].id").value(workerRecord));
+        perform(get(base + "/records/deleted"), secondary)
+                .andExpect(jsonPath("$.data.items").isEmpty());
+        perform(get(base + "/records/deleted"), institution).andExpect(status().isForbidden());
+        perform(get(base + "/records/deleted"), outsider).andExpect(status().isForbidden());
+        perform(get(base + "/records/deleted?page=0"), guardian).andExpect(status().isBadRequest());
+
+        given(clock.instant()).willReturn(NOW.plus(Duration.ofDays(30)));
+        perform(get(base + "/records/deleted"), guardian)
+                .andExpect(jsonPath("$.data.items").isEmpty());
+    }
+
+    @Test
     void removedRequestNotificationSettingsAreNotExposed() throws Exception {
         perform(get("/api/users/me/notification-settings"), guardian)
                 .andExpect(status().isOk())

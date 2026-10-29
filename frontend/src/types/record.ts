@@ -19,6 +19,11 @@ export type DailyRecord = {
   pinned?: boolean;
 };
 
+export type DeletedRecord = Pick<DailyRecord, 'id' | 'content' | 'category' | 'recordedAt'> & {
+  deletedAt: string;
+  restoreUntil: string;
+};
+
 export type CreateRecordPayload = {
   content: string;
   category: RecordCategory;
