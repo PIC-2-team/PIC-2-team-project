@@ -8,7 +8,7 @@ type Role = 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: 'GUARDIAN', label: '돌봄 보호자', desc: '발달장애인의 부모·가족으로 기록을 직접 관리합니다.' },
-  { value: 'SUPPORT_WORKER', label: '활동지원사', desc: '담당 이용자의 기록을 열람하고 제안합니다.' },
+  { value: 'SUPPORT_WORKER', label: '활동지원사', desc: '담당 이용자의 기록을 작성하고, 본인 기록을 수정·삭제합니다.' },
   { value: 'INSTITUTION', label: '기관 담당자', desc: '소속 이용자와 지원자를 관리합니다.' },
 ];
 
