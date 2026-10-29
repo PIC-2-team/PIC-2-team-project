@@ -45,7 +45,6 @@ public class DailyRecordService {
         access.verifyCreate(userId, recipientId);
         boolean pinned = Boolean.TRUE.equals(request.pinned());
         if (pinned) access.verifyGuardian(userId, recipientId);
-        rejectPendingRecordRequest(request.recordRequestId());
         List<RecordMedia> attached = media.validateIds(recipientId, request.mediaIds());
         CareRecipient recipient = lockRecipient(recipientId);
         DailyRecord record = records.save(DailyRecord.builder().careRecipientId(recipientId).authorId(userId)
@@ -189,12 +188,6 @@ public class DailyRecordService {
 
     private Map<Long, User> authors(List<Long> ids) {
         return users.findAllById(new HashSet<>(ids)).stream().collect(Collectors.toMap(User::getId, Function.identity()));
-    }
-
-    private void rejectPendingRecordRequest(Long recordRequestId) {
-        if (recordRequestId != null) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "UNSUPPORTED_RECORD_LINK", "기록 요청 연결은 아직 지원하지 않습니다.");
-        }
     }
 
     private Pageable pageable(int page, int size, String sortField) {

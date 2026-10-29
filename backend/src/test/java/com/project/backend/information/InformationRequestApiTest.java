@@ -142,7 +142,7 @@ class InformationRequestApiTest {
             perform(post(recipientPath).content("{\"message\":\"" + message + "\"}"), worker)
                     .andExpect(status().isUnprocessableEntity());
         }
-        guardian.updateNotificationSettings(true, true, true, true, false, true);
+        guardian.updateNotificationSettings(true, true, true, false);
         String created = perform(post(recipientPath).content("{\"message\":\"질문\"}"), worker)
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = ((Number) JsonPath.read(created, "$.data.id")).longValue();

@@ -17,11 +17,12 @@ vi.mock('react-router-dom', async () => {
 
 let mockRole = 'GUARDIAN';
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ selectedRecipientId: 42, user: { role: mockRole } }),
+  useAuth: () => ({ selectedRecipientId: 42, user: { id: mockRole === 'SUPPORT_WORKER' ? 2 : 1, role: mockRole } }),
 }));
 
 const sampleRecord: DailyRecord = {
   id: 101,
+  author: { id: 1, name: '보호자', role: 'GUARDIAN' },
   content: '오늘 점심에 밥을 맛있게 먹었어요.',
   category: 'MEAL',
   recordedAt: '2026-10-22T12:00:00Z',
@@ -128,23 +129,34 @@ it('수정 모드에서 취소 버튼 클릭 시 수정이 취소되고 원래 �
   expect(screen.queryByText('취소할 내용')).not.toBeInTheDocument();
 });
 
-it('활동지원사로 진입 시 수정 제안 버튼이 노출된다', async () => {
+it('활동지원사는 본인 기록만 수정·삭제할 수 있다', async () => {
   mockRole = 'SUPPORT_WORKER';
-  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord, author: { id: 2, name: '활동지원사', role: 'SUPPORT_WORKER' },
+  });
+  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
+    <Route path="/records/:id" element={<RecordDetailPage />} />
+  </Routes></MemoryRouter>);
+  expect(await screen.findByRole('button', { name: '수정' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '삭제' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '수정 제안' })).not.toBeInTheDocument();
+});
 
-  render(
-    <MemoryRouter initialEntries={['/records/101']}>
-      <Routes>
-        <Route path="/records/:id" element={<RecordDetailPage />} />
-      </Routes>
-    </MemoryRouter>
-  );
-
-  expect(await screen.findByRole('button', { name: '수정 제안' })).toBeInTheDocument();
+it.each(['GUARDIAN', 'SUPPORT_WORKER'])('%s는 다른 작성자의 기록을 수정·삭제할 수 없다', async role => {
+  mockRole = role;
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    author: role === 'GUARDIAN'
+      ? { id: 2, name: '활동지원사', role: 'SUPPORT_WORKER' }
+      : sampleRecord.author,
+  });
+  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
+    <Route path="/records/:id" element={<RecordDetailPage />} />
+  </Routes></MemoryRouter>);
+  expect(await screen.findByText(sampleRecord.content)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument();
 });
-
 it('보호자가 삭제 버튼을 누르고 확인하면 deleteRecord 호출 후 목록으로 이동한다', async () => {
   vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
   const deleteSpy = vi.spyOn(recordsApi, 'deleteRecord').mockResolvedValue({
@@ -170,38 +182,6 @@ it('보호자가 삭제 버튼을 누르고 확인하면 deleteRecord 호출 후
     expect(deleteSpy).toHaveBeenCalledWith(42, 101);
     expect(mockNavigate).toHaveBeenCalledWith('/records', { replace: true });
   });
-});
-
-it('보호자 화면에서 활동지원사가 보낸 대기 중인 수정 제안이 있으면 안내 배너와 내용을 표시한다', async () => {
-  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
-  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({
-    items: [
-      {
-        id: 7,
-        recordId: 101,
-        original: { content: '기존 내용', category: 'MEAL' },
-        proposed: { content: '점심 식사 시 반찬을 골고루 드셨습니다.', category: 'MEAL' },
-        reason: '내용 보충',
-        suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
-        status: 'PENDING',
-        createdAt: '2026-10-22T12:30:00Z',
-      },
-    ],
-    pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
-  });
-
-  render(
-    <MemoryRouter initialEntries={['/records/101']}>
-      <Routes>
-        <Route path="/records/:id" element={<RecordDetailPage />} />
-      </Routes>
-    </MemoryRouter>
-  );
-
-  expect(await screen.findByText(/활동지원사의 수정 제안이 1건 있어요/)).toBeInTheDocument();
-  expect(screen.getByText(/이활동 님의 제안/)).toBeInTheDocument();
-  expect(screen.getByText('점심 식사 시 반찬을 골고루 드셨습니다.')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '검토하기' })).toHaveAttribute('href', '/record-suggestions');
 });
 
 it('보호자가 기록 수정을 저장하면 수정 이력을 즉시 재조회한다', async () => {
@@ -235,43 +215,6 @@ it('보호자가 기록 수정을 저장하면 수정 이력을 즉시 재조회
   });
   expect(revisionsSpy).toHaveBeenNthCalledWith(2, 42, 101);
 });
-
-it('다른 기록의 제안이 20건 있어도 현재 기록의 제안을 조회해 표시한다', async () => {
-  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
-  const suggestion = {
-    id: 21, recordId: 101,
-    proposed: { content: '현재 기록의 이전 제안', category: 'MEAL' as const },
-    suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' },
-    status: 'PENDING' as const, createdAt: '2026-10-22T10:00:00Z',
-  };
-  vi.spyOn(recordsApi, 'getRecordSuggestions').mockImplementation(async (_recipientId, _status, _page, _pageSize, recordId) => ({
-    items: recordId === 101 ? [suggestion] : Array.from({ length: 20 }, (_, i) => ({ ...suggestion, id: i + 1, recordId: 999 })),
-    pagination: { page: 1, pageSize: 20, totalItems: recordId === 101 ? 1 : 21, totalPages: recordId === 101 ? 1 : 2 },
-  }));
-
-  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
-    <Route path="/records/:id" element={<RecordDetailPage />} />
-  </Routes></MemoryRouter>);
-
-  expect(await screen.findByText('현재 기록의 이전 제안')).toBeInTheDocument();
-  expect(screen.getByText(/활동지원사의 수정 제안이 1건 있어요/)).toBeInTheDocument();
-});
-
-it('현재 기록의 제안이 한 페이지를 넘으면 전체 대기 건수를 표시한다', async () => {
-  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);
-  vi.spyOn(recordsApi, 'getRecordSuggestions').mockResolvedValue({
-    items: [{ id: 1, recordId: 101, proposed: { content: '수정 제안', category: 'MEAL' },
-      suggestedBy: { id: 3, name: '이활동', role: 'SUPPORT_WORKER' }, status: 'PENDING', createdAt: '2026-10-22T10:00:00Z' }],
-    pagination: { page: 1, pageSize: 20, totalItems: 21, totalPages: 2 },
-  });
-
-  render(<MemoryRouter initialEntries={['/records/101']}><Routes>
-    <Route path="/records/:id" element={<RecordDetailPage />} />
-  </Routes></MemoryRouter>);
-
-  expect(await screen.findByText(/활동지원사의 수정 제안이 21건 있어요/)).toBeInTheDocument();
-});
-
 
 it('수정 이력이 존재할 때 아코디언을 펼치면 이전 리비전 내역이 표시된다', async () => {
   vi.spyOn(recordsApi, 'getRecord').mockResolvedValue(sampleRecord);

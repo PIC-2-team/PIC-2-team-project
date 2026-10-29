@@ -4,8 +4,27 @@ import { MemoryRouter } from 'react-router-dom';
 import { DailyRecordPage } from './DailyRecordPage';
 import * as recordsApi from '../api/records';
 
-vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { role: 'GUARDIAN' } }) }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+let mockRole = 'GUARDIAN';
+vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { role: mockRole } }) }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; });
+
+it('활동지원사에게 기록 작성 버튼이 표시된다', async () => {
+  mockRole = 'SUPPORT_WORKER';
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({
+    items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 },
+  });
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  expect(screen.getByRole('button', { name: '기록하기' })).toBeInTheDocument();
+});
+
+it('전체 목록에서도 활동지원사에게 기록 작성 버튼이 표시된다', () => {
+  mockRole = 'SUPPORT_WORKER';
+  vi.spyOn(recordsApi, 'getRecords').mockResolvedValue({
+    items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+  });
+  render(<MemoryRouter initialEntries={['/records?view=list']}><DailyRecordPage /></MemoryRouter>);
+  expect(screen.getByRole('button', { name: '기록하기' })).toBeInTheDocument();
+});
 
 it('더보기를 누르면 달력 없이 전체 기록을 조회하고 카테고리로 필터링한다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });

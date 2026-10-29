@@ -118,21 +118,21 @@ class RecordApiTest {
                 .andExpect(jsonPath("$.data.recordedAt").value("2026-10-14T03:00:00Z"))
                 .andExpect(jsonPath("$.data.author.id").value(worker.getId()))
                 .andExpect(jsonPath("$.data.media").isEmpty());
-        perform(patch(base + "/records/" + id).content("{\"content\":\"수정 내용\"}"), guardian)
+        perform(patch(base + "/records/" + id).content("{\"content\":\"수정 내용\"}"), worker)
                 .andExpect(status().isOk());
         entityManager.flush();
         entityManager.clear();
         perform(get(base + "/records/" + id + "/revisions"), guardian)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].revision").value(1))
                 .andExpect(jsonPath("$.data.items[0].content").value("원래 내용"))
-                .andExpect(jsonPath("$.data.items[0].changedBy.id").value(guardian.getId()));
+                .andExpect(jsonPath("$.data.items[0].changedBy.id").value(worker.getId()));
         perform(delete(base + "/records/" + id), worker).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.restoreUntil").value("2026-11-13T03:00:00Z"));
         entityManager.flush();
         entityManager.clear();
         perform(get(base + "/records"), guardian).andExpect(jsonPath("$.data.items").isEmpty());
         perform(get(base + "/records/" + id), guardian).andExpect(status().isNotFound());
-        perform(post(base + "/records/" + id + "/restore"), secondary)
+        perform(post(base + "/records/" + id + "/restore"), worker)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.content").value("수정 내용"));
         assertThat(recipients.findById(recipient.getId()).orElseThrow().getLatestRecordAt())
                 .isEqualTo(LocalDateTime.of(2026, 10, 14, 3, 0));
@@ -189,6 +189,54 @@ class RecordApiTest {
         guardians.save(CareGuardian.builder().careRecipientId(otherRecipient.getId()).guardianId(guardian.getId())
                 .type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build());
         perform(get("/api/care-recipients/" + otherRecipient.getId() + "/records/" + id), guardian)
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void guardiansAndSupportWorkersCanChangeOnlyTheirOwnRecords() throws Exception {
+        long guardianRecord = create(guardian, "보호자 기록", "2026-10-14T03:00:00Z");
+        long workerRecord = create(worker, "지원사 기록", "2026-10-14T03:00:00Z");
+        perform(patch(base + "/records/" + workerRecord).content("{\"content\":\"변경\"}"), guardian)
+                .andExpect(status().isForbidden());
+        perform(delete(base + "/records/" + workerRecord), guardian).andExpect(status().isForbidden());
+        perform(patch(base + "/records/" + guardianRecord).content("{\"content\":\"변경\"}"), worker)
+                .andExpect(status().isForbidden());
+        perform(delete(base + "/records/" + guardianRecord), worker).andExpect(status().isForbidden());
+        perform(patch(base + "/records/" + guardianRecord).content("{\"content\":\"변경\"}"), secondary)
+                .andExpect(status().isForbidden());
+        perform(patch(base + "/records/" + guardianRecord).content("{\"content\":\"보호자 수정\"}"), guardian)
+                .andExpect(status().isOk());
+        perform(patch(base + "/records/" + workerRecord).content("{\"content\":\"지원사 수정\"}"), worker)
+                .andExpect(status().isOk());
+        perform(delete(base + "/records/" + workerRecord), worker).andExpect(status().isOk());
+        perform(post(base + "/records/" + workerRecord + "/restore"), guardian)
+                .andExpect(status().isForbidden());
+        perform(post(base + "/records/" + workerRecord + "/restore"), worker)
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void removedRequestNotificationSettingsAreNotExposed() throws Exception {
+        perform(get("/api/users/me/notification-settings"), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.informationRequestReceived").value(true))
+                .andExpect(jsonPath("$.data.suggestionReceived").doesNotExist())
+                .andExpect(jsonPath("$.data.recordRequestReceived").doesNotExist());
+        perform(put("/api/users/me/notification-settings")
+                        .content("{\"recordCreated\":true,\"recordUpdated\":true,\"assignmentChanged\":true,\"informationRequestReceived\":false}"), guardian)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.informationRequestReceived").value(false));
+    }
+
+    @Test
+    void removedRecordSuggestionAndRequestEndpointsAreUnavailable() throws Exception {
+        long id = create(worker, "기록", "2026-10-14T03:00:00Z");
+        perform(post(base + "/records/" + id + "/suggestions")
+                        .content("{\"content\":\"제안\"}"), worker)
+                .andExpect(status().isNotFound());
+        perform(get(base + "/record-suggestions"), guardian).andExpect(status().isNotFound());
+        perform(post(base + "/record-requests")
+                        .content("{\"idempotencyKey\":\"key\",\"message\":\"요청\"}"), worker)
                 .andExpect(status().isNotFound());
     }
 
@@ -271,8 +319,8 @@ class RecordApiTest {
     }
 
     @Test
-    void unsupportedMediaAndRecordRequestsAreNotSilentlyDiscarded() throws Exception {
-        for (String extra : List.of("\"mediaIds\":[1]", "\"recordRequestId\":1")) {
+    void unsupportedMediaIsNotSilentlyDiscarded() throws Exception {
+        for (String extra : List.of("\"mediaIds\":[1]")) {
             String json = body("기록", "2026-10-14T03:00:00Z");
             json = json.substring(0, json.length() - 1) + "," + extra + "}";
             perform(post(base + "/records").content(json), guardian).andExpect(status().isUnprocessableEntity());
@@ -310,7 +358,7 @@ class RecordApiTest {
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.data.pinned").value(true))
                 .andReturn().getResponse().getContentAsString();
         long id = ((Number) JsonPath.read(result, "$.data.id")).longValue();
-        perform(delete(base + "/records/" + id), guardian).andExpect(status().isOk());
+        perform(delete(base + "/records/" + id), secondary).andExpect(status().isOk());
         perform(get(base + "/care-info"), guardian).andExpect(jsonPath("$.data.pinnedRecords").isEmpty());
         perform(patch(base + "/records/" + id + "/pin").content("{\"pinned\":false}"), guardian)
                 .andExpect(status().isNotFound());
@@ -335,7 +383,7 @@ class RecordApiTest {
                 .andExpect(status().isOk());
         entityManager.flush();
         entityManager.clear();
-        perform(patch(base + "/records/" + id).content("{\"category\":\"MEAL\"}"), guardian)
+        perform(patch(base + "/records/" + id).content("{\"category\":\"MEAL\"}"), worker)
                 .andExpect(status().isOk());
         entityManager.flush();
         entityManager.clear();
@@ -348,173 +396,6 @@ class RecordApiTest {
                 .andExpect(jsonPath("$.data.items[0].content").value("버전1"));
         perform(get(base + "/records/" + id + "/revisions?pageSize=101"), guardian)
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void recordSuggestionsAreFilteredBeforePagination() throws Exception {
-        long target = create(worker, "확인할 기록", "2026-10-14T03:00:00Z");
-        long other = create(worker, "다른 기록", "2026-10-14T03:00:00Z");
-        perform(post(base + "/records/" + target + "/suggestions")
-                .content("{\"content\":\"확인할 제안\"}"), worker).andExpect(status().isCreated());
-        for (int i = 0; i < 20; i++) {
-            perform(post(base + "/records/" + other + "/suggestions")
-                    .content("{\"content\":\"다른 제안\"}"), worker).andExpect(status().isCreated());
-        }
-
-        perform(get(base + "/record-suggestions"), guardian)
-                .andExpect(jsonPath("$.data.pagination.totalItems").value(21));
-        perform(get(base + "/record-suggestions").param("recordId", String.valueOf(target)), guardian)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items.length()").value(1))
-                .andExpect(jsonPath("$.data.items[0].recordId").value(target))
-                .andExpect(jsonPath("$.data.pagination.totalItems").value(1));
-        perform(get(base + "/record-suggestions").param("recordId", String.valueOf(target)), worker)
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void supportWorkerCanSuggestAndGuardianApprovalUpdatesRecordWithRevision() throws Exception {
-        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
-        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
-                        .content("{\"content\":\"수정 제안\",\"category\":\"MEAL\",\"reason\":\"분류 보완\"}"), worker)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
-                .andExpect(jsonPath("$.data.original.content").value("기존 기록"))
-                .andExpect(jsonPath("$.data.proposed.content").value("수정 제안"))
-                .andReturn().getResponse().getContentAsString();
-        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
-
-        perform(get(base + "/record-suggestions"), secondary)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].id").value(suggestionId))
-                .andExpect(jsonPath("$.data.pagination.totalItems").value(1));
-        entityManager.flush();
-        entityManager.clear();
-
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"APPROVE\"}"), guardian)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("APPROVED"));
-        entityManager.flush();
-        entityManager.clear();
-        perform(get(base + "/records/" + id), guardian)
-                .andExpect(jsonPath("$.data.content").value("수정 제안"))
-                .andExpect(jsonPath("$.data.category").value("MEAL"));
-        perform(get(base + "/records/" + id + "/revisions"), guardian)
-                .andExpect(jsonPath("$.data.items[0].content").value("기존 기록"))
-                .andExpect(jsonPath("$.data.items[0].changedBy.id").value(guardian.getId()));
-    }
-
-    @Test
-    void rejectingSuggestionDoesNotChangeRecordAndOnlyGuardianCanDecide() throws Exception {
-        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
-        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
-                        .content("{\"content\":\"수정 제안\"}"), institution)
-                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"REJECT\"}"), worker)
-                .andExpect(status().isForbidden());
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"REJECT\"}"), secondary)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REJECTED"));
-        perform(get(base + "/records/" + id), guardian)
-                .andExpect(jsonPath("$.data.content").value("기존 기록"));
-        perform(get(base + "/records/" + id + "/revisions"), guardian)
-                .andExpect(jsonPath("$.data.items").isEmpty());
-    }
-
-    @Test
-    void staleOrRepeatedSuggestionDecisionIsRejected() throws Exception {
-        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
-        String suggestionJson = perform(post(base + "/records/" + id + "/suggestions")
-                        .content("{\"content\":\"수정 제안\"}"), worker)
-                .andReturn().getResponse().getContentAsString();
-        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
-        given(clock.instant()).willReturn(NOW.plusSeconds(1));
-        perform(patch(base + "/records/" + id).content("{\"recordedAt\":\"2026-10-15T03:00:00Z\"}"), guardian)
-                .andExpect(status().isOk());
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"APPROVE\"}"), guardian)
-                .andExpect(status().isConflict());
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"REJECT\"}"), guardian)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.status").value("REJECTED"));
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"APPROVE\"}"), guardian)
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void invalidSuggestionAndUnauthorizedCreationAreRejected() throws Exception {
-        long id = create(worker, "기존 기록", "2026-10-14T03:00:00Z");
-        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"   \"}"), worker)
-                .andExpect(status().isUnprocessableEntity());
-        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"제안\"}"), guardian)
-                .andExpect(status().isForbidden());
-        perform(get(base + "/record-suggestions"), worker).andExpect(status().isForbidden());
-        perform(get(base + "/record-suggestions?pageSize=101"), guardian).andExpect(status().isBadRequest());
-        perform(delete(base + "/records/" + id), guardian).andExpect(status().isOk());
-        perform(post(base + "/records/" + id + "/suggestions").content("{\"content\":\"제안\"}"), worker)
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void suggestionNotificationsReachGuardiansAndAuthorAndCanBeMarkedRead() throws Exception {
-        long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
-        String suggestionJson = perform(post(base + "/records/" + recordId + "/suggestions")
-                        .content("{\"content\":\"수정 제안\"}"), worker)
-                .andReturn().getResponse().getContentAsString();
-        long suggestionId = ((Number) JsonPath.read(suggestionJson, "$.data.id")).longValue();
-
-        String inbox = perform(get("/api/notifications?read=false"), guardian)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"))
-                .andExpect(jsonPath("$.data.items[0].read").value(false))
-                .andReturn().getResponse().getContentAsString();
-        perform(get("/api/notifications?read=false"), secondary)
-                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"));
-        perform(get("/api/notifications?read=false"), worker)
-                .andExpect(jsonPath("$.data.items").isEmpty());
-        long notificationId = ((Number) JsonPath.read(inbox, "$.data.items[0].id")).longValue();
-        perform(patch("/api/notifications/" + notificationId).content("{\"read\":true}"), worker)
-                .andExpect(status().isNotFound());
-        perform(patch("/api/notifications/" + notificationId).content("{\"read\":true}"), guardian)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.read").value(true));
-        perform(get("/api/notifications?read=true"), guardian)
-                .andExpect(jsonPath("$.data.items[0].id").value(notificationId));
-
-        perform(post(base + "/record-suggestions/" + suggestionId + "/decision")
-                        .content("{\"decision\":\"APPROVE\"}"), guardian)
-                .andExpect(status().isOk());
-        perform(get("/api/notifications?read=false"), worker)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_DECIDED"));
-    }
-
-    @Test
-    void notificationSettingsDefaultToEnabledAndControlSuggestionNotifications() throws Exception {
-        perform(get("/api/users/me/notification-settings"), guardian)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.recordCreated").value(true))
-                .andExpect(jsonPath("$.data.recordUpdated").value(true))
-                .andExpect(jsonPath("$.data.assignmentChanged").value(true))
-                .andExpect(jsonPath("$.data.suggestionReceived").value(true))
-                .andExpect(jsonPath("$.data.informationRequestReceived").value(true))
-                .andExpect(jsonPath("$.data.recordRequestReceived").value(true));
-        String settings = "{\"recordCreated\":false,\"recordUpdated\":true,\"assignmentChanged\":true,"
-                + "\"suggestionReceived\":false,\"informationRequestReceived\":true,\"recordRequestReceived\":true}";
-        perform(put("/api/users/me/notification-settings").content(settings), guardian)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.suggestionReceived").value(false));
-        perform(put("/api/users/me/notification-settings").content("{\"recordCreated\":true}"), guardian)
-                .andExpect(status().isUnprocessableEntity());
-
-        long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
-        perform(post(base + "/records/" + recordId + "/suggestions")
-                        .content("{\"content\":\"수정 제안\"}"), worker)
-                .andExpect(status().isCreated());
-        perform(get("/api/notifications?read=false"), guardian)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
-        perform(get("/api/notifications?read=false"), secondary)
-                .andExpect(jsonPath("$.data.items[0].type").value("SUGGESTION_RECEIVED"));
     }
 
     @Test
@@ -645,7 +526,8 @@ class RecordApiTest {
         long recordId = create(worker, "기록", "2026-10-14T03:00:00Z");
         mediaLinks.save(new RecordMediaLink(recordId, photo.getId()));
         perform(delete(base + "/media/" + photo.getId()), otherWorker).andExpect(status().isForbidden());
-        perform(delete(base + "/media/" + photo.getId()), guardian).andExpect(status().isOk());
+        perform(delete(base + "/media/" + photo.getId()), guardian).andExpect(status().isForbidden());
+        perform(delete(base + "/media/" + photo.getId()), worker).andExpect(status().isOk());
     }
 
     private UsernamePasswordAuthenticationToken auth(User user) {

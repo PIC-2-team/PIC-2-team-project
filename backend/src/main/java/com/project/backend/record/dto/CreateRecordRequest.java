@@ -10,7 +10,6 @@ public record CreateRecordRequest(
         @NotNull RecordCategory category,
         @NotNull OffsetDateTime recordedAt,
         @Size(max = 5) List<Long> mediaIds,
-        Long recordRequestId,
         Boolean pinned) {
     public CreateRecordRequest {
         if (content != null) content = content.trim();

@@ -6,10 +6,7 @@ import {
   getRecord,
   updateRecord,
   deleteRecord,
-  createSuggestion,
   getRecordRevisions,
-  getRecordSuggestions,
-  type RecordSuggestion,
 } from '../api/records';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
@@ -56,21 +53,10 @@ export function RecordDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // 수정 제안 상태 (활동지원사용)
-  const [showSuggestion, setShowSuggestion] = useState(false);
-  const [suggestionText, setSuggestionText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [suggestionDone, setSuggestionDone] = useState(false);
-  const [suggestionError, setSuggestionError] = useState<string | null>(null);
-
   // 수정 이력 상태 (보호자/열람자용)
   const [revisions, setRevisions] = useState<RecordRevision[]>([]);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
-
-  // 해당 기록에 대한 대기 중인 활동지원사 수정 제안 목록
-  const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
-  const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -96,20 +82,8 @@ export function RecordDetailPage() {
       .catch(() => { if (isCurrent) setRevisions([]); })
       .finally(() => { if (isCurrent) setRevisionsLoading(false); });
 
-    if (user?.role === 'GUARDIAN') {
-      // TODO: 백엔드에 /records/{id}/suggestions 엔드포인트 추가 시 교체
-      getRecordSuggestions(selectedRecipientId, 'PENDING', 1, 20, recordId)
-        .then(res => {
-          if (!isCurrent) return;
-          setPendingSuggestions(res?.items ?? []);
-          setPendingSuggestionCount(res?.pagination.totalItems ?? 0);
-        })
-        .catch(() => {
-          if (isCurrent) { setPendingSuggestions([]); setPendingSuggestionCount(0); }
-        });
-    }
     return () => { isCurrent = false; };
-  }, [id, selectedRecipientId, user?.role]);
+  }, [id, selectedRecipientId]);
 
   const startEditing = () => {
     if (!record) return;
@@ -161,20 +135,8 @@ export function RecordDetailPage() {
     }
   };
 
-  const submitSuggestion = async () => {
-    if (!selectedRecipientId || !id || !suggestionText.trim()) return;
-    setSubmitting(true);
-    setSuggestionError(null);
-    try {
-      await createSuggestion(selectedRecipientId, Number(id), suggestionText.trim());
-      setSuggestionDone(true);
-      setShowSuggestion(false);
-    } catch (e) {
-      setSuggestionError(e instanceof Error ? e.message : '제안 제출 중 오류가 발생했어요.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const canEdit = (user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER')
+    && record?.author?.id === user.id;
 
   return (
     <AppShell role={user?.role}>
@@ -269,53 +231,6 @@ export function RecordDetailPage() {
               </>
             ) : (
               <>
-                {user?.role === 'GUARDIAN' && pendingSuggestionCount > 0 && (
-                  <aside
-                    aria-label="활동지원사 수정 제안"
-                    style={{
-                      background: '#fffbeb',
-                      border: '1.5px solid #f59e0b',
-                      borderRadius: '12px',
-                      padding: '1rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>
-                        📢 활동지원사의 수정 제안이 {pendingSuggestionCount}건 있어요
-                      </strong>
-                      <Link
-                        to="/record-suggestions"
-                        className="btn secondary"
-                        style={{ fontSize: '0.8rem', padding: '4px 10px', textDecoration: 'none' }}
-                      >
-                        검토하기
-                      </Link>
-                    </div>
-                    {pendingSuggestions.map(sug => (
-                      <div
-                        key={sug.id}
-                        style={{
-                          marginTop: '0.5rem',
-                          padding: '0.625rem',
-                          background: '#ffffff',
-                          borderRadius: '8px',
-                          border: '1px solid #fde68a',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#4b5563' }}>
-                          {sug.suggestedBy?.name ?? '활동지원사'} 님의 제안
-                          {sug.reason && <span style={{ fontWeight: 400, color: '#6b7280' }}> · 사유: {sug.reason}</span>}
-                        </p>
-                        <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
-                          {sug.proposed?.content ?? sug.suggestedContent}
-                        </p>
-                      </div>
-                    ))}
-                  </aside>
-                )}
-
                 <article className="demo-card">
                   <time className="record-meta" dateTime={record.recordedAt}>
                     {new Date(record.recordedAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -324,7 +239,7 @@ export function RecordDetailPage() {
                   <p className="record-content">{record.content}</p>
                 </article>
                 {actionMsg && <p role="status" className="hint">{actionMsg}</p>}
-                {user?.role === 'GUARDIAN' && (
+                {canEdit && (
                   <div className="actions">
                     <button type="button" className="btn secondary" onClick={startEditing}>수정</button>
                     <button
@@ -337,38 +252,6 @@ export function RecordDetailPage() {
                     </button>
                   </div>
                 )}
-                {user?.role === 'SUPPORT_WORKER' && (
-                  <>
-                    {suggestionDone ? (
-                      <p role="status">제안 전송 완료 — 보호자에게 전달됐어요.</p>
-                    ) : showSuggestion ? (
-                      <div>
-                        <textarea
-                          aria-label="수정 제안 내용"
-                          value={suggestionText}
-                          onChange={e => setSuggestionText(e.target.value)}
-                          rows={4}
-                          placeholder="수정할 내용을 입력해 주세요."
-                        />
-                        <div className="actions">
-                          <button type="button" className="btn secondary" onClick={() => setShowSuggestion(false)}>취소</button>
-                          <button
-                            type="button"
-                            className="btn primary"
-                            disabled={!suggestionText.trim() || submitting}
-                            onClick={() => { void submitSuggestion(); }}
-                          >
-                            {submitting ? '제출 중…' : '제안하기'}
-                          </button>
-                        </div>
-                        {suggestionError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{suggestionError}</p>}
-                      </div>
-                    ) : (
-                      <button type="button" className="btn secondary" onClick={() => setShowSuggestion(true)}>수정 제안</button>
-                    )}
-                  </>
-                )}
-
                 <section style={{ marginTop: '1.5rem' }} aria-labelledby="revisions-heading">
                   <button
                     type="button"

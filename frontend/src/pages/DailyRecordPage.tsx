@@ -136,7 +136,7 @@ export function DailyRecordPage() {
   const hasMore = !listOnly && !showAllDayRecords && selectedRecords.length > 3;
   const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
-  const canWrite = user?.role === 'GUARDIAN';
+  const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
@@ -250,7 +250,7 @@ export function DailyRecordPage() {
         </nav>
       )}
 
-      {canWrite && !listOnly && (
+      {canWrite && (
         <button
           className={`btn ${styles.recordButton}`}
           type="button"

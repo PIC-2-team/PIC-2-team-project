@@ -17,10 +17,8 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
 import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { RecordRequestPage } from './pages/RecordRequestPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
-import { RecordSuggestionsPage } from './pages/RecordSuggestionsPage';
 import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -54,6 +52,13 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER']} />,
+        children: [{
+          element: <RequireRecipient />,
+          children: [{ path: '/records/new', element: <RecordFormPage /> }],
+        }],
+      },
+      {
         element: <RequireRecipient />,
         children: [
           { path: '/records/:id', element: <RecordDetailPage /> },
@@ -63,7 +68,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // GUARDIAN 전용 — 활동지원사는 기록 작성 불가
+  // GUARDIAN 전용
   {
     element: <RequireAuth />,
     children: [
@@ -72,27 +77,8 @@ export const router = createBrowserRouter([
         children: [{
           element: <RequireRecipient />,
           children: [
-            { path: '/records/new', element: <RecordFormPage /> },
             { path: '/secondary-guardian', element: <SecondaryGuardianPage /> },
             { path: '/care-relations', element: <CareRelationsPage /> },
-            { path: '/record-suggestions', element: <RecordSuggestionsPage /> },
-          ],
-        }],
-      },
-    ],
-  },
-
-  // SUPPORT_WORKER 전용 — 활동지원사 돌봄 내용 수정 요청
-  {
-    element: <RequireAuth />,
-    children: [
-      {
-        element: <RequireRole role="SUPPORT_WORKER" />,
-        children: [{
-          element: <RequireRecipient />,
-          children: [
-            { path: '/record-requests/new', element: <RecordRequestPage /> },
-            { path: '/care-info/request', element: <RecordRequestPage /> },
           ],
         }],
       },
