@@ -1,3 +1,24 @@
 .main {
   height: 100%;
 }
+
+.recordError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  color: #8b1e1e;
+  background: #fff0f0;
+}
+
+.recordError button {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.25rem;
+}

@@ -32,15 +32,15 @@ const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'OTHER', label: '기타' },
 ];
 
-export function RecordDetailModal({ recordId, onClose, onChanged }: {
+export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
   recordId: number;
-  onClose: (changed: boolean) => void;
+  onClose: () => void;
   onChanged?: () => void;
+  onError?: (message: string) => void;
 }) {
   const { selectedRecipientId, user } = useAuth();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const changedRef = useRef(false);
   const [record, setRecord] = useState<DailyRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,13 +103,11 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
     return () => { isCurrent = false; };
   }, [recordId, selectedRecipientId]);
 
-  const close = () => onClose(changedRef.current);
-
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (showDeleteDialog) return;
     if (event.key === 'Escape') {
       event.stopPropagation();
-      close();
+      onClose();
     }
     if (event.key !== 'Tab' || !dialogRef.current) return;
     const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), a[href]'));
@@ -146,13 +144,14 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
     setError(null);
     try {
       await deleteRecord(selectedRecipientId, recordId);
-      if (isMountedRef.current) onClose(true);
-      else onChanged?.();
+      onChanged?.();
+      if (isMountedRef.current) onClose();
     } catch (e) {
+      const message = e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.';
       if (isMountedRef.current) {
-        setError(e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.');
+        setError(message);
         setIsDeleting(false);
-      }
+      } else onError?.(message);
     }
   };
 
@@ -168,14 +167,15 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
       onChanged?.();
       if (!isMountedRef.current) return;
       setRecord(updated);
-      changedRef.current = true;
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
       getRecordRevisions(selectedRecipientId, recordId)
         .then(res => { if (isMountedRef.current) setRevisions(res?.items ?? []); })
         .catch(() => {});
     } catch (e) {
-      if (isMountedRef.current) setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
+      const message = e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.';
+      if (isMountedRef.current) setEditError(message);
+      else onError?.(message);
     } finally {
       if (isMountedRef.current) setIsSaving(false);
     }
@@ -185,7 +185,7 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
     && record?.author?.id === user.id;
 
   return (
-    <div className={styles.backdrop} onMouseDown={event => { if (event.target === event.currentTarget && !showDeleteDialog) close(); }}>
+    <div className={styles.backdrop} onMouseDown={event => { if (event.target === event.currentTarget && !showDeleteDialog) onClose(); }}>
       <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="record-detail-title" onKeyDown={handleKeyDown}>
       <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
         description="삭제 후 30일 동안 기록 목록에서 복원할 수 있습니다." confirmLabel="삭제" variant="danger"
@@ -193,7 +193,7 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
       <div className={styles.body}>
         <div className={styles.header}>
           <h2 id="record-detail-title">{isEditing ? '기록 수정' : '기록 상세'}</h2>
-          <button ref={closeButtonRef} type="button" className={styles.close} onClick={close} aria-label="기록 상세 닫기">✕</button>
+          <button ref={closeButtonRef} type="button" className={styles.close} onClick={onClose} aria-label="기록 상세 닫기">✕</button>
         </div>
         {isLoading ? <p className="empty-state" role="status">불러오는 중…</p> : error ? (
           <p className="error" role="alert">{error}</p>

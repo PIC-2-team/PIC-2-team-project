@@ -42,7 +42,7 @@ it('기록 상세를 모달로 표시하고 닫으면 변경 없이 돌아간다
   expect(screen.getByText('식사')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '기록 상세 닫기' })).toHaveFocus();
   fireEvent.click(screen.getByRole('button', { name: '기록 상세 닫기' }));
-  expect(onClose).toHaveBeenCalledWith(false);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('Escape 키로 모달을 닫고 Tab 이동을 모달 안에 유지한다', async () => {
@@ -54,7 +54,7 @@ it('Escape 키로 모달을 닫고 Tab 이동을 모달 안에 유지한다', as
   expect(screen.getByRole('button', { name: /수정 내역 및 이력/ })).toHaveFocus();
   closeButton.focus();
   fireEvent.keyDown(dialog, { key: 'Escape' });
-  expect(onClose).toHaveBeenCalledWith(false);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('본인 기록을 수정하면 모달 내용과 이력을 갱신하고 닫을 때 목록 변경을 알린다', async () => {
@@ -76,7 +76,7 @@ it('본인 기록을 수정하면 모달 내용과 이력을 갱신하고 닫을
   expect(await screen.findByText('수정된 기록입니다.')).toBeInTheDocument();
   await waitFor(() => expect(revisions).toHaveBeenCalledTimes(2));
   fireEvent.click(screen.getByRole('button', { name: '기록 상세 닫기' }));
-  expect(onClose).toHaveBeenCalledWith(true);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('수정 취소 시 원래 내용을 유지한다', async () => {
@@ -105,7 +105,7 @@ it('본인 기록 삭제 후 모달을 닫고 목록 변경을 알린다', async
   fireEvent.click(await screen.findByRole('button', { name: '삭제' }));
   fireEvent.click(screen.getByRole('alertdialog').querySelectorAll('button')[1]);
   await waitFor(() => expect(remove).toHaveBeenCalledWith(42, 101));
-  expect(onClose).toHaveBeenCalledWith(true);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('수정 이력을 펼치면 이전 내용을 볼 수 있다', async () => {

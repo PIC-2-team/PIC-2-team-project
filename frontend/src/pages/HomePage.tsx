@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
@@ -54,8 +54,7 @@ type PageState =
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const recordChangedAt = (location.state as { recordChangedAt?: number } | null)?.recordChangedAt;
+  const recordVersion = useOutletContext<{ recordVersion?: number } | undefined>()?.recordVersion;
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const requestRef = useRef(0);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -101,7 +100,7 @@ export function HomePage() {
     };
     void load();
     return () => { requests.current++; };
-  }, [user?.role, selectedRecipientId, navigate, setSelectedRecipient, recordChangedAt]);
+  }, [user?.role, selectedRecipientId, navigate, setSelectedRecipient, recordVersion]);
 
   if (page.status === 'loading') return (
     <div className="demo-page status-page" data-testid="loading-skeleton">
@@ -224,7 +223,7 @@ export function HomePage() {
           </div>
           <div className={styles.records}>
             {pinnedRecords.map(record => (
-              <Link key={record.id} to={`/home?record=${record.id}`} className={styles.recordCard}>
+              <Link key={record.id} to={`/home?record=${record.id}`} state={{ recordModalFromList: true }} className={styles.recordCard}>
                 <p className={styles.recordContent}>{record.content}</p>
                 <span className={styles.recordTime}>
                   {toSeoulDateKey(record.recordedAt)}
@@ -253,7 +252,7 @@ export function HomePage() {
             <p>오늘 기록이 없어요.</p>
           ) : (
             todayRecords.map(record => (
-              <Link key={record.id} to={`/home?record=${record.id}`} className={styles.recordCard}>
+              <Link key={record.id} to={`/home?record=${record.id}`} state={{ recordModalFromList: true }} className={styles.recordCard}>
                 <p className={styles.recordContent}>{record.content}</p>
                 <span className={styles.recordTime}>
                   {new Date(record.recordedAt).toLocaleTimeString('ko-KR', {
