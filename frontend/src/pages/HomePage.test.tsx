@@ -96,6 +96,8 @@ it('보호자 사용자는 중요 돌봄 정보를 중복 없이 오늘의 기�
   expect(screen.getByText('돌봄 당사자')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /오늘의 기록/ })).toBeInTheDocument();
   expect(screen.getByText('오늘 점심 잘 먹음')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /오늘 점심 잘 먹음/ })).toHaveAttribute('href', '/home?record=1');
+  expect(screen.getByRole('link', { name: /중요: 특정 약 복용 주의/ })).toHaveAttribute('href', '/home?record=2');
 });
 
 it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고 프로필 모달을 열 수 있다', async () => {

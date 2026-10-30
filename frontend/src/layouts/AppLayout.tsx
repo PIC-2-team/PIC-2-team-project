@@ -1,14 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TabBar from '../components/TabBar/TabBar';
 import styles from './AppLayout.module.css';
 import { AppShell } from '../components/AppShell';
 import { getUnreadNotificationCount } from '../api/notifications';
+import { RecordDetailModal } from '../components/RecordDetailModal';
 
 export function AppLayout() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const recordParam = new URLSearchParams(location.search).get('record');
+  const recordId = recordParam ? Number(recordParam) : null;
+  const showRecordModal = (location.pathname === '/home' || location.pathname === '/records')
+    && recordId !== null && Number.isInteger(recordId) && recordId > 0;
+
+  const closeRecordModal = (changed: boolean) => {
+    const params = new URLSearchParams(location.search);
+    params.delete('record');
+    navigate({ pathname: location.pathname, search: params.toString() }, {
+      replace: true,
+      state: changed ? { recordChangedAt: Date.now() } : location.state,
+    });
+  };
 
   useEffect(() => {
     if (!user?.role) return;
@@ -24,6 +40,7 @@ export function AppLayout() {
       <main className={styles.main}>
         <Outlet context={{ hasAppShell: true }} />
       </main>
+      {showRecordModal && <RecordDetailModal key={recordId} recordId={recordId} onClose={closeRecordModal} />}
     </AppShell>
   );
 }

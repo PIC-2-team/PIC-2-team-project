@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
 import type { DailyRecord, RecordCategory } from '../types/record';
@@ -91,6 +91,8 @@ function getWeekdayLabel(year: number, month: number, day: number) {
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const recordChangedAt = (location.state as { recordChangedAt?: number } | null)?.recordChangedAt;
   const [searchParams, setSearchParams] = useSearchParams();
   const listOnly = searchParams.get('view') === 'list';
   const [category, setCategory] = useState<RecordCategory | ''>('');
@@ -125,7 +127,13 @@ export function DailyRecordPage() {
       .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록 불러오기 실패'); })
       .finally(() => { if (isCurrent) setIsLoading(false); });
     return () => { isCurrent = false; };
-  }, [selectedRecipientId, viewYear, viewMonth, listOnly, category, page]);
+  }, [selectedRecipientId, viewYear, viewMonth, listOnly, category, page, recordChangedAt]);
+
+  const recordUrl = (recordId: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('record', String(recordId));
+    return `/records?${params.toString()}`;
+  };
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
@@ -225,7 +233,7 @@ export function DailyRecordPage() {
         ) : (
           <div className={styles.records}>
             {visibleRecords.map(record => (
-              <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
+              <Link key={record.id} to={recordUrl(record.id)} className={styles.recordCard}>
                 <div
                   className={styles.recordIcon}
                   style={{ background: CATEGORY_COLOR[record.category] }}
