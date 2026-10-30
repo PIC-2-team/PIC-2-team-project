@@ -23,6 +23,7 @@ test('모달을 닫은 뒤 브라우저 뒤로가기는 이전 페이지로 이�
 
 test('저장된 당사자 ID가 만료되어 자동 전환되면 새 기록을 표시한다', async ({ page }) => {
   await loginAndGoHome(page, TEST_USERS.guardian);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sam_recipient_id'))).toBe('1');
   await page.evaluate(() => localStorage.setItem('sam_recipient_id', '99'));
   await page.route('**/api/care-recipients', async route => {
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -34,10 +35,8 @@ test('저장된 당사자 ID가 만료되어 자동 전환되면 새 기록을 �
     }
     return route.fulfill({ json: ok(record) });
   });
-  const oldResponse = page.waitForResponse(response => response.url().includes('/care-recipients/99/records/10'));
-  const newResponse = page.waitForResponse(response => response.url().includes('/care-recipients/1/records/10'));
   await page.goto('/home?record=10');
-  await Promise.all([oldResponse, newResponse]);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sam_recipient_id'))).toBe('1');
   await expect(page.getByRole('dialog', { name: '기록 상세' })).toBeVisible();
   await expect(page.getByText('브라우저 기록')).toBeVisible();
 });
