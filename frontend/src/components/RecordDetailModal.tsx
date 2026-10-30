@@ -1,6 +1,4 @@
-import { AppShell } from '../components/AppShell';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getRecord,
@@ -8,8 +6,9 @@ import {
   deleteRecord,
   getRecordRevisions,
 } from '../api/records';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
+import styles from './RecordDetailModal.module.css';
 
 const CATEGORY_LABEL: Record<string, string> = {
   COMMUNICATION: '의사소통',
@@ -33,10 +32,15 @@ const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'OTHER', label: '기타' },
 ];
 
-export function RecordDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
+  recordId: number;
+  onClose: () => void;
+  onChanged?: () => void;
+  onError?: (message: string) => void;
+}) {
   const { selectedRecipientId, user } = useAuth();
-  const navigate = useNavigate();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [record, setRecord] = useState<DailyRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,12 +69,26 @@ export function RecordDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedRecipientId || !id) {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    const scrollContainer = dialogRef.current?.closest<HTMLElement>('.app-main');
+    const previousScrollOverflow = scrollContainer?.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (scrollContainer) scrollContainer.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (scrollContainer) scrollContainer.style.overflow = previousScrollOverflow ?? '';
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRecipientId || !Number.isInteger(recordId) || recordId <= 0) {
       setIsLoading(false);
       return;
     }
     let isCurrent = true;
-    const recordId = Number(id);
     getRecord(selectedRecipientId, recordId)
       .then(res => { if (isCurrent) setRecord(res); })
       .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'); })
@@ -83,7 +101,27 @@ export function RecordDetailPage() {
       .finally(() => { if (isCurrent) setRevisionsLoading(false); });
 
     return () => { isCurrent = false; };
-  }, [id, selectedRecipientId]);
+  }, [recordId, selectedRecipientId]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (showDeleteDialog) return;
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onClose();
+    }
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), a[href]'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const startEditing = () => {
     if (!record) return;
@@ -100,38 +138,46 @@ export function RecordDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedRecipientId || !id) return;
+    if (!selectedRecipientId) return;
     setShowDeleteDialog(false);
     setIsDeleting(true);
     setError(null);
     try {
-      await deleteRecord(selectedRecipientId, Number(id));
-      navigate('/records', { replace: true });
+      await deleteRecord(selectedRecipientId, recordId);
+      onChanged?.();
+      if (isMountedRef.current) onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.');
-      setIsDeleting(false);
+      const message = e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.';
+      if (isMountedRef.current) {
+        setError(message);
+        setIsDeleting(false);
+      } else onError?.(message);
     }
   };
 
   const submitEdit = async () => {
-    if (!selectedRecipientId || !id || !editContent.trim()) return;
+    if (!selectedRecipientId || !editContent.trim()) return;
     setIsSaving(true);
     setEditError(null);
     try {
-      const updated = await updateRecord(selectedRecipientId, Number(id), {
+      const updated = await updateRecord(selectedRecipientId, recordId, {
         content: editContent.trim(),
         category: editCategory,
       });
+      onChanged?.();
+      if (!isMountedRef.current) return;
       setRecord(updated);
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
-      getRecordRevisions(selectedRecipientId, Number(id))
+      getRecordRevisions(selectedRecipientId, recordId)
         .then(res => { if (isMountedRef.current) setRevisions(res?.items ?? []); })
         .catch(() => {});
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
+      const message = e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.';
+      if (isMountedRef.current) setEditError(message);
+      else onError?.(message);
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
@@ -139,19 +185,20 @@ export function RecordDetailPage() {
     && record?.author?.id === user.id;
 
   return (
-    <AppShell role={user?.role}>
+    <div className={styles.backdrop} onMouseDown={event => { if (event.target === event.currentTarget && !showDeleteDialog) onClose(); }}>
+      <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="record-detail-title" onKeyDown={handleKeyDown}>
       <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
         description="삭제 후 30일 동안 기록 목록에서 복원할 수 있습니다." confirmLabel="삭제" variant="danger"
         onConfirm={() => { void handleDelete(); }} onCancel={() => setShowDeleteDialog(false)} />
-      <main className="demo-page">
-        <div className="page-heading">
-          <button type="button" className="back" onClick={() => navigate(-1)} aria-label="뒤로가기">←</button>
-          <h1>{isEditing ? '기록 수정' : '기록 상세'}</h1>
+      <div className={styles.body}>
+        <div className={styles.header}>
+          <h2 id="record-detail-title">{isEditing ? '기록 수정' : '기록 상세'}</h2>
+          <button ref={closeButtonRef} type="button" className={styles.close} onClick={onClose} aria-label="기록 상세 닫기">✕</button>
         </div>
         {isLoading ? <p className="empty-state" role="status">불러오는 중…</p> : error ? (
-          <><p className="error" role="alert">{error}</p><Link className="btn secondary" to="/records">← 목록으로</Link></>
+          <p className="error" role="alert">{error}</p>
         ) : !record ? (
-          <><p className="empty-state">기록을 찾을 수 없어요.</p><Link className="btn secondary" to="/records">← 목록으로</Link></>
+          <p className="empty-state">기록을 찾을 수 없어요.</p>
         ) : (
           <>
             {isEditing ? (
@@ -353,7 +400,8 @@ export function RecordDetailPage() {
             )}
           </>
         )}
-      </main>
-    </AppShell>
+      </div>
+      </div>
+    </div>
   );
 }

@@ -9,7 +9,6 @@ import { HomePage } from './pages/HomePage';
 import { DailyRecordPage } from './pages/DailyRecordPage';
 import { DeletedRecordsPage } from './pages/DeletedRecordsPage';
 import { RecordFormPage } from './pages/RecordFormPage';
-import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
@@ -22,6 +21,7 @@ import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
 import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { LegacyRecordDetailRedirect } from './components/LegacyRecordDetailRedirect';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LoginPage /> },
@@ -66,7 +66,7 @@ export const router = createBrowserRouter([
       {
         element: <RequireRecipient />,
         children: [
-          { path: '/records/:id', element: <RecordDetailPage /> },
+          { path: '/records/:id', element: <LegacyRecordDetailRedirect /> },
           { path: '/care-info/:categoryId', element: <CareInfoDetailPage /> },
         ],
       },

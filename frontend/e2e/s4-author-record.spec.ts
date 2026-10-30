@@ -4,8 +4,9 @@ import { TEST_USERS, loginAndGoHome, spaNavigate } from './helpers/mocks';
 const RECORD_ID = 10;
 type RecordUser = typeof TEST_USERS.guardian | typeof TEST_USERS.worker;
 
-async function openRecord(page: Page, user: RecordUser, author: RecordUser) {
+async function openRecord(page: Page, user: RecordUser, author: RecordUser, largeText = false) {
   await loginAndGoHome(page, user);
+  if (largeText) await page.getByRole('button', { name: '큰 글씨 모드 전환' }).click();
 
   let content = '오늘 점심을 먹었어요.';
   await page.route(/\/api\/care-recipients\/\d+\/records\/10$/, route => {
@@ -25,11 +26,26 @@ async function openRecord(page: Page, user: RecordUser, author: RecordUser) {
     });
   });
 
-  await spaNavigate(page, `/records/${RECORD_ID}`);
+  await spaNavigate(page, `/records?record=${RECORD_ID}`);
   await expect(page.getByRole('heading', { name: '기록 상세' })).toBeVisible();
 }
 
 test.describe('S4 — 작성자 본인 기록 관리', () => {
+  test('기록 모달에서 줄바꿈과 큰 글씨 모드가 유지된다', async ({ page }) => {
+    await openRecord(page, TEST_USERS.guardian, TEST_USERS.guardian, true);
+    const content = page.getByRole('dialog', { name: '기록 상세' }).locator('.record-content');
+    await expect(content).toHaveCSS('white-space', 'pre-wrap');
+    await expect(content).toHaveCSS('font-size', '18px');
+  });
+
+  test('기록 모달이 열린 동안 목록 스크롤이 잠기고 닫으면 복원된다', async ({ page }) => {
+    await openRecord(page, TEST_USERS.guardian, TEST_USERS.guardian);
+    const scrollContainer = page.locator('.app-main');
+    await expect(scrollContainer).toHaveCSS('overflow-y', 'hidden');
+    await page.getByRole('button', { name: '기록 상세 닫기' }).click();
+    await expect(scrollContainer).toHaveCSS('overflow-y', 'auto');
+  });
+
   for (const user of [TEST_USERS.guardian, TEST_USERS.worker]) {
     test(`${user.name}는 본인 기록을 수정할 수 있다`, async ({ page }) => {
       await openRecord(page, user, user);

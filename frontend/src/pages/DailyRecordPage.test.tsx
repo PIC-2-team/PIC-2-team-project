@@ -51,7 +51,7 @@ it('전체 기록의 다음 페이지를 조회하고 필터 변경 시 첫 페�
     pagination: { page: 1, pageSize: 20, totalItems: 21, totalPages: 2 },
   });
   render(<MemoryRouter initialEntries={['/records?view=list']}><DailyRecordPage /></MemoryRouter>);
-  expect(await screen.findByRole('link', { name: '산책 기록' })).toHaveAttribute('href', '/records/1');
+  expect(await screen.findByRole('link', { name: '산책 기록' })).toHaveAttribute('href', '/records?view=list&record=1');
   fireEvent.click(screen.getByRole('button', { name: '다음' }));
   await waitFor(() => expect(list).toHaveBeenLastCalledWith(42, undefined, 2));
   fireEvent.change(screen.getByRole('combobox', { name: '카테고리' }), { target: { value: 'MEAL' } });
