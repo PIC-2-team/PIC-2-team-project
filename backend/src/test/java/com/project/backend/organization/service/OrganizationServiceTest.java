@@ -152,6 +152,7 @@ class OrganizationServiceTest {
 
         User worker = supportWorkerUser(5L);
         given(userRepository.findById(5L)).willReturn(Optional.of(worker));
+        given(userRepository.findByIdForUpdate(5L)).willReturn(Optional.of(worker));
 
         MemberResponse result = organizationService.updateMemberStatus(1L, 50L, false);
 

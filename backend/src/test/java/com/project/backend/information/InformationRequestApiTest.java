@@ -43,6 +43,7 @@ class InformationRequestApiTest {
     @Autowired CareGuardianRepository guardians;
     @Autowired CareAssignmentRepository assignments;
     @Autowired OrganizationRepository organizations;
+    @Autowired OrganizationMemberRepository members;
     @Autowired OrganizationRecipientLinkRepository links;
     @Autowired NotificationRepository notifications;
     @MockitoBean Clock clock;
@@ -161,6 +162,7 @@ class InformationRequestApiTest {
     }
 
     private void assign(User worker, Long organizationId) {
+        members.save(OrganizationMember.builder().organizationId(organizationId).userId(worker.getId()).build());
         assignments.save(CareAssignment.builder().careRecipientId(recipient.getId()).supportWorkerId(worker.getId())
                 .organizationId(organizationId).startDate(LocalDate.of(2026, 10, 1))
                 .idempotencyKey(UUID.randomUUID().toString()).build());

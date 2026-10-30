@@ -147,12 +147,14 @@ public class OrganizationService {
     public MemberResponse updateMemberStatus(Long ownerId, Long memberId, boolean active) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        lockWorker(member.getUserId());
         if (active) {
-            lockWorker(member.getUserId());
             verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
             member.activate();
+        } else {
+            member.deactivate();
+            endMemberAssignments(org.getId(), member.getUserId());
         }
-        else member.deactivate();
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
@@ -162,12 +164,13 @@ public class OrganizationService {
         if (request.name() != null || request.phone() != null || request.active() == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 소속 상태만 변경할 수 있습니다.");
         }
+        lockWorker(member.getUserId());
         if (request.active()) {
-            lockWorker(member.getUserId());
             verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
             member.activate();
         } else {
             member.deactivate();
+            endMemberAssignments(org.getId(), member.getUserId());
         }
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
@@ -216,6 +219,8 @@ public class OrganizationService {
     public void removeMember(Long ownerId, Long memberId) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        lockWorker(member.getUserId());
+        endMemberAssignments(org.getId(), member.getUserId());
         organizationMemberRepository.delete(member);
     }
 
@@ -375,6 +380,11 @@ public class OrganizationService {
     private void lockWorker(Long userId) {
         userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+    }
+
+    private void endMemberAssignments(Long organizationId, Long userId) {
+        careAssignmentRepository.findByOrganizationIdAndSupportWorkerIdAndEndedAtIsNull(organizationId, userId)
+                .forEach(CareAssignment::end);
     }
 
     private void verifyGuardianAccess(Long guardianId, Long careRecipientId) {

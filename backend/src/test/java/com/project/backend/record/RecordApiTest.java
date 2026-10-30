@@ -5,8 +5,10 @@ import com.project.backend.common.security.JwtProvider;
 import jakarta.persistence.EntityManager;
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.*;
+import com.project.backend.care.service.CareAccessService;
 import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.*;
+import com.project.backend.organization.service.OrganizationService;
 import com.project.backend.user.entity.*;
 import com.project.backend.user.repository.UserRepository;
 import com.project.backend.record.media.*;
@@ -56,7 +58,10 @@ class RecordApiTest {
     @Autowired CareRecipientRepository recipients;
     @Autowired CareGuardianRepository guardians;
     @Autowired CareAssignmentRepository assignments;
+    @Autowired CareAccessService careAccessService;
     @Autowired OrganizationRepository organizations;
+    @Autowired OrganizationMemberRepository members;
+    @Autowired OrganizationService organizationService;
     @Autowired OrganizationRecipientLinkRepository links;
     @MockitoBean Clock clock;
     @MockitoBean S3Client s3;
@@ -90,6 +95,8 @@ class RecordApiTest {
                 .careRecipientId(recipient.getId()).requestedById(guardian.getId()).build();
         link.accept();
         links.save(link);
+        members.save(OrganizationMember.builder().organizationId(org.getId()).userId(worker.getId()).build());
+        members.save(OrganizationMember.builder().organizationId(org.getId()).userId(otherWorker.getId()).build());
         assignment = assign(worker, LocalDate.of(2026, 10, 1), null, org.getId());
         assign(otherWorker, LocalDate.of(2026, 10, 1), null, org.getId());
         base = "/api/care-recipients/" + recipient.getId();
@@ -283,6 +290,52 @@ class RecordApiTest {
         perform(patch(base + "/records/" + id).content("{\"content\":\"변경\"}"), worker)
                 .andExpect(status().isForbidden());
         perform(get(base + "/care-info"), worker).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void removingWorkerMembershipRevokesRecordAccessAndEndsAssignment() throws Exception {
+        long id = create(worker, "기록", "2026-10-14T03:00:00Z");
+        Long memberId = members.findByOrganizationIdAndUserId(assignment.getOrganizationId(), worker.getId())
+                .orElseThrow().getId();
+
+        organizationService.removeMember(institution.getId(), memberId);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(assignments.findById(assignment.getId()).orElseThrow().isActive()).isFalse();
+        perform(get(base + "/records/" + id), worker).andExpect(status().isForbidden());
+        perform(patch(base + "/records/" + id).content("{\"content\":\"변경\"}"), worker)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deactivatingWorkerMembershipRevokesRecordAccessAndEndsAssignment() throws Exception {
+        long id = create(worker, "기록", "2026-10-14T03:00:00Z");
+        Long memberId = members.findByOrganizationIdAndUserId(assignment.getOrganizationId(), worker.getId())
+                .orElseThrow().getId();
+
+        organizationService.updateMemberStatus(institution.getId(), memberId, false);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(assignments.findById(assignment.getId()).orElseThrow().isActive()).isFalse();
+        perform(get(base + "/records/" + id), worker).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staleAssignmentWithoutMembershipDoesNotGrantRecordOrRecipientAccess() throws Exception {
+        long id = create(worker, "기록", "2026-10-14T03:00:00Z");
+        OrganizationMember member = members.findByOrganizationIdAndUserId(assignment.getOrganizationId(), worker.getId())
+                .orElseThrow();
+        members.delete(member);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(assignments.findById(assignment.getId()).orElseThrow().isActive()).isTrue();
+        assertThat(careAccessService.hasAccess(worker.getId(), recipient.getId())).isFalse();
+        perform(get(base + "/records/" + id), worker).andExpect(status().isForbidden());
+        perform(get("/api/care-recipients"), worker).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test
