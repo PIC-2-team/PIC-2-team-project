@@ -71,10 +71,14 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
   useEffect(() => {
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
+    const scrollContainer = dialogRef.current?.closest<HTMLElement>('.app-main');
+    const previousScrollOverflow = scrollContainer?.style.overflow;
     document.body.style.overflow = 'hidden';
+    if (scrollContainer) scrollContainer.style.overflow = 'hidden';
     closeButtonRef.current?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
+      if (scrollContainer) scrollContainer.style.overflow = previousScrollOverflow ?? '';
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
     };
   }, []);

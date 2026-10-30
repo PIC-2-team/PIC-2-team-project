@@ -38,6 +38,14 @@ test.describe('S4 — 작성자 본인 기록 관리', () => {
     await expect(content).toHaveCSS('font-size', '18px');
   });
 
+  test('기록 모달이 열린 동안 목록 스크롤이 잠기고 닫으면 복원된다', async ({ page }) => {
+    await openRecord(page, TEST_USERS.guardian, TEST_USERS.guardian);
+    const scrollContainer = page.locator('.app-main');
+    await expect(scrollContainer).toHaveCSS('overflow-y', 'hidden');
+    await page.getByRole('button', { name: '기록 상세 닫기' }).click();
+    await expect(scrollContainer).toHaveCSS('overflow-y', 'auto');
+  });
+
   for (const user of [TEST_USERS.guardian, TEST_USERS.worker]) {
     test(`${user.name}는 본인 기록을 수정할 수 있다`, async ({ page }) => {
       await openRecord(page, user, user);

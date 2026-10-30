@@ -8,14 +8,14 @@ import { getUnreadNotificationCount } from '../api/notifications';
 import { RecordDetailModal } from '../components/RecordDetailModal';
 
 export function AppLayout() {
-  const { user } = useAuth();
+  const { user, selectedRecipientId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const recordParam = new URLSearchParams(location.search).get('record');
   const recordId = recordParam ? Number(recordParam) : null;
   const showRecordModal = (location.pathname === '/home' || location.pathname === '/records')
-    && recordId !== null && Number.isInteger(recordId) && recordId > 0;
+    && selectedRecipientId !== null && recordId !== null && Number.isInteger(recordId) && recordId > 0;
 
   const closeRecordModal = (changed: boolean) => {
     const params = new URLSearchParams(location.search);
