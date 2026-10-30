@@ -331,10 +331,10 @@ class OrganizationServiceTest {
 
         CareGuardian cg = CareGuardian.builder().careRecipientId(50L).guardianId(2L).type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
         given(careGuardianRepository.findByGuardianIdAndStatus(2L, GuardianStatus.ACTIVE)).willReturn(List.of(cg));
-        given(organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(10L, 50L)).willReturn(Optional.empty());
 
         CareRecipient recipient = CareRecipient.builder().name("김당사").careRecipientNumber("R-1234").build();
         ReflectionTestUtils.setField(recipient, "id", 50L);
+        given(careRecipientRepository.findForUpdate(50L)).willReturn(Optional.of(recipient));
         given(careRecipientRepository.findAllById(List.of(50L))).willReturn(List.of(recipient));
 
         var response = organizationService.registerGuardian(1L, new RegisterGuardianRequest("p-abcdefgh"));
@@ -343,7 +343,7 @@ class OrganizationServiceTest {
         assertThat(response.phone()).isEqualTo("010-1234-5678");
         assertThat(response.careRecipients()).hasSize(1);
         assertThat(response.careRecipients().get(0).name()).isEqualTo("김당사");
-        verify(organizationRecipientLinkRepository).save(any());
+        verify(organizationRecipientLinkRepository).saveAndFlush(any());
     }
 
     @Test

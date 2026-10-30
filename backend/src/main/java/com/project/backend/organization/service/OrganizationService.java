@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -96,17 +97,22 @@ public class OrganizationService {
         verifyGuardianAccess(guardianId, careRecipientId);
         Organization org = organizationRepository.findByOrganizationCode(organizationCode)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관 코드를 찾을 수 없습니다."));
+        lockRecipient(careRecipientId);
 
         if (organizationRecipientLinkRepository
-                .findByOrganizationIdAndCareRecipientId(org.getId(), careRecipientId).isPresent()) {
+                .findByOrganizationIdAndCareRecipientIdForUpdate(org.getId(), careRecipientId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "LINK_ALREADY_EXISTS", "이미 연결 요청이 존재합니다.");
         }
 
-        organizationRecipientLinkRepository.save(OrganizationRecipientLink.builder()
-                .organizationId(org.getId())
-                .careRecipientId(careRecipientId)
-                .requestedById(guardianId)
-                .build());
+        try {
+            organizationRecipientLinkRepository.saveAndFlush(OrganizationRecipientLink.builder()
+                    .organizationId(org.getId())
+                    .careRecipientId(careRecipientId)
+                    .requestedById(guardianId)
+                    .build());
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "LINK_ALREADY_EXISTS", "이미 연결 요청이 존재합니다.");
+        }
     }
 
     public void decideLinkRequest(Long organizationOwnerId, Long linkId, boolean accepted) {
@@ -253,16 +259,19 @@ public class OrganizationService {
         }
 
         // 보호자가 이미 등록해 둔 돌봄 대상자가 있다면 기관과 자동 연결(ACCEPTED)
-        List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE);
+        List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE)
+                .stream().sorted(Comparator.comparing(CareGuardian::getCareRecipientId)).toList();
         for (CareGuardian cg : careGuardians) {
-            if (organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(org.getId(), cg.getCareRecipientId()).isEmpty()) {
+            lockRecipient(cg.getCareRecipientId());
+            if (organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientIdForUpdate(
+                    org.getId(), cg.getCareRecipientId()).isEmpty()) {
                 OrganizationRecipientLink recipientLink = OrganizationRecipientLink.builder()
                         .organizationId(org.getId())
                         .careRecipientId(cg.getCareRecipientId())
                         .requestedById(finalGuardian.getId())
                         .build();
                 recipientLink.accept();
-                organizationRecipientLinkRepository.save(recipientLink);
+                organizationRecipientLinkRepository.saveAndFlush(recipientLink);
             }
         }
 
@@ -387,6 +396,11 @@ public class OrganizationService {
     private void lockWorker(Long userId) {
         userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+    }
+
+    private void lockRecipient(Long recipientId) {
+        careRecipientRepository.findForUpdate(recipientId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CARE_RECIPIENT_NOT_FOUND", "당사자를 찾을 수 없습니다."));
     }
 
     private void endMemberAssignments(Long organizationId, Long userId) {

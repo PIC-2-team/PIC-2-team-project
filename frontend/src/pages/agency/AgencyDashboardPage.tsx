@@ -125,6 +125,7 @@ export function AgencyDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
+  const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
   const [orgCode, setOrgCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -283,8 +284,8 @@ export function AgencyDashboardPage() {
       } else {
         setAssignCareRecipientId('');
       }
-      if (page.members.length > 0) {
-        setAssignWorkerId(String(page.members[0].userId ?? page.members[0].id));
+      if (activeMembers.length > 0) {
+        setAssignWorkerId(String(activeMembers[0].userId ?? activeMembers[0].id));
       } else {
         setAssignWorkerId('');
       }
@@ -1162,15 +1163,19 @@ export function AgencyDashboardPage() {
                         aria-label="돌봄 지원사"
                         value={assignWorkerId}
                         onChange={(e) => setAssignWorkerId(e.target.value)}
+                        disabled={activeMembers.length === 0}
                         required
                       >
-                        {page.members.map((m) => (
+                        {activeMembers.map((m) => (
                           <option key={m.id} value={m.userId ?? m.id}>
                             {m.name} ({m.publicCode || `#${m.id}`})
                           </option>
                         ))}
                       </select>
                     </label>
+                    {activeMembers.length === 0 && (
+                      <p className="muted">활성 상태인 돌봄 지원사가 없습니다. 지원사를 활성화한 뒤 배정해 주세요.</p>
+                    )}
 
                     <label style={{ marginTop: 12, fontWeight: 600 }}>
                       배정 시작일
@@ -1207,7 +1212,7 @@ export function AgencyDashboardPage() {
                         type="submit"
                         className="btn"
                         style={{ flex: 1 }}
-                        disabled={isAssigning || page.recipients.length === 0}
+                        disabled={isAssigning || page.recipients.length === 0 || activeMembers.length === 0}
                       >
                         {isAssigning ? '등록 중…' : '배정 등록'}
                       </button>
