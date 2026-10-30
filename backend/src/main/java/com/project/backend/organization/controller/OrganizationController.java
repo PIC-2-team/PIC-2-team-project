@@ -65,7 +65,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.addMember(userId, request));
     }
 
-    @Operation(summary = "지원사 상태 및 정보 변경")
+    @Operation(summary = "지원사 소속 상태 변경")
     @PatchMapping("/me/members/{memberId}")
     public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
                                                            @PathVariable Long memberId,

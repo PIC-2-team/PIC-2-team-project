@@ -147,7 +147,10 @@ public class OrganizationService {
     public MemberResponse updateMemberStatus(Long ownerId, Long memberId, boolean active) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
-        if (active) member.activate();
+        if (active) {
+            verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
+            member.activate();
+        }
         else member.deactivate();
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
@@ -155,20 +158,16 @@ public class OrganizationService {
     public MemberResponse updateMember(Long ownerId, Long memberId, UpdateMemberRequest request) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
-        User worker = findUser(member.getUserId());
-
-        if (request.active() != null) {
-            if (request.active()) member.activate();
-            else member.deactivate();
+        if (request.name() != null || request.phone() != null || request.active() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 소속 상태만 변경할 수 있습니다.");
         }
-
-        if (request.name() != null && !request.name().isBlank()) {
-            String newPhone = request.phone() != null ? request.phone().trim() : worker.getPhone();
-            worker.updateProfile(request.name().trim(), newPhone);
-            userRepository.save(worker);
+        if (request.active()) {
+            verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
+            member.activate();
+        } else {
+            member.deactivate();
         }
-
-        return MemberResponse.of(member, worker);
+        return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
     @Transactional(readOnly = true)
@@ -362,6 +361,13 @@ public class OrganizationService {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다.");
         }
         return member;
+    }
+
+    private void verifyNoOtherActiveOrganization(Long organizationId, Long userId) {
+        if (organizationMemberRepository.findByUserIdAndStatus(userId, OrganizationMemberStatus.ACTIVE).stream()
+                .anyMatch(member -> !member.getOrganizationId().equals(organizationId))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
+        }
     }
 
     private void verifyGuardianAccess(Long guardianId, Long careRecipientId) {

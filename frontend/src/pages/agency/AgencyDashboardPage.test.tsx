@@ -535,17 +535,14 @@ it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 Confir
   expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
 });
 
-it('지원사 수정 카드에서 이름과 전화번호를 변경하여 저장한다', async () => {
+it('기관은 고유 코드로 연결한 지원사 계정의 이름과 전화번호를 수정할 수 없다', async () => {
   vi.spyOn(organizationsApi, 'getMyOrganization').mockResolvedValue({ id: 1, name: '예시 기관', organizationCode: 'ABC123' } as any);
   vi.spyOn(organizationsApi, 'getMembers').mockResolvedValue([{ id: 2, userId: 2, name: '기존 지원사', phone: '010-0000-0000', status: 'ACTIVE' }] as any);
   vi.spyOn(organizationsApi, 'getAssignments').mockResolvedValue([]);
   vi.spyOn(organizationsApi, 'getOrganizationRecipients').mockResolvedValue([]);
   vi.spyOn(organizationsApi, 'getOrganizationGuardians').mockResolvedValue([]);
-  const update = vi.spyOn(organizationsApi, 'updateMember').mockResolvedValue({ id: 2, name: '수정 지원사' } as any);
   renderWithProviders(['/agency?tab=workers']);
-  fireEvent.click(await screen.findByRole('button', { name: '수정' }));
-  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '수정 지원사' } });
-  fireEvent.change(screen.getByLabelText(/연락처/), { target: { value: '010-1234-5678' } });
-  fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
-  await waitFor(() => expect(update).toHaveBeenCalledWith(2, { name: '수정 지원사', phone: '010-1234-5678' }));
+  expect(await screen.findByText('기존 지원사')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '비활성화' })).toBeInTheDocument();
 });

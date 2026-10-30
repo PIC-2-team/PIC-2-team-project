@@ -156,14 +156,6 @@ export function AgencyDashboardPage() {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
-  // 돌봄 지원사 수정 모달 상태 (Update)
-  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
-  const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
-  const [editMemberName, setEditMemberName] = useState('');
-  const [editMemberPhone, setEditMemberPhone] = useState('');
-  const [isEditingMember, setIsEditingMember] = useState(false);
-  const [editMemberError, setEditMemberError] = useState<string | null>(null);
-
   const fetchDashboardData = async () => {
     try {
       const [org, members, assignments, recipients, guardians] = await Promise.all([
@@ -368,40 +360,6 @@ export function AgencyDashboardPage() {
       setMemberError(err instanceof Error ? err.message : '지원사 추가에 실패했습니다.');
     } finally {
       setIsAddingMember(false);
-    }
-  };
-
-  // 돌봄 지원사 수정 모달 열기
-  const handleOpenEditMemberModal = (member: OrganizationMember) => {
-    setEditingMember(member);
-    setEditMemberName(member.name);
-    setEditMemberPhone(member.phone || '');
-    setEditMemberError(null);
-    setShowEditMemberModal(true);
-  };
-
-  // 돌봄 지원사 수정 제출
-  const handleEditMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingMember) return;
-    if (!editMemberName.trim()) {
-      setEditMemberError('돌봄 지원사 성명을 입력해 주세요.');
-      return;
-    }
-    setIsEditingMember(true);
-    setEditMemberError(null);
-    try {
-      await updateMember(editingMember.id, {
-        name: editMemberName.trim(),
-        phone: editMemberPhone.trim() || undefined,
-      });
-      setShowEditMemberModal(false);
-      setEditingMember(null);
-      await fetchDashboardData();
-    } catch (err) {
-      setEditMemberError(err instanceof Error ? err.message : '지원사 정보 수정에 실패했습니다.');
-    } finally {
-      setIsEditingMember(false);
     }
   };
 
@@ -797,11 +755,11 @@ export function AgencyDashboardPage() {
                           </div>
                         )}
 
-                        {/* 2행: 카드 전용 액션 버튼 컴포넌트 (가로 전체 꽉 차게 3등분 균등 배치) */}
+                        {/* 2행: 소속 상태와 연결 관리 */}
                         <div
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
                             gap: 6,
                             borderTop: '1px solid #f0f0f0',
                             paddingTop: 8,
@@ -809,11 +767,6 @@ export function AgencyDashboardPage() {
                             boxSizing: 'border-box',
                           }}
                         >
-                          <CardActionButton
-                            label="수정"
-                            variant="default"
-                            onClick={() => handleOpenEditMemberModal(m)}
-                          />
                           <CardActionButton
                             label={m.status === 'ACTIVE' ? '비활성화' : '활성화'}
                             variant={m.status === 'ACTIVE' ? 'default' : 'success'}
@@ -1113,83 +1066,6 @@ export function AgencyDashboardPage() {
                       </button>
                       <button type="submit" className="btn" style={{ flex: 1 }} disabled={isAddingMember}>
                         {isAddingMember ? '추가 중…' : '추가하기'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* 돌봄 지원사 수정 모달 (Update) */}
-            {showEditMemberModal && editingMember && (
-              <div
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  backdropFilter: 'blur(3px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 9999,
-                  padding: 12,
-                  boxSizing: 'border-box',
-                }}
-              >
-                <div
-                  className="demo-card"
-                  style={{
-                    maxWidth: 360,
-                    width: '100%',
-                    maxHeight: '88vh',
-                    overflowY: 'auto',
-                    background: '#fff',
-                    borderRadius: 14,
-                    padding: '20px 16px',
-                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.16)',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: '1.15rem' }}>돌봄 지원사 정보 수정</h2>
-                  <p className="muted" style={{ fontSize: '0.82rem', marginTop: 0, marginBottom: 14 }}>
-                    고유 코드: <strong>{editingMember.publicCode || `#${editingMember.id}`}</strong>
-                  </p>
-                  <form className="demo-form" onSubmit={(e) => { void handleEditMember(e); }}>
-                    <label>
-                      지원사 성명
-                      <input
-                        type="text"
-                        value={editMemberName}
-                        onChange={(e) => setEditMemberName(e.target.value)}
-                        placeholder="예: 이지원"
-                        required
-                        autoFocus
-                      />
-                    </label>
-
-                    <label style={{ marginTop: 12 }}>
-                      연락처 (선택)
-                      <input
-                        type="tel"
-                        value={editMemberPhone}
-                        onChange={(e) => setEditMemberPhone(e.target.value)}
-                        placeholder="예: 010-1234-5678"
-                      />
-                    </label>
-
-                    {editMemberError && <p className="error" role="alert" style={{ fontSize: '0.82rem', marginTop: 8 }}>{editMemberError}</p>}
-
-                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ flex: 1 }}
-                        onClick={() => setShowEditMemberModal(false)}
-                      >
-                        취소
-                      </button>
-                      <button type="submit" className="btn" style={{ flex: 1 }} disabled={isEditingMember}>
-                        {isEditingMember ? '저장 중…' : '저장하기'}
                       </button>
                     </div>
                   </form>

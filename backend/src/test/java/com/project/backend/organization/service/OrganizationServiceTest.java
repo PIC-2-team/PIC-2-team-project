@@ -159,6 +159,68 @@ class OrganizationServiceTest {
     }
 
     @Test
+    void updateMember_다른_기관에_활성_소속인_지원사는_재활성화할_수_없다() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
+        member.deactivate();
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE))
+                .willReturn(List.of(OrganizationMember.builder().organizationId(99L).userId(5L).build()));
+
+        assertThatThrownBy(() -> organizationService.updateMember(1L, 50L, new com.project.backend.organization.dto.UpdateMemberRequest(true, null, null)))
+                .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.CONFLICT);
+        assertThat(member.getStatus()).isEqualTo(OrganizationMemberStatus.INACTIVE);
+    }
+
+    @Test
+    void updateMemberStatus_다른_기관에_활성_소속인_지원사는_재활성화할_수_없다() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
+        member.deactivate();
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE))
+                .willReturn(List.of(OrganizationMember.builder().organizationId(99L).userId(5L).build()));
+
+        assertThatThrownBy(() -> organizationService.updateMemberStatus(1L, 50L, true))
+                .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.CONFLICT);
+        assertThat(member.getStatus()).isEqualTo(OrganizationMemberStatus.INACTIVE);
+    }
+
+    @Test
+    void updateMember_다른_기관에_활성_소속이_없으면_재활성화한다() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
+        member.deactivate();
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE)).willReturn(List.of());
+        given(userRepository.findById(5L)).willReturn(Optional.of(supportWorkerUser(5L)));
+
+        MemberResponse result = organizationService.updateMember(1L, 50L,
+                new com.project.backend.organization.dto.UpdateMemberRequest(true, null, null));
+
+        assertThat(result.status()).isEqualTo(OrganizationMemberStatus.ACTIVE);
+    }
+
+    @Test
+    void updateMember_기관은_기존_지원사_계정의_이름이나_전화번호를_변경할_수_없다() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> organizationService.updateMember(1L, 50L, new com.project.backend.organization.dto.UpdateMemberRequest(null, "변경명", "010-9999-9999")))
+                .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void addMember_지원사_고유코드로_기존_계정을_연결한다() {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);

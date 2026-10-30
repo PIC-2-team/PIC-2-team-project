@@ -31,7 +31,7 @@ export function addMember(payload: { publicCode: string }): Promise<Organization
   });
 }
 
-export function updateMember(memberId: number, payload: { active?: boolean; name?: string; phone?: string }): Promise<OrganizationMember> {
+export function updateMember(memberId: number, payload: { active: boolean }): Promise<OrganizationMember> {
   return apiRequest(`/api/organizations/me/members/${memberId}`, {
     method: 'PATCH',
     body: payload,
