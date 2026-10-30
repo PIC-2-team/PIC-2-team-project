@@ -131,9 +131,9 @@ export function AgencyDashboardPage() {
 
   const currentTab = searchParams.get('tab') || 'home';
 
-  // 돌봄 보호자 등록 모달 상태 (전화번호 기반)
+  // 돌봄 보호자 등록 모달 상태
   const [showGuardianModal, setShowGuardianModal] = useState(false);
-  const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianCode, setGuardianCode] = useState('');
   const [isRegisteringGuardian, setIsRegisteringGuardian] = useState(false);
   const [guardianError, setGuardianError] = useState<string | null>(null);
 
@@ -152,8 +152,7 @@ export function AgencyDashboardPage() {
 
   // 돌봄 지원사 추가 모달 상태
   const [showMemberModal, setShowMemberModal] = useState(false);
-  const [newMemberName, setNewMemberName] = useState('');
-  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberCode, setNewMemberCode] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
@@ -244,23 +243,23 @@ export function AgencyDashboardPage() {
 
   // 돌봄 보호자 등록 모달 열기
   const handleOpenGuardianModal = () => {
-    setGuardianPhone('');
+    setGuardianCode('');
     setGuardianError(null);
     setShowGuardianModal(true);
   };
 
-  // 돌봄 보호자 등록 제출 (전화번호 기반)
+  // 돌봄 보호자 등록 제출
   const handleRegisterGuardian = async (e: React.FormEvent) => {
     e.preventDefault();
-    const phoneInput = guardianPhone.trim().replace(/[-\s]/g, '');
-    if (!phoneInput || !/^01[0-9]{8,9}$/.test(phoneInput)) {
-      setGuardianError('올바른 보호자 전화번호를 입력해 주세요. (예: 010-1234-5678)');
+    const publicCode = guardianCode.trim().toUpperCase();
+    if (!/^P-[A-Z0-9]{8}$/.test(publicCode)) {
+      setGuardianError('보호자 고유 코드를 입력해 주세요. (예: P-ABCDEFGH)');
       return;
     }
     setIsRegisteringGuardian(true);
     setGuardianError(null);
     try {
-      await registerOrganizationGuardian({ phone: guardianPhone.trim() });
+      await registerOrganizationGuardian({ publicCode });
       setShowGuardianModal(false);
       await fetchDashboardData();
     } catch (err) {
@@ -346,26 +345,23 @@ export function AgencyDashboardPage() {
 
   // 돌봄 지원사 추가 모달 열기
   const handleOpenMemberModal = () => {
-    setNewMemberName('');
-    setNewMemberPhone('');
+    setNewMemberCode('');
     setMemberError(null);
     setShowMemberModal(true);
   };
 
-  // 돌봄 지원사 추가 제출 (이름 기반 -> 고유 코드 자동 발급)
+  // 돌봄 지원사 추가 제출
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMemberName.trim()) {
-      setMemberError('돌봄 지원사 성명을 입력해 주세요.');
+    const publicCode = newMemberCode.trim().toUpperCase();
+    if (!/^S-[A-Z0-9]{8}$/.test(publicCode)) {
+      setMemberError('지원사 고유 코드를 입력해 주세요. (예: S-ABCDEFGH)');
       return;
     }
     setIsAddingMember(true);
     setMemberError(null);
     try {
-      await addMember({
-        name: newMemberName.trim(),
-        phone: newMemberPhone.trim() || undefined,
-      });
+      await addMember({ publicCode });
       setShowMemberModal(false);
       await fetchDashboardData();
     } catch (err) {
@@ -635,7 +631,7 @@ export function AgencyDashboardPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <strong style={{ fontSize: '0.92rem' }}>{g.name}</strong>
                               <span className="muted" style={{ fontSize: '0.8rem' }}>
-                                ({g.phone || g.publicCode || g.email || `#${g.guardianId}`})
+                                ({g.publicCode || g.phone || g.email || `#${g.guardianId}`})
                               </span>
                             </div>
                             <div style={{ fontSize: '0.78rem', color: '#666', marginTop: 2 }}>
@@ -1022,16 +1018,16 @@ export function AgencyDashboardPage() {
                 >
                   <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: '1.15rem' }}>돌봄 보호자 등록</h2>
                   <p className="muted" style={{ fontSize: '0.82rem', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
-                    등록할 보호자의 전화번호를 입력하세요. 등록된 보호자가 앱에서 당사자를 등록하면 이곳에서 함께 관리할 수 있습니다.
+                    등록할 보호자에게 고유 코드(P-로 시작)를 받아 입력하세요. 코드는 보호자의 내 프로필에서 확인할 수 있습니다.
                   </p>
                   <form className="demo-form" onSubmit={(e) => { void handleRegisterGuardian(e); }}>
                     <label>
-                      보호자 전화번호
+                      보호자 고유 코드
                       <input
-                        type="tel"
-                        value={guardianPhone}
-                        onChange={(e) => setGuardianPhone(e.target.value)}
-                        placeholder="예: 010-1234-5678"
+                        type="text"
+                        value={guardianCode}
+                        onChange={(e) => setGuardianCode(e.target.value)}
+                        placeholder="예: P-ABCDEFGH"
                         required
                         autoFocus
                       />
@@ -1089,28 +1085,18 @@ export function AgencyDashboardPage() {
                 >
                   <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: '1.15rem' }}>돌봄 지원사 추가</h2>
                   <p className="muted" style={{ fontSize: '0.82rem', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
-                    지원사 이름을 등록하면 돌봄 지원사 고유 코드(S-XXXX)가 자동으로 발급됩니다.
+                    가입한 활동지원사에게 고유 코드(S-로 시작)를 받아 입력하세요. 코드는 활동지원사의 내 프로필에서 확인할 수 있습니다.
                   </p>
                   <form className="demo-form" onSubmit={(e) => { void handleAddMember(e); }}>
                     <label>
-                      지원사 성명 (필수)
+                      지원사 고유 코드
                       <input
                         type="text"
-                        value={newMemberName}
-                        onChange={(e) => setNewMemberName(e.target.value)}
-                        placeholder="예: 이지원"
+                        value={newMemberCode}
+                        onChange={(e) => setNewMemberCode(e.target.value)}
+                        placeholder="예: S-ABCDEFGH"
                         required
                         autoFocus
-                      />
-                    </label>
-
-                    <label style={{ marginTop: 12 }}>
-                      지원사 연락처 (선택)
-                      <input
-                        type="tel"
-                        value={newMemberPhone}
-                        onChange={(e) => setNewMemberPhone(e.target.value)}
-                        placeholder="예: 010-1234-5678"
                       />
                     </label>
 

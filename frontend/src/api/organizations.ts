@@ -24,11 +24,10 @@ export function getMembers(): Promise<OrganizationMember[]> {
   return apiRequest('/api/organizations/me/members');
 }
 
-export function addMember(payload: number | { name?: string; phone?: string; userId?: number }): Promise<OrganizationMember> {
-  const body = typeof payload === 'number' ? { userId: payload } : payload;
+export function addMember(payload: { publicCode: string }): Promise<OrganizationMember> {
   return apiRequest('/api/organizations/me/members', {
     method: 'POST',
-    body,
+    body: payload,
   });
 }
 
@@ -53,7 +52,7 @@ export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
   return apiRequest('/api/organizations/me/guardians');
 }
 
-export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
+export function registerOrganizationGuardian(payload: { publicCode: string }): Promise<OrganizationGuardian> {
   return apiRequest('/api/organizations/me/guardians', {
     method: 'POST',
     body: payload,

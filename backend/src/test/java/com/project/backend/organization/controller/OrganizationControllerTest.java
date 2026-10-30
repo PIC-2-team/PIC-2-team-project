@@ -124,7 +124,7 @@ class OrganizationControllerTest {
     @Test
     @DisplayName("돌봄지원사 추가 API 호출 시 지원사를 멤버로 추가하고 반환한다")
     void addMember_endpoint() {
-        AddMemberRequest request = new AddMemberRequest(20L, null, null);
+        AddMemberRequest request = new AddMemberRequest("S-ABCDEFGH");
         MemberResponse mockMember = new MemberResponse(
                 5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now());
         given(organizationService.addMember(10L, request)).willReturn(mockMember);
@@ -162,7 +162,7 @@ class OrganizationControllerTest {
     @Test
     @DisplayName("기관 돌봄 보호자 등록 API 호출 시 보호자를 등록하고 반환한다")
     void registerGuardian_endpoint() {
-        RegisterGuardianRequest request = new RegisterGuardianRequest("010-1234-5678");
+        RegisterGuardianRequest request = new RegisterGuardianRequest("P-ABCDEFGH");
         OrganizationGuardianResponse mockGuardian = new OrganizationGuardianResponse(
                 1L, 20L, "박보호", "010-1234-5678", "guardian@test.com", "P-12345", LocalDateTime.now(), List.of()
         );

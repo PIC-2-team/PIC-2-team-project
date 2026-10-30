@@ -1,6 +1,5 @@
 package com.project.backend.organization.service;
 
-import com.project.backend.auth.service.PublicCodeGenerator;
 import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.CareGuardian;
 import com.project.backend.care.entity.CareRecipient;
@@ -26,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -47,7 +47,6 @@ public class OrganizationService {
     private final CareGuardianRepository careGuardianRepository;
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
-    private final PublicCodeGenerator publicCodeGenerator;
 
     public OrganizationResponse register(Long ownerId, RegisterOrganizationRequest request) {
         User owner = findUser(ownerId);
@@ -189,51 +188,27 @@ public class OrganizationService {
     }
 
     public MemberResponse addMember(Long ownerId, AddMemberRequest request) {
-        if (request.name() != null && !request.name().isBlank()) {
-            return addMemberByName(ownerId, request.name(), request.phone());
-        }
-        if (request.userId() != null) {
-            return addMember(ownerId, request.userId());
-        }
-        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 이름 또는 사용자 ID를 입력해 주세요.");
-    }
-
-    public MemberResponse addMemberByName(Long ownerId, String name, String phone) {
         Organization org = findOrgByOwner(ownerId);
-        String publicCode = publicCodeGenerator.generate(UserRole.SUPPORT_WORKER);
-        String email = "sw_" + publicCode.toLowerCase().replace("-", "") + "@samgyeol.local";
-
-        User worker = User.builder()
-                .name(name.trim())
-                .email(email)
-                .phone(phone != null && !phone.isBlank() ? phone.trim() : null)
-                .publicCode(publicCode)
-                .role(UserRole.SUPPORT_WORKER)
-                .build();
-        worker = userRepository.save(worker);
-
-        OrganizationMember member = organizationMemberRepository.save(
-                OrganizationMember.builder()
-                        .organizationId(org.getId())
-                        .userId(worker.getId())
-                        .build()
-        );
-        return MemberResponse.of(member, worker);
-    }
-
-    public MemberResponse addMember(Long ownerId, Long supportWorkerId) {
-        Organization org = findOrgByOwner(ownerId);
-        User worker = findUser(supportWorkerId);
+        String code = normalizePublicCode(request.publicCode(), "S-");
+        User worker = userRepository.findByPublicCode(code)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPORT_WORKER_NOT_FOUND", "해당 고유 코드의 활동지원사를 찾을 수 없습니다."));
         if (worker.getRole() != UserRole.SUPPORT_WORKER) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "활동지원사 계정만 멤버로 추가할 수 있습니다.");
         }
-        OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndUserId(org.getId(), supportWorkerId)
+        List<OrganizationMember> activeMemberships = organizationMemberRepository.findByUserIdAndStatus(worker.getId(), OrganizationMemberStatus.ACTIVE);
+        if (activeMemberships.stream().anyMatch(member -> !member.getOrganizationId().equals(org.getId()))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
+        }
+        if (activeMemberships.stream().anyMatch(member -> member.getOrganizationId().equals(org.getId()))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 활동지원사입니다.");
+        }
+        OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndUserId(org.getId(), worker.getId())
                 .map(m -> {
                     m.activate();
                     return organizationMemberRepository.save(m);
                 })
                 .orElseGet(() -> organizationMemberRepository.save(
-                        OrganizationMember.builder().organizationId(org.getId()).userId(supportWorkerId).build()));
+                        OrganizationMember.builder().organizationId(org.getId()).userId(worker.getId()).build()));
         return MemberResponse.of(member, worker);
     }
 
@@ -245,24 +220,9 @@ public class OrganizationService {
 
     public OrganizationGuardianResponse registerGuardian(Long ownerId, RegisterGuardianRequest request) {
         Organization org = findOrgByOwner(ownerId);
-        String query = request.getIdentifier();
-
-        // 전화번호 정규화 및 조회
-        String cleanPhone = query.replaceAll("[^0-9]", "");
-        String formattedPhone = formatPhone(cleanPhone);
-
-        java.util.Optional<User> guardian = java.util.Optional.empty();
-        if (!cleanPhone.isEmpty()) {
-            guardian = userRepository.findByPhone(formattedPhone)
-                    .or(() -> userRepository.findByPhone(cleanPhone));
-        }
-        if (guardian.isEmpty()) {
-            guardian = userRepository.findByPublicCode(query)
-                    .or(() -> userRepository.findByEmail(query));
-        }
-
-        User finalGuardian = guardian.orElseThrow(() -> new ApiException(
-                HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 전화번호의 보호자를 찾을 수 없습니다."));
+        String code = normalizePublicCode(request.publicCode(), "P-");
+        User finalGuardian = userRepository.findByPublicCode(code)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 고유 코드의 보호자를 찾을 수 없습니다."));
 
         if (finalGuardian.getRole() != UserRole.GUARDIAN) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "돌봄 보호자 계정만 등록할 수 있습니다.");
@@ -421,14 +381,12 @@ public class OrganizationService {
         return code;
     }
 
-    private String formatPhone(String cleanPhone) {
-        if (cleanPhone == null) return "";
-        if (cleanPhone.length() == 11) {
-            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 7) + "-" + cleanPhone.substring(7);
-        } else if (cleanPhone.length() == 10) {
-            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 6) + "-" + cleanPhone.substring(6);
+    private String normalizePublicCode(String rawCode, String prefix) {
+        String code = rawCode == null ? "" : rawCode.trim().toUpperCase(Locale.ROOT);
+        if (!code.matches(prefix + "[A-Z0-9]{8}")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PUBLIC_CODE", "고유 코드 형식이 올바르지 않습니다.");
         }
-        return cleanPhone;
+        return code;
     }
 
     private User findUser(Long id) {

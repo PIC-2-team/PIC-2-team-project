@@ -363,14 +363,18 @@ it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를
   // + 보호자 등록 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 보호자 등록' }));
 
-  // 전화번호 입력
-  fireEvent.change(screen.getByLabelText(/보호자 전화번호/), { target: { value: '010-9999-8888' } });
+  fireEvent.change(screen.getByLabelText(/보호자 고유 코드/), { target: { value: '010-9999-8888' } });
+  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('보호자 고유 코드를 입력해 주세요.');
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/me/guardians') && init?.method === 'POST')).toHaveLength(0);
+
+  fireEvent.change(screen.getByLabelText(/보호자 고유 코드/), { target: { value: 'p-abcdefgh' } });
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/guardians', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ phone: '010-9999-8888' }),
+      body: JSON.stringify({ publicCode: 'P-ABCDEFGH' }),
     }));
   });
 
@@ -388,7 +392,7 @@ it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async 
     const method = init?.method ?? 'GET';
 
     if (url.includes('/api/organizations/me/members') && method === 'POST') {
-      const created = { id: 2, userId: 20, name: '새지원사', publicCode: 'SW-002', status: 'ACTIVE' };
+      const created = { id: 2, userId: 20, name: '새지원사', publicCode: 'S-ABCDEFGH', status: 'ACTIVE' };
       members = [...members, created];
       return new Response(JSON.stringify({ success: true, data: created }), { status: 201 });
     }
@@ -421,14 +425,18 @@ it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async 
   // + 지원사 추가 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 지원사 추가' }));
 
-  // 지원사 성명 입력
-  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '새지원사' } });
+  fireEvent.change(screen.getByLabelText(/지원사 고유 코드/), { target: { value: '새지원사' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가하기' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('지원사 고유 코드를 입력해 주세요.');
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/me/members') && init?.method === 'POST')).toHaveLength(0);
+
+  fireEvent.change(screen.getByLabelText(/지원사 고유 코드/), { target: { value: 's-abcdefgh' } });
   fireEvent.click(screen.getByRole('button', { name: '추가하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/members', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ name: '새지원사' }),
+      body: JSON.stringify({ publicCode: 'S-ABCDEFGH' }),
     }));
   });
 
