@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getRecord,
@@ -33,7 +32,11 @@ const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'OTHER', label: '기타' },
 ];
 
-export function RecordDetailModal({ recordId, onClose }: { recordId: number; onClose: (changed: boolean) => void }) {
+export function RecordDetailModal({ recordId, onClose, onChanged }: {
+  recordId: number;
+  onClose: (changed: boolean) => void;
+  onChanged?: () => void;
+}) {
   const { selectedRecipientId, user } = useAuth();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,7 @@ export function RecordDetailModal({ recordId, onClose }: { recordId: number; onC
       });
       setRecord(updated);
       changedRef.current = true;
+      onChanged?.();
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
       getRecordRevisions(selectedRecipientId, recordId)
@@ -172,7 +176,7 @@ export function RecordDetailModal({ recordId, onClose }: { recordId: number; onC
   const canEdit = (user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER')
     && record?.author?.id === user.id;
 
-  return createPortal(
+  return (
     <div className={styles.backdrop} onMouseDown={event => { if (event.target === event.currentTarget && !showDeleteDialog) close(); }}>
       <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="record-detail-title" onKeyDown={handleKeyDown}>
       <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
@@ -390,7 +394,6 @@ export function RecordDetailModal({ recordId, onClose }: { recordId: number; onC
         )}
       </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }

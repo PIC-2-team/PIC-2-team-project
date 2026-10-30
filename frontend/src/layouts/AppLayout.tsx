@@ -22,7 +22,16 @@ export function AppLayout() {
     params.delete('record');
     navigate({ pathname: location.pathname, search: params.toString() }, {
       replace: true,
-      state: changed ? { recordChangedAt: Date.now() } : location.state,
+      state: changed && !(location.state as { recordChangedAt?: number } | null)?.recordChangedAt
+        ? { recordChangedAt: Date.now() }
+        : location.state,
+    });
+  };
+
+  const markRecordChanged = () => {
+    navigate({ pathname: location.pathname, search: location.search }, {
+      replace: true,
+      state: { recordChangedAt: Date.now() },
     });
   };
 
@@ -40,7 +49,7 @@ export function AppLayout() {
       <main className={styles.main}>
         <Outlet context={{ hasAppShell: true }} />
       </main>
-      {showRecordModal && <RecordDetailModal key={recordId} recordId={recordId} onClose={closeRecordModal} />}
+      {showRecordModal && <RecordDetailModal key={recordId} recordId={recordId} onClose={closeRecordModal} onChanged={markRecordChanged} />}
     </AppShell>
   );
 }
