@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TabBar from '../components/TabBar/TabBar';
@@ -11,6 +11,9 @@ export function AppLayout() {
   const { user, selectedRecipientId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const locationRef = useRef(location);
+  const isMountedRef = useRef(true);
+  locationRef.current = location;
   const [unreadCount, setUnreadCount] = useState(0);
   const recordParam = new URLSearchParams(location.search).get('record');
   const recordId = recordParam ? Number(recordParam) : null;
@@ -18,22 +21,32 @@ export function AppLayout() {
     && selectedRecipientId !== null && recordId !== null && Number.isInteger(recordId) && recordId > 0;
 
   const closeRecordModal = (changed: boolean) => {
-    const params = new URLSearchParams(location.search);
+    const currentLocation = locationRef.current;
+    const params = new URLSearchParams(currentLocation.search);
+    if (!isMountedRef.current || Number(params.get('record')) !== recordId) return;
     params.delete('record');
-    navigate({ pathname: location.pathname, search: params.toString() }, {
+    navigate({ pathname: currentLocation.pathname, search: params.toString() }, {
       replace: true,
-      state: changed && !(location.state as { recordChangedAt?: number } | null)?.recordChangedAt
-        ? { recordChangedAt: Date.now() }
-        : location.state,
+      state: changed
+        ? { ...(currentLocation.state ?? {}), recordChangedAt: Date.now() }
+        : currentLocation.state,
     });
   };
 
   const markRecordChanged = () => {
-    navigate({ pathname: location.pathname, search: location.search }, {
+    if (!isMountedRef.current) return;
+    const currentLocation = locationRef.current;
+    if (currentLocation.pathname !== '/home' && currentLocation.pathname !== '/records') return;
+    navigate({ pathname: currentLocation.pathname, search: currentLocation.search }, {
       replace: true,
-      state: { recordChangedAt: Date.now() },
+      state: { ...(currentLocation.state ?? {}), recordChangedAt: Date.now() },
     });
   };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (!user?.role) return;

@@ -146,10 +146,13 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
     setError(null);
     try {
       await deleteRecord(selectedRecipientId, recordId);
-      onClose(true);
+      if (isMountedRef.current) onClose(true);
+      else onChanged?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.');
-      setIsDeleting(false);
+      if (isMountedRef.current) {
+        setError(e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.');
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -162,18 +165,19 @@ export function RecordDetailModal({ recordId, onClose, onChanged }: {
         content: editContent.trim(),
         category: editCategory,
       });
+      onChanged?.();
+      if (!isMountedRef.current) return;
       setRecord(updated);
       changedRef.current = true;
-      onChanged?.();
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
       getRecordRevisions(selectedRecipientId, recordId)
         .then(res => { if (isMountedRef.current) setRevisions(res?.items ?? []); })
         .catch(() => {});
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
+      if (isMountedRef.current) setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
