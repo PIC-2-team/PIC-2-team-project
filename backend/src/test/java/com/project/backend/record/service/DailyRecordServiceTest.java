@@ -61,7 +61,7 @@ class DailyRecordServiceTest {
         given(media.forRecord(200L)).willReturn(List.of());
 
         recordService.create(1L, 100L, new CreateRecordRequest(
-                "내용", RecordCategory.COMMUNICATION, OffsetDateTime.now(), null, null, null));
+                "내용", RecordCategory.COMMUNICATION, OffsetDateTime.now(), null, null));
 
         verify(accessLogService).log(1L, 100L, AccessLogAction.CREATE, AccessLogResourceType.RECORD, 200L);
     }

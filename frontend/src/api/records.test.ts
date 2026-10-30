@@ -3,12 +3,8 @@ import {
   createRecordDraft,
   deleteRecordMedia,
   uploadRecordAudio,
-  createRecordRequest,
-  getMyRecordRequests,
-  cancelRecordRequest,
   getRecordRevisions,
   getRecordsByMonth,
-  getRecordSuggestions,
 } from './records';
 import { setTokenProvider } from './client';
 
@@ -51,51 +47,6 @@ it('오디오를 multipart로 업로드하고 임시 미디어 삭제 API를 호
   const [deleteUrl, deleteOptions] = fetchMock.mock.calls[1];
   expect(deleteUrl).toBe('/api/care-recipients/42/media/9');
   expect(deleteOptions).toEqual(expect.objectContaining({ method: 'DELETE' }));
-});
-
-it('활동지원사가 당사자에게 기록 요청을 생성한다', async () => {
-  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-    success: true,
-    data: {
-      id: 1,
-      organizationId: 10,
-      careRecipientId: 42,
-      supportWorkerId: 5,
-      idempotencyKey: 'test-key',
-      message: '식사 관련 돌봄 내용 수정 부탁드립니다.',
-      status: 'PENDING',
-      createdAt: '2026-10-21T10:00:00',
-    },
-  })));
-  setTokenProvider(() => 'test-token');
-
-  const res = await createRecordRequest(42, '식사 관련 돌봄 내용 수정 부탁드립니다.', 'test-key');
-
-  expect(res.id).toBe(1);
-  expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients/42/record-requests', expect.objectContaining({
-    method: 'POST',
-    headers: expect.objectContaining({ Authorization: 'Bearer test-token', 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ idempotencyKey: 'test-key', message: '식사 관련 돌봄 내용 수정 부탁드립니다.' }),
-  }));
-});
-
-it('본인이 생성한 기록 요청 목록을 조회하고 취소한다', async () => {
-  const fetchMock = vi.spyOn(globalThis, 'fetch')
-    .mockResolvedValueOnce(new Response(JSON.stringify({
-      success: true,
-      data: [{ id: 1, careRecipientId: 42, status: 'PENDING', message: '요청 1' }],
-    })))
-    .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: null })));
-  setTokenProvider(() => 'test-token');
-
-  const list = await getMyRecordRequests();
-  expect(list).toHaveLength(1);
-  expect(fetchMock).toHaveBeenCalledWith('/api/record-requests/mine', expect.any(Object));
-
-  await cancelRecordRequest(42, 1);
-  expect(fetchMock).toHaveBeenLastCalledWith('/api/care-recipients/42/record-requests/1/cancel', expect.objectContaining({
-    method: 'POST',
-  }));
 });
 
 it('특정 기록의 수정 이력을 조회한다', async () => {
@@ -141,18 +92,5 @@ it('카테고리가 전달되면 getRecordsByMonth에 category 쿼리를 포함�
     expect.objectContaining({
       headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
     })
-  );
-});
-
-it('수정 제안 목록을 기록 ID로 필터링해 요청한다', async () => {
-  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-    success: true, data: { items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } },
-  })));
-
-  await getRecordSuggestions(42, 'PENDING', 1, 20, 101);
-
-  expect(fetchMock).toHaveBeenCalledWith(
-    '/api/care-recipients/42/record-suggestions?status=PENDING&page=1&pageSize=20&recordId=101',
-    expect.any(Object),
   );
 });

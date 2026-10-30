@@ -136,7 +136,7 @@ export function DailyRecordPage() {
   const hasMore = !listOnly && !showAllDayRecords && selectedRecords.length > 3;
   const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
-  const canWrite = user?.role === 'GUARDIAN';
+  const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
@@ -250,14 +250,17 @@ export function DailyRecordPage() {
         </nav>
       )}
 
-      {canWrite && !listOnly && (
-        <button
-          className={`btn ${styles.recordButton}`}
-          type="button"
-          onClick={() => navigate('/records/new')}
-        >
-          기록하기
-        </button>
+      {canWrite && (
+        <>
+          <Link to="/records/deleted" className={styles.viewAll}>삭제된 기록 보기</Link>
+          <button
+            className={`btn ${styles.recordButton}`}
+            type="button"
+            onClick={() => navigate('/records/new')}
+          >
+            기록하기
+          </button>
+        </>
       )}
     </div>
   );

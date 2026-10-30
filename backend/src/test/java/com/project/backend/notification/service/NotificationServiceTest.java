@@ -82,19 +82,4 @@ class NotificationServiceTest {
         assertThat(saved.getMessage()).isEqualTo("새 당사자가 배정되었습니다.");
     }
 
-    @Test
-    @DisplayName("notifyRecordRequest: 활동지원사에게 기록 요청 알림을 저장한다")
-    void notifyRecordRequest_enabled() {
-        User worker = mock(User.class);
-        given(worker.isRecordRequestReceived()).willReturn(true);
-        given(users.findById(20L)).willReturn(Optional.of(worker));
-
-        service.notifyRecordRequest(20L, "도전행동 기록 작성 요청이 도착했습니다.");
-
-        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notifications).save(captor.capture());
-        Notification saved = captor.getValue();
-        assertThat(saved.getUserId()).isEqualTo(20L);
-        assertThat(saved.getType()).isEqualTo(NotificationType.RECORD_REQUEST_RECEIVED);
-    }
 }

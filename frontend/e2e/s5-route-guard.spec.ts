@@ -22,13 +22,13 @@ test.describe('S5 — 역할별 라우트 보호', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('SUPPORT_WORKER는 /records/new에 접근하면 /home으로 리다이렉트된다', async ({ page }) => {
+  test('SUPPORT_WORKER는 /records/new에 접근할 수 있다', async ({ page }) => {
     await loginAndGoHome(page, TEST_USERS.worker);
     await expect(page).toHaveURL('/home');
 
-    // auth 상태를 유지하며 SPA 내비게이션 — RequireRole이 /home으로 리다이렉트
     await spaNavigate(page, '/records/new');
-    await expect(page).toHaveURL('/home');
+    await expect(page).toHaveURL('/records/new');
+    await expect(page.getByRole('heading', { name: '기록 작성' })).toBeVisible();
   });
 
   test('INSTITUTION은 /home 접근 시 /agency로 리다이렉트된다', async ({ page }) => {
