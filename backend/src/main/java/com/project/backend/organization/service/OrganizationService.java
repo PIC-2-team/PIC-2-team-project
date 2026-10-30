@@ -148,6 +148,7 @@ public class OrganizationService {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
         if (active) {
+            lockWorker(member.getUserId());
             verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
             member.activate();
         }
@@ -162,6 +163,7 @@ public class OrganizationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 소속 상태만 변경할 수 있습니다.");
         }
         if (request.active()) {
+            lockWorker(member.getUserId());
             verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
             member.activate();
         } else {
@@ -189,12 +191,12 @@ public class OrganizationService {
     public MemberResponse addMember(Long ownerId, AddMemberRequest request) {
         Organization org = findOrgByOwner(ownerId);
         String code = normalizePublicCode(request.publicCode(), "S-");
-        User worker = userRepository.findByPublicCode(code)
+        User worker = userRepository.findByPublicCodeForUpdate(code)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPORT_WORKER_NOT_FOUND", "해당 고유 코드의 활동지원사를 찾을 수 없습니다."));
         if (worker.getRole() != UserRole.SUPPORT_WORKER) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "활동지원사 계정만 멤버로 추가할 수 있습니다.");
         }
-        List<OrganizationMember> activeMemberships = organizationMemberRepository.findByUserIdAndStatus(worker.getId(), OrganizationMemberStatus.ACTIVE);
+        List<OrganizationMember> activeMemberships = organizationMemberRepository.findByUserIdAndStatusForUpdate(worker.getId(), OrganizationMemberStatus.ACTIVE);
         if (activeMemberships.stream().anyMatch(member -> !member.getOrganizationId().equals(org.getId()))) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
         }
@@ -364,10 +366,15 @@ public class OrganizationService {
     }
 
     private void verifyNoOtherActiveOrganization(Long organizationId, Long userId) {
-        if (organizationMemberRepository.findByUserIdAndStatus(userId, OrganizationMemberStatus.ACTIVE).stream()
+        if (organizationMemberRepository.findByUserIdAndStatusForUpdate(userId, OrganizationMemberStatus.ACTIVE).stream()
                 .anyMatch(member -> !member.getOrganizationId().equals(organizationId))) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
         }
+    }
+
+    private void lockWorker(Long userId) {
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
     }
 
     private void verifyGuardianAccess(Long guardianId, Long careRecipientId) {

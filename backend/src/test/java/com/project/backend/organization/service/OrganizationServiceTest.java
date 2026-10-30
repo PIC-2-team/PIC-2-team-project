@@ -166,7 +166,8 @@ class OrganizationServiceTest {
         OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
         member.deactivate();
         given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
-        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE))
+        given(userRepository.findByIdForUpdate(5L)).willReturn(Optional.of(supportWorkerUser(5L)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(5L, OrganizationMemberStatus.ACTIVE))
                 .willReturn(List.of(OrganizationMember.builder().organizationId(99L).userId(5L).build()));
 
         assertThatThrownBy(() -> organizationService.updateMember(1L, 50L, new com.project.backend.organization.dto.UpdateMemberRequest(true, null, null)))
@@ -182,7 +183,8 @@ class OrganizationServiceTest {
         OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
         member.deactivate();
         given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
-        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE))
+        given(userRepository.findByIdForUpdate(5L)).willReturn(Optional.of(supportWorkerUser(5L)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(5L, OrganizationMemberStatus.ACTIVE))
                 .willReturn(List.of(OrganizationMember.builder().organizationId(99L).userId(5L).build()));
 
         assertThatThrownBy(() -> organizationService.updateMemberStatus(1L, 50L, true))
@@ -198,7 +200,8 @@ class OrganizationServiceTest {
         OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(5L).build();
         member.deactivate();
         given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
-        given(organizationMemberRepository.findByUserIdAndStatus(5L, OrganizationMemberStatus.ACTIVE)).willReturn(List.of());
+        given(userRepository.findByIdForUpdate(5L)).willReturn(Optional.of(supportWorkerUser(5L)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(5L, OrganizationMemberStatus.ACTIVE)).willReturn(List.of());
         given(userRepository.findById(5L)).willReturn(Optional.of(supportWorkerUser(5L)));
 
         MemberResponse result = organizationService.updateMember(1L, 50L,
@@ -227,8 +230,8 @@ class OrganizationServiceTest {
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
 
         User worker = supportWorkerUser(20L);
-        given(userRepository.findByPublicCode("S-ABCDEFGH")).willReturn(Optional.of(worker));
-        given(organizationMemberRepository.findByUserIdAndStatus(20L, OrganizationMemberStatus.ACTIVE)).willReturn(List.of());
+        given(userRepository.findByPublicCodeForUpdate("S-ABCDEFGH")).willReturn(Optional.of(worker));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(20L, OrganizationMemberStatus.ACTIVE)).willReturn(List.of());
         given(organizationMemberRepository.findByOrganizationIdAndUserId(10L, 20L)).willReturn(Optional.empty());
         given(organizationMemberRepository.save(any())).willAnswer(inv -> {
             OrganizationMember m = inv.getArgument(0);
@@ -250,8 +253,8 @@ class OrganizationServiceTest {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
-        given(userRepository.findByPublicCode("S-ABCDEFGH")).willReturn(Optional.of(supportWorkerUser(20L)));
-        given(organizationMemberRepository.findByUserIdAndStatus(20L, OrganizationMemberStatus.ACTIVE))
+        given(userRepository.findByPublicCodeForUpdate("S-ABCDEFGH")).willReturn(Optional.of(supportWorkerUser(20L)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(20L, OrganizationMemberStatus.ACTIVE))
                 .willReturn(List.of(OrganizationMember.builder().organizationId(99L).userId(20L).build()));
 
         assertThatThrownBy(() -> organizationService.addMember(1L, new com.project.backend.organization.dto.AddMemberRequest("S-ABCDEFGH")))
@@ -263,8 +266,8 @@ class OrganizationServiceTest {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
-        given(userRepository.findByPublicCode("S-ABCDEFGH")).willReturn(Optional.of(supportWorkerUser(20L)));
-        given(organizationMemberRepository.findByUserIdAndStatus(20L, OrganizationMemberStatus.ACTIVE))
+        given(userRepository.findByPublicCodeForUpdate("S-ABCDEFGH")).willReturn(Optional.of(supportWorkerUser(20L)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(20L, OrganizationMemberStatus.ACTIVE))
                 .willReturn(List.of(OrganizationMember.builder().organizationId(10L).userId(20L).build()));
 
         assertThatThrownBy(() -> organizationService.addMember(1L, new com.project.backend.organization.dto.AddMemberRequest("S-ABCDEFGH")))
@@ -276,7 +279,7 @@ class OrganizationServiceTest {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
-        given(userRepository.findByPublicCode("S-ABCDEFGH")).willReturn(Optional.empty());
+        given(userRepository.findByPublicCodeForUpdate("S-ABCDEFGH")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> organizationService.addMember(1L, new com.project.backend.organization.dto.AddMemberRequest("S-ABCDEFGH")))
                 .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
