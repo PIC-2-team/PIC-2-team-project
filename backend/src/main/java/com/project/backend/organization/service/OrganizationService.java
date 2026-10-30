@@ -20,6 +20,7 @@ import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -227,23 +228,29 @@ public class OrganizationService {
     public OrganizationGuardianResponse registerGuardian(Long ownerId, RegisterGuardianRequest request) {
         Organization org = findOrgByOwner(ownerId);
         String code = normalizePublicCode(request.publicCode(), "P-");
-        User finalGuardian = userRepository.findByPublicCode(code)
+        User finalGuardian = userRepository.findByPublicCodeForUpdate(code)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 고유 코드의 보호자를 찾을 수 없습니다."));
 
         if (finalGuardian.getRole() != UserRole.GUARDIAN) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "돌봄 보호자 계정만 등록할 수 있습니다.");
         }
 
-        if (organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(org.getId(), finalGuardian.getId())) {
+        if (!organizationGuardianLinkRepository.findByOrganizationIdAndGuardianIdForUpdate(
+                org.getId(), finalGuardian.getId()).isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 돌봄 보호자입니다.");
         }
 
-        OrganizationGuardianLink link = organizationGuardianLinkRepository.save(
-                OrganizationGuardianLink.builder()
-                        .organizationId(org.getId())
-                        .guardianId(finalGuardian.getId())
-                        .build()
-        );
+        OrganizationGuardianLink link;
+        try {
+            link = organizationGuardianLinkRepository.saveAndFlush(
+                    OrganizationGuardianLink.builder()
+                            .organizationId(org.getId())
+                            .guardianId(finalGuardian.getId())
+                            .build()
+            );
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 돌봄 보호자입니다.");
+        }
 
         // 보호자가 이미 등록해 둔 돌봄 대상자가 있다면 기관과 자동 연결(ACCEPTED)
         List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE);

@@ -21,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -320,14 +321,13 @@ class OrganizationServiceTest {
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
 
         User guardian = guardianUser(2L);
-        given(userRepository.findByPublicCode("P-ABCDEFGH")).willReturn(Optional.of(guardian));
-        given(organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(10L, 2L)).willReturn(false);
+        given(userRepository.findByPublicCodeForUpdate("P-ABCDEFGH")).willReturn(Optional.of(guardian));
 
         com.project.backend.organization.entity.OrganizationGuardianLink savedLink =
                 com.project.backend.organization.entity.OrganizationGuardianLink.builder()
                         .organizationId(10L).guardianId(2L).build();
         ReflectionTestUtils.setField(savedLink, "id", 100L);
-        given(organizationGuardianLinkRepository.save(any())).willReturn(savedLink);
+        given(organizationGuardianLinkRepository.saveAndFlush(any())).willReturn(savedLink);
 
         CareGuardian cg = CareGuardian.builder().careRecipientId(50L).guardianId(2L).type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
         given(careGuardianRepository.findByGuardianIdAndStatus(2L, GuardianStatus.ACTIVE)).willReturn(List.of(cg));
@@ -361,8 +361,23 @@ class OrganizationServiceTest {
         Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
         ReflectionTestUtils.setField(org, "id", 10L);
         given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
-        given(userRepository.findByPublicCode("P-ABCDEFGH")).willReturn(Optional.of(guardianUser(2L)));
-        given(organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(10L, 2L)).willReturn(true);
+        given(userRepository.findByPublicCodeForUpdate("P-ABCDEFGH")).willReturn(Optional.of(guardianUser(2L)));
+        given(organizationGuardianLinkRepository.findByOrganizationIdAndGuardianIdForUpdate(10L, 2L))
+                .willReturn(List.of(com.project.backend.organization.entity.OrganizationGuardianLink.builder()
+                        .organizationId(10L).guardianId(2L).build()));
+
+        assertThatThrownBy(() -> organizationService.registerGuardian(1L, new RegisterGuardianRequest("P-ABCDEFGH")))
+                .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void registerGuardian_DB_고유제약_충돌도_CONFLICT로_응답한다() {
+        Organization org = Organization.builder().ownerId(1L).name("복지관").organizationCode("CODE1234").build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOwnerId(1L)).willReturn(Optional.of(org));
+        given(userRepository.findByPublicCodeForUpdate("P-ABCDEFGH")).willReturn(Optional.of(guardianUser(2L)));
+        given(organizationGuardianLinkRepository.saveAndFlush(any()))
+                .willThrow(new DataIntegrityViolationException("duplicate guardian link"));
 
         assertThatThrownBy(() -> organizationService.registerGuardian(1L, new RegisterGuardianRequest("P-ABCDEFGH")))
                 .isInstanceOf(ApiException.class).extracting("status").isEqualTo(HttpStatus.CONFLICT);
