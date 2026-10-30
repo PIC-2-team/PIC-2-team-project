@@ -1,6 +1,5 @@
 package com.project.backend.organization.service;
 
-import com.project.backend.auth.service.PublicCodeGenerator;
 import com.project.backend.care.entity.CareAssignment;
 import com.project.backend.care.entity.CareGuardian;
 import com.project.backend.care.entity.CareRecipient;
@@ -21,11 +20,14 @@ import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -47,7 +49,6 @@ public class OrganizationService {
     private final CareGuardianRepository careGuardianRepository;
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
-    private final PublicCodeGenerator publicCodeGenerator;
 
     public OrganizationResponse register(Long ownerId, RegisterOrganizationRequest request) {
         User owner = findUser(ownerId);
@@ -96,17 +97,22 @@ public class OrganizationService {
         verifyGuardianAccess(guardianId, careRecipientId);
         Organization org = organizationRepository.findByOrganizationCode(organizationCode)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관 코드를 찾을 수 없습니다."));
+        lockRecipient(careRecipientId);
 
         if (organizationRecipientLinkRepository
-                .findByOrganizationIdAndCareRecipientId(org.getId(), careRecipientId).isPresent()) {
+                .findByOrganizationIdAndCareRecipientIdForUpdate(org.getId(), careRecipientId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "LINK_ALREADY_EXISTS", "이미 연결 요청이 존재합니다.");
         }
 
-        organizationRecipientLinkRepository.save(OrganizationRecipientLink.builder()
-                .organizationId(org.getId())
-                .careRecipientId(careRecipientId)
-                .requestedById(guardianId)
-                .build());
+        try {
+            organizationRecipientLinkRepository.saveAndFlush(OrganizationRecipientLink.builder()
+                    .organizationId(org.getId())
+                    .careRecipientId(careRecipientId)
+                    .requestedById(guardianId)
+                    .build());
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "LINK_ALREADY_EXISTS", "이미 연결 요청이 존재합니다.");
+        }
     }
 
     public void decideLinkRequest(Long organizationOwnerId, Long linkId, boolean accepted) {
@@ -148,28 +154,32 @@ public class OrganizationService {
     public MemberResponse updateMemberStatus(Long ownerId, Long memberId, boolean active) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
-        if (active) member.activate();
-        else member.deactivate();
+        lockWorker(member.getUserId());
+        if (active) {
+            verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
+            member.activate();
+        } else {
+            member.deactivate();
+            endMemberAssignments(org.getId(), member.getUserId());
+        }
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
     public MemberResponse updateMember(Long ownerId, Long memberId, UpdateMemberRequest request) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
-        User worker = findUser(member.getUserId());
-
-        if (request.active() != null) {
-            if (request.active()) member.activate();
-            else member.deactivate();
+        if (request.name() != null || request.phone() != null || request.active() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 소속 상태만 변경할 수 있습니다.");
         }
-
-        if (request.name() != null && !request.name().isBlank()) {
-            String newPhone = request.phone() != null ? request.phone().trim() : worker.getPhone();
-            worker.updateProfile(request.name().trim(), newPhone);
-            userRepository.save(worker);
+        lockWorker(member.getUserId());
+        if (request.active()) {
+            verifyNoOtherActiveOrganization(org.getId(), member.getUserId());
+            member.activate();
+        } else {
+            member.deactivate();
+            endMemberAssignments(org.getId(), member.getUserId());
         }
-
-        return MemberResponse.of(member, worker);
+        return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
     @Transactional(readOnly = true)
@@ -189,107 +199,79 @@ public class OrganizationService {
     }
 
     public MemberResponse addMember(Long ownerId, AddMemberRequest request) {
-        if (request.name() != null && !request.name().isBlank()) {
-            return addMemberByName(ownerId, request.name(), request.phone());
-        }
-        if (request.userId() != null) {
-            return addMember(ownerId, request.userId());
-        }
-        throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "지원사 이름 또는 사용자 ID를 입력해 주세요.");
-    }
-
-    public MemberResponse addMemberByName(Long ownerId, String name, String phone) {
         Organization org = findOrgByOwner(ownerId);
-        String publicCode = publicCodeGenerator.generate(UserRole.SUPPORT_WORKER);
-        String email = "sw_" + publicCode.toLowerCase().replace("-", "") + "@samgyeol.local";
-
-        User worker = User.builder()
-                .name(name.trim())
-                .email(email)
-                .phone(phone != null && !phone.isBlank() ? phone.trim() : null)
-                .publicCode(publicCode)
-                .role(UserRole.SUPPORT_WORKER)
-                .build();
-        worker = userRepository.save(worker);
-
-        OrganizationMember member = organizationMemberRepository.save(
-                OrganizationMember.builder()
-                        .organizationId(org.getId())
-                        .userId(worker.getId())
-                        .build()
-        );
-        return MemberResponse.of(member, worker);
-    }
-
-    public MemberResponse addMember(Long ownerId, Long supportWorkerId) {
-        Organization org = findOrgByOwner(ownerId);
-        User worker = findUser(supportWorkerId);
+        String code = normalizePublicCode(request.publicCode(), "S-");
+        User worker = userRepository.findByPublicCodeForUpdate(code)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPORT_WORKER_NOT_FOUND", "해당 고유 코드의 활동지원사를 찾을 수 없습니다."));
         if (worker.getRole() != UserRole.SUPPORT_WORKER) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "활동지원사 계정만 멤버로 추가할 수 있습니다.");
         }
-        OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndUserId(org.getId(), supportWorkerId)
+        List<OrganizationMember> activeMemberships = organizationMemberRepository.findByUserIdAndStatusForUpdate(worker.getId(), OrganizationMemberStatus.ACTIVE);
+        if (activeMemberships.stream().anyMatch(member -> !member.getOrganizationId().equals(org.getId()))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
+        }
+        if (activeMemberships.stream().anyMatch(member -> member.getOrganizationId().equals(org.getId()))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 활동지원사입니다.");
+        }
+        OrganizationMember member = organizationMemberRepository.findByOrganizationIdAndUserId(org.getId(), worker.getId())
                 .map(m -> {
                     m.activate();
                     return organizationMemberRepository.save(m);
                 })
                 .orElseGet(() -> organizationMemberRepository.save(
-                        OrganizationMember.builder().organizationId(org.getId()).userId(supportWorkerId).build()));
+                        OrganizationMember.builder().organizationId(org.getId()).userId(worker.getId()).build()));
         return MemberResponse.of(member, worker);
     }
 
     public void removeMember(Long ownerId, Long memberId) {
         Organization org = findOrgByOwner(ownerId);
         OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        lockWorker(member.getUserId());
+        endMemberAssignments(org.getId(), member.getUserId());
         organizationMemberRepository.delete(member);
     }
 
     public OrganizationGuardianResponse registerGuardian(Long ownerId, RegisterGuardianRequest request) {
         Organization org = findOrgByOwner(ownerId);
-        String query = request.getIdentifier();
-
-        // 전화번호 정규화 및 조회
-        String cleanPhone = query.replaceAll("[^0-9]", "");
-        String formattedPhone = formatPhone(cleanPhone);
-
-        java.util.Optional<User> guardian = java.util.Optional.empty();
-        if (!cleanPhone.isEmpty()) {
-            guardian = userRepository.findByPhone(formattedPhone)
-                    .or(() -> userRepository.findByPhone(cleanPhone));
-        }
-        if (guardian.isEmpty()) {
-            guardian = userRepository.findByPublicCode(query)
-                    .or(() -> userRepository.findByEmail(query));
-        }
-
-        User finalGuardian = guardian.orElseThrow(() -> new ApiException(
-                HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 전화번호의 보호자를 찾을 수 없습니다."));
+        String code = normalizePublicCode(request.publicCode(), "P-");
+        User finalGuardian = userRepository.findByPublicCodeForUpdate(code)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "GUARDIAN_NOT_FOUND", "해당 고유 코드의 보호자를 찾을 수 없습니다."));
 
         if (finalGuardian.getRole() != UserRole.GUARDIAN) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "돌봄 보호자 계정만 등록할 수 있습니다.");
         }
 
-        if (organizationGuardianLinkRepository.existsByOrganizationIdAndGuardianId(org.getId(), finalGuardian.getId())) {
+        if (!organizationGuardianLinkRepository.findByOrganizationIdAndGuardianIdForUpdate(
+                org.getId(), finalGuardian.getId()).isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 돌봄 보호자입니다.");
         }
 
-        OrganizationGuardianLink link = organizationGuardianLinkRepository.save(
-                OrganizationGuardianLink.builder()
-                        .organizationId(org.getId())
-                        .guardianId(finalGuardian.getId())
-                        .build()
-        );
+        OrganizationGuardianLink link;
+        try {
+            link = organizationGuardianLinkRepository.saveAndFlush(
+                    OrganizationGuardianLink.builder()
+                            .organizationId(org.getId())
+                            .guardianId(finalGuardian.getId())
+                            .build()
+            );
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_REGISTERED", "이미 등록된 돌봄 보호자입니다.");
+        }
 
         // 보호자가 이미 등록해 둔 돌봄 대상자가 있다면 기관과 자동 연결(ACCEPTED)
-        List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE);
+        List<CareGuardian> careGuardians = careGuardianRepository.findByGuardianIdAndStatus(finalGuardian.getId(), GuardianStatus.ACTIVE)
+                .stream().sorted(Comparator.comparing(CareGuardian::getCareRecipientId)).toList();
         for (CareGuardian cg : careGuardians) {
-            if (organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientId(org.getId(), cg.getCareRecipientId()).isEmpty()) {
+            lockRecipient(cg.getCareRecipientId());
+            if (organizationRecipientLinkRepository.findByOrganizationIdAndCareRecipientIdForUpdate(
+                    org.getId(), cg.getCareRecipientId()).isEmpty()) {
                 OrganizationRecipientLink recipientLink = OrganizationRecipientLink.builder()
                         .organizationId(org.getId())
                         .careRecipientId(cg.getCareRecipientId())
                         .requestedById(finalGuardian.getId())
                         .build();
                 recipientLink.accept();
-                organizationRecipientLinkRepository.save(recipientLink);
+                organizationRecipientLinkRepository.saveAndFlush(recipientLink);
             }
         }
 
@@ -404,6 +386,28 @@ public class OrganizationService {
         return member;
     }
 
+    private void verifyNoOtherActiveOrganization(Long organizationId, Long userId) {
+        if (organizationMemberRepository.findByUserIdAndStatusForUpdate(userId, OrganizationMemberStatus.ACTIVE).stream()
+                .anyMatch(member -> !member.getOrganizationId().equals(organizationId))) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_ASSIGNED_TO_ORGANIZATION", "이미 다른 기관에 소속된 활동지원사입니다.");
+        }
+    }
+
+    private void lockWorker(Long userId) {
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+    }
+
+    private void lockRecipient(Long recipientId) {
+        careRecipientRepository.findForUpdate(recipientId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CARE_RECIPIENT_NOT_FOUND", "당사자를 찾을 수 없습니다."));
+    }
+
+    private void endMemberAssignments(Long organizationId, Long userId) {
+        careAssignmentRepository.findByOrganizationIdAndSupportWorkerIdAndEndedAtIsNull(organizationId, userId)
+                .forEach(CareAssignment::end);
+    }
+
     private void verifyGuardianAccess(Long guardianId, Long careRecipientId) {
         if (!careGuardianRepository.existsByCareRecipientIdAndGuardianIdAndStatus(
                 careRecipientId, guardianId, GuardianStatus.ACTIVE)) {
@@ -421,14 +425,12 @@ public class OrganizationService {
         return code;
     }
 
-    private String formatPhone(String cleanPhone) {
-        if (cleanPhone == null) return "";
-        if (cleanPhone.length() == 11) {
-            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 7) + "-" + cleanPhone.substring(7);
-        } else if (cleanPhone.length() == 10) {
-            return cleanPhone.substring(0, 3) + "-" + cleanPhone.substring(3, 6) + "-" + cleanPhone.substring(6);
+    private String normalizePublicCode(String rawCode, String prefix) {
+        String code = rawCode == null ? "" : rawCode.trim().toUpperCase(Locale.ROOT);
+        if (!code.matches(prefix + "[A-Z0-9]{8}")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PUBLIC_CODE", "고유 코드 형식이 올바르지 않습니다.");
         }
-        return cleanPhone;
+        return code;
     }
 
     private User findUser(Long id) {

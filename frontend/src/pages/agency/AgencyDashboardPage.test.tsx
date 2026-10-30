@@ -232,6 +232,52 @@ it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하
   expect(screen.getAllByText(/이지원/).length).toBeGreaterThanOrEqual(1);
 });
 
+function mockAssignmentPage(members: Array<{ id: number; userId: number; name: string; publicCode: string; status: string }>) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({ success: true, data: members }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/recipients')) {
+      return new Response(JSON.stringify({ success: true, data: [
+        { id: 200, name: '김당사', careRecipientNumber: 'R-00000001', birthDate: '2000-01-01', gender: 'MALE' },
+      ] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/guardians') || url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: true, data: {
+      id: 1, name: '희망 복지관', organizationCode: 'HOPE01',
+    } }), { status: 200 });
+  });
+}
+
+it('배정할 때 비활성 지원사는 선택지에서 제외하고 활성 지원사를 기본 선택한다', async () => {
+  mockAssignmentPage([
+    { id: 1, userId: 10, name: '비활성지원사', publicCode: 'S-INACTIVE', status: 'INACTIVE' },
+    { id: 2, userId: 20, name: '활성지원사', publicCode: 'S-ACTIVE0', status: 'ACTIVE' },
+  ]);
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+
+  expect(screen.getByRole('combobox', { name: '돌봄 지원사' })).toHaveValue('20');
+  expect(screen.queryByRole('option', { name: /비활성지원사/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /활성지원사/ })).toBeInTheDocument();
+});
+
+it('활성 지원사가 없으면 배정할 수 없다고 안내하고 제출을 막는다', async () => {
+  mockAssignmentPage([
+    { id: 1, userId: 10, name: '비활성지원사', publicCode: 'S-INACTIVE', status: 'INACTIVE' },
+  ]);
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+
+  expect(screen.getByText('활성 상태인 돌봄 지원사가 없습니다. 지원사를 활성화한 뒤 배정해 주세요.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '배정 등록' })).toBeDisabled();
+});
+
 it('진행 중인 배정에서 배정 종료 버튼을 클릭하면 배정을 종료하고 배정 기록 탭에서 확인된다', async () => {
   let ended = false;
 
@@ -363,14 +409,18 @@ it('홈 대시보드에서 돌봄 보호자 등록 모달을 통해 보호자를
   // + 보호자 등록 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 보호자 등록' }));
 
-  // 전화번호 입력
-  fireEvent.change(screen.getByLabelText(/보호자 전화번호/), { target: { value: '010-9999-8888' } });
+  fireEvent.change(screen.getByLabelText(/보호자 고유 코드/), { target: { value: '010-9999-8888' } });
+  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('보호자 고유 코드를 입력해 주세요.');
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/me/guardians') && init?.method === 'POST')).toHaveLength(0);
+
+  fireEvent.change(screen.getByLabelText(/보호자 고유 코드/), { target: { value: 'p-abcdefgh' } });
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/guardians', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ phone: '010-9999-8888' }),
+      body: JSON.stringify({ publicCode: 'P-ABCDEFGH' }),
     }));
   });
 
@@ -388,7 +438,7 @@ it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async 
     const method = init?.method ?? 'GET';
 
     if (url.includes('/api/organizations/me/members') && method === 'POST') {
-      const created = { id: 2, userId: 20, name: '새지원사', publicCode: 'SW-002', status: 'ACTIVE' };
+      const created = { id: 2, userId: 20, name: '새지원사', publicCode: 'S-ABCDEFGH', status: 'ACTIVE' };
       members = [...members, created];
       return new Response(JSON.stringify({ success: true, data: created }), { status: 201 });
     }
@@ -421,14 +471,18 @@ it('돌봄 지원사 관리 탭에서 지원사를 추가할 수 있다', async 
   // + 지원사 추가 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '+ 지원사 추가' }));
 
-  // 지원사 성명 입력
-  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '새지원사' } });
+  fireEvent.change(screen.getByLabelText(/지원사 고유 코드/), { target: { value: '새지원사' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가하기' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('지원사 고유 코드를 입력해 주세요.');
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/me/members') && init?.method === 'POST')).toHaveLength(0);
+
+  fireEvent.change(screen.getByLabelText(/지원사 고유 코드/), { target: { value: 's-abcdefgh' } });
   fireEvent.click(screen.getByRole('button', { name: '추가하기' }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledWith('/api/organizations/me/members', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ name: '새지원사' }),
+      body: JSON.stringify({ publicCode: 'S-ABCDEFGH' }),
     }));
   });
 
@@ -527,17 +581,14 @@ it('배정 종료 버튼 클릭 시 window.confirm이 호출되지 않고 Confir
   expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
 });
 
-it('지원사 수정 카드에서 이름과 전화번호를 변경하여 저장한다', async () => {
+it('기관은 고유 코드로 연결한 지원사 계정의 이름과 전화번호를 수정할 수 없다', async () => {
   vi.spyOn(organizationsApi, 'getMyOrganization').mockResolvedValue({ id: 1, name: '예시 기관', organizationCode: 'ABC123' } as any);
   vi.spyOn(organizationsApi, 'getMembers').mockResolvedValue([{ id: 2, userId: 2, name: '기존 지원사', phone: '010-0000-0000', status: 'ACTIVE' }] as any);
   vi.spyOn(organizationsApi, 'getAssignments').mockResolvedValue([]);
   vi.spyOn(organizationsApi, 'getOrganizationRecipients').mockResolvedValue([]);
   vi.spyOn(organizationsApi, 'getOrganizationGuardians').mockResolvedValue([]);
-  const update = vi.spyOn(organizationsApi, 'updateMember').mockResolvedValue({ id: 2, name: '수정 지원사' } as any);
   renderWithProviders(['/agency?tab=workers']);
-  fireEvent.click(await screen.findByRole('button', { name: '수정' }));
-  fireEvent.change(screen.getByLabelText(/지원사 성명/), { target: { value: '수정 지원사' } });
-  fireEvent.change(screen.getByLabelText(/연락처/), { target: { value: '010-1234-5678' } });
-  fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
-  await waitFor(() => expect(update).toHaveBeenCalledWith(2, { name: '수정 지원사', phone: '010-1234-5678' }));
+  expect(await screen.findByText('기존 지원사')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '비활성화' })).toBeInTheDocument();
 });

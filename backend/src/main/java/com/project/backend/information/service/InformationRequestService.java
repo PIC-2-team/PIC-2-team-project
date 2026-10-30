@@ -70,9 +70,7 @@ public class InformationRequestService {
     @Transactional(readOnly = true)
     public PaginatedData<InformationRequestResponse> listRequester(Long userId, InformationRequestStatus status, int page, int pageSize) {
         requireRole(userId, UserRole.SUPPORT_WORKER);
-        Page<InformationRequest> result = status == null
-                ? requests.findByRequestedById(userId, pageable(page, pageSize))
-                : requests.findByRequestedByIdAndStatus(userId, status, pageable(page, pageSize));
+        Page<InformationRequest> result = requests.findVisibleByRequester(userId, status, pageable(page, pageSize));
         return page(result);
     }
 

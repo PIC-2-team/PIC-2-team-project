@@ -57,7 +57,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.getMember(userId, memberId));
     }
 
-    @Operation(summary = "지원사 추가")
+    @Operation(summary = "지원사 고유 코드로 소속 등록")
     @PostMapping("/me/members")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MemberResponse> addMember(@AuthenticationPrincipal Long userId,
@@ -65,7 +65,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.addMember(userId, request));
     }
 
-    @Operation(summary = "지원사 상태 및 정보 변경")
+    @Operation(summary = "지원사 소속 상태 변경")
     @PatchMapping("/me/members/{memberId}")
     public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
                                                            @PathVariable Long memberId,
@@ -87,7 +87,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.getGuardians(userId));
     }
 
-    @Operation(summary = "기관 돌봄 보호자 등록")
+    @Operation(summary = "보호자 고유 코드로 기관 등록")
     @PostMapping("/me/guardians")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<OrganizationGuardianResponse> registerGuardian(@AuthenticationPrincipal Long userId,

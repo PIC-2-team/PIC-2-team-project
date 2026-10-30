@@ -6,6 +6,7 @@ import com.project.backend.care.repository.*;
 import com.project.backend.notification.repository.NotificationRepository;
 import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.*;
+import com.project.backend.organization.service.OrganizationService;
 import com.project.backend.user.entity.*;
 import com.project.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,8 @@ class InformationRequestApiTest {
     @Autowired CareGuardianRepository guardians;
     @Autowired CareAssignmentRepository assignments;
     @Autowired OrganizationRepository organizations;
+    @Autowired OrganizationMemberRepository members;
+    @Autowired OrganizationService organizationService;
     @Autowired OrganizationRecipientLinkRepository links;
     @Autowired NotificationRepository notifications;
     @MockitoBean Clock clock;
@@ -110,6 +113,35 @@ class InformationRequestApiTest {
     }
 
     @Test
+    void 소속_해제_후_이전_기관의_정보_요청과_보호자_답변을_볼_수_없다() throws Exception {
+        String created = perform(post(recipientPath).content("{\"message\":\"복용 시간을 알려주세요\"}"), worker)
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long requestId = ((Number) JsonPath.read(created, "$.data.id")).longValue();
+        perform(post("/api/organizations/me/information-requests/" + requestId + "/forward").content("{}"), institution)
+                .andExpect(status().isOk());
+        perform(post(recipientPath + "/" + requestId + "/reply")
+                .content("{\"message\":\"매일 저녁 식후입니다\"}"), guardian).andExpect(status().isOk());
+        perform(get("/api/information-requests"), worker)
+                .andExpect(jsonPath("$.data.items[0].reply.message").value("매일 저녁 식후입니다"));
+
+        OrganizationMember member = members.findByUserIdAndStatus(worker.getId(), OrganizationMemberStatus.ACTIVE)
+                .stream().findFirst().orElseThrow();
+        organizationService.removeMember(institution.getId(), member.getId());
+
+        perform(get("/api/information-requests"), worker)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(0));
+
+        Organization nextOrganization = organizations.save(Organization.builder().name("다른 기관")
+                .ownerId(otherInstitution.getId()).organizationCode("BB-001").build());
+        members.save(OrganizationMember.builder().organizationId(nextOrganization.getId())
+                .userId(worker.getId()).build());
+        perform(get("/api/information-requests?status=ANSWERED"), worker)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty())
+                .andExpect(jsonPath("$.data.pagination.totalItems").value(0));
+    }
+
+    @Test
     void roleScopeAndTransitionsAreEnforced() throws Exception {
         perform(post(recipientPath).content("{\"message\":\"질문\"}"), institution).andExpect(status().isForbidden());
         String created = perform(post(recipientPath).content("{\"message\":\"질문\"}"), worker)
@@ -161,6 +193,7 @@ class InformationRequestApiTest {
     }
 
     private void assign(User worker, Long organizationId) {
+        members.save(OrganizationMember.builder().organizationId(organizationId).userId(worker.getId()).build());
         assignments.save(CareAssignment.builder().careRecipientId(recipient.getId()).supportWorkerId(worker.getId())
                 .organizationId(organizationId).startDate(LocalDate.of(2026, 10, 1))
                 .idempotencyKey(UUID.randomUUID().toString()).build());

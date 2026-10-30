@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "organization_guardian_link")
+@Table(name = "organization_guardian_link",
+       uniqueConstraints = @UniqueConstraint(name = "uk_organization_guardian_link_org_guardian",
+               columnNames = {"organizationId", "guardianId"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrganizationGuardianLink {
