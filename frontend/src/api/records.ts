@@ -114,6 +114,12 @@ export function uploadRecordAudio(recipientId: number, file: File): Promise<{ me
   return apiRequest(`/api/care-recipients/${recipientId}/media`, { method: 'POST', body: form });
 }
 
+export function uploadRecordMedia(recipientId: number, file: File): Promise<{ mediaId: number }> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiRequest(`/api/care-recipients/${recipientId}/media`, { method: 'POST', body: form });
+}
+
 export function deleteRecordMedia(recipientId: number, mediaId: number): Promise<{ deleted: boolean }> {
   return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }
