@@ -145,7 +145,7 @@ ADR-012(2026-10-22) 작성 뒤 다음이 바뀌었다.
 
 - **BE**: 탈퇴 미리보기 API(당사자별 선택 가능 여부), `DELETE /api/users/me`(당사자별 결정 목록), 계정 익명화, 세컨드 승계, 이관 시 필드 비우기, 소프트 딜리트 후 하드 딜리트 스케줄러, 익명 작성자 기록의 삭제 권한 예외
 - **FE**: 기관 홈의 "보호자 연결 요청" 승인 화면, `MorePage`에 탈퇴 진입점, 세컨드 유무에 따른 이관/삭제 선택 다이얼로그, 기록 목록의 "탈퇴한 사용자" 표기
-- **DB**: `users.deletedAt`, `care_recipient.deletedAt` 컬럼 추가 SQL(`db/manual`)
+- **DB**: `users.deletedAt`, `care_recipient.deletedAt`, `care_recipient.transferred_at` 컬럼 추가 SQL(`db/manual`)
 - **문서**: API 명세서의 `DELETE /api/users/me`(현재 "파기 정책 미정" 계열 표기), 마이페이지 플로우
 
 ## 결과와 남은 위험
