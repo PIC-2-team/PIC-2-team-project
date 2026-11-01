@@ -12,8 +12,10 @@ export function UnreadNotificationSummaryCard() {
     setError(null);
     try {
       setSummary(await summarizeUnreadNotifications());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '요약을 불러오지 못했습니다.');
+    } catch {
+      setError(summary?.summary
+        ? '새 요약을 만들지 못했어요. 이전 요약을 계속 보여드릴게요.'
+        : '요약 리포트를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
     }
@@ -23,11 +25,11 @@ export function UnreadNotificationSummaryCard() {
     <section className={styles.card} aria-labelledby="unread-summary-title">
       <div className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>알림 정리</p>
-          <h2 id="unread-summary-title" className={styles.title}>AI 미확인 알림 요약</h2>
+          <p className={styles.eyebrow}>놓친 알림 요약</p>
+          <h2 id="unread-summary-title" className={styles.title}>미확인 알림 한눈에 보기</h2>
         </div>
       </div>
-      <p className={styles.description}>아직 확인하지 않은 알림의 핵심 내용을 빠르게 확인해요.</p>
+      <p className={styles.description}>읽지 않은 알림을 모아 중요한 내용부터 간단히 정리해 드려요. 2~3분이면 흐름을 파악할 수 있어요.</p>
       {summary && summary.summary && (
         <div className={styles.result}>
           <p className={styles.count}>미확인 알림 {summary.unreadCount}건</p>
@@ -35,14 +37,14 @@ export function UnreadNotificationSummaryCard() {
         </div>
       )}
       {summary && !summary.summary && (
-        <p className={styles.status} role="status">확인하지 않은 알림이 없어요.</p>
+        <p className={styles.status} role="status">지금은 확인하지 않은 알림이 없어요.</p>
       )}
-      {loading && <p className={styles.status} role="status">알림을 요약하고 있어요…</p>}
+      {loading && <p className={styles.status} role="status">알림 내용을 모아 요약하고 있어요. 잠시만 기다려 주세요.</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
-        {loading ? '요약하는 중…' : summary?.summary ? '다시 요약하기' : '미확인 알림 요약하기'}
+        {loading ? '요약하는 중…' : summary?.summary ? '다시 요약하기' : '요약 리포트 만들기'}
       </button>
-      <p className={styles.note}>요약을 확인해도 알림의 읽음 상태는 바뀌지 않아요.</p>
+      <p className={styles.note}>요약 리포트를 만들어도 원본 알림은 읽음 처리되지 않아요.</p>
     </section>
   );
 }
