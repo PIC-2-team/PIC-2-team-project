@@ -12,6 +12,7 @@ import { RecordFormPage } from './pages/RecordFormPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
                 children: [{ path: '/records/deleted', element: <DeletedRecordsPage /> }],
               },
               { path: '/care-info', element: <CareInfoPage /> },
+              { path: '/profile', element: <ProfilePage /> },
             ],
           },
           { path: '/more', element: <MorePage /> },

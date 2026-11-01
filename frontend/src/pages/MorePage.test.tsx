@@ -244,3 +244,15 @@ it('더보기에서 당사자 전환 시 공통 선택 상태를 변경한다', 
   expect(mockSetSelectedRecipient).toHaveBeenCalledWith(2);
   expect(mockNavigate).not.toHaveBeenCalled();
 });
+
+it('프로필 모달의 버튼을 누르면 프로필 화면으로 이동하고 모달이 닫힌다', async () => {
+  mockSelectedRecipientId = 42;
+  vi.spyOn(recipientsApi, 'getCareRecipient').mockResolvedValue({ id: 42, name: '김당사' });
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+
+  fireEvent.click(screen.getByRole('button', { name: '돌봄 대상자 프로필 보기' }));
+  fireEvent.click(await screen.findByRole('button', { name: '프로필 보기·수정' }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/profile');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});

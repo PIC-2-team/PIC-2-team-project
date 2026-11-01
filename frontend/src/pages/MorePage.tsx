@@ -304,6 +304,17 @@ export function MorePage() {
               <p className="muted">당사자 정보를 찾을 수 없습니다.</p>
             )}
 
+            {recipient && (
+              <button
+                type="button"
+                className="btn"
+                style={{ width: '100%', marginTop: '0.5rem' }}
+                onClick={() => { setShowRecipientModal(false); navigate('/profile'); }}
+              >
+                프로필 보기·수정
+              </button>
+            )}
+
             <button
               type="button"
               className="btn secondary"
