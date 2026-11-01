@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AppShell } from '../../components/AppShell';
 import TabBar from '../../components/TabBar/TabBar';
@@ -119,6 +121,8 @@ function EndAssignmentButton({ onClick }: { onClick: () => void }) {
 
 export function AgencyDashboardPage() {
   const { user } = useAuth();
+  const [showQrModal, setShowQrModal] = useState(false);
+  const qrPrintRef = useRef<HTMLDivElement>(null);
   const [confirmation, setConfirmation] = useState<{
     title: string; confirmLabel: string; action: () => Promise<void>;
   } | null>(null);
@@ -453,9 +457,19 @@ export function AgencyDashboardPage() {
           <>
             {/* 기관 헤더 */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: '1.3rem' }}>🏢</span>
-                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{page.org.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: '1.3rem' }}>🏢</span>
+                  <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{page.org.name}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  style={{ fontSize: '0.78rem', padding: '5px 12px', whiteSpace: 'nowrap', flexShrink: 0, minHeight: 'auto' }}
+                  onClick={() => setShowQrModal(true)}
+                >
+                  QR 코드 인쇄
+                </button>
               </div>
               <p className="muted" style={{ margin: '4px 0 0 28px', fontSize: '0.85rem' }}>
                 기관 코드: <strong>{page.org.organizationCode}</strong>
@@ -1229,6 +1243,155 @@ export function AgencyDashboardPage() {
           onConfirm={() => { const action = confirmation?.action; setConfirmation(null); void action?.(); }}
           onCancel={() => setConfirmation(null)} />
       </main>
+
+      {/* QR 코드 인쇄 모달 */}
+      {showQrModal && page.status === 'ok' && createPortal(
+        <>
+          <style>{`
+            @media print {
+              @page { size: A4; margin: 0; }
+              body > #root { display: none !important; }
+              #qr-print-portal {
+                position: static !important;
+                display: block !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                padding: 0 !important;
+                background: white !important;
+              }
+              #qr-print-area {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 16px !important;
+                background: white !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                max-width: none !important;
+                box-sizing: border-box !important;
+                width: 210mm !important;
+                height: 297mm !important;
+              }
+              #qr-print-area svg {
+                width: 160mm !important;
+                height: 160mm !important;
+              }
+              #qr-print-area .qr-title {
+                font-size: 14pt !important;
+                font-weight: 600 !important;
+                color: #333 !important;
+              }
+              #qr-print-area .qr-org-name {
+                font-size: 22pt !important;
+                font-weight: 700 !important;
+                color: #1a1a1a !important;
+              }
+              #qr-print-area .qr-code-label {
+                font-size: 12pt !important;
+                color: #555 !important;
+              }
+              #qr-print-area .qr-code-value {
+                font-size: 20pt !important;
+                font-weight: 700 !important;
+                color: #1a7a4a !important;
+                letter-spacing: 2px !important;
+              }
+              #qr-print-area .qr-hint {
+                font-size: 10pt !important;
+                color: #777 !important;
+                text-align: center !important;
+              }
+              #qr-print-no-print { display: none !important; visibility: hidden !important; }
+            }
+          `}</style>
+          <div
+            id="qr-print-portal"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(3px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              id="qr-print-area"
+              ref={qrPrintRef}
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: '28px 24px',
+                maxWidth: 320,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 12,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+                textAlign: 'center',
+                margin: 'auto',
+              }}
+            >
+              <div className="qr-title" style={{ fontSize: '0.78rem', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>
+                삶결 기관 연결 코드
+              </div>
+              <div className="qr-org-name" style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1a1a1a' }}>
+                {page.org.name}
+              </div>
+              <div style={{ background: '#fff', padding: 12, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                <QRCodeSVG
+                  value={page.org.organizationCode}
+                  size={180}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                }}
+              >
+                <span className="qr-code-label" style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 500, display: 'block' }}>기관 코드</span>
+                <span className="qr-code-value" style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '0.1em', color: '#15803d' }}>
+                  {page.org.organizationCode}
+                </span>
+              </div>
+              <p className="qr-hint" style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', lineHeight: 1.5 }}>
+                보호자와 활동지원사는 기관 인증 시<br />이 QR 코드를 스캔해 기관 코드를 확인하세요.
+              </p>
+              <div id="qr-print-no-print" style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  style={{ flex: 1, fontSize: '0.85rem', background: '#f0f7f3', color: '#1a7a4a', border: '1px solid #cde2d3' }}
+                  onClick={() => setShowQrModal(false)}
+                >
+                  닫기
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ flex: 1, fontSize: '0.85rem', background: '#3CAB7E', color: '#fff' }}
+                  onClick={() => window.print()}
+                >
+                  인쇄하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </>, document.body
+      )}
     </AppShell>
   );
 }

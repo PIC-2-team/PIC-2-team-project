@@ -213,6 +213,7 @@ export function DailyRecordPage() {
     }
   };
 
+
   const handleDeleteSchedule = async (scheduleId: number) => {
     if (!selectedRecipientId) return;
     try {

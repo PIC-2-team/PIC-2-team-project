@@ -33,7 +33,7 @@ public class RecordAccessService {
         boolean allowed = switch (user.getRole()) {
             case GUARDIAN -> isGuardian(userId, recipientId);
             case SUPPORT_WORKER -> isAssigned(userId, recipientId);
-            case INSTITUTION -> organizations.findByOwnerId(userId)
+            case INSTITUTION -> organizations.findFirstByOwnerIdOrderByIdAsc(userId)
                     .map(org -> links.existsByOrganizationIdAndCareRecipientIdAndStatus(
                             org.getId(), recipientId, LinkStatus.ACCEPTED)).orElse(false);
             case ADMIN -> true;

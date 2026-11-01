@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -21,6 +21,12 @@ export function CareRelationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animFrameRef = useRef<number>(0);
+
   const fetchRelations = useCallback(async () => {
     if (!selectedRecipientId) return;
     setData(null);
@@ -42,6 +48,8 @@ export function CareRelationsPage() {
     void fetchRelations();
   }, [fetchRelations]);
 
+  useEffect(() => () => { stopStream(); }, []);
+
   const handleRequestLink = async (e: FormEvent) => {
     e.preventDefault();
     const code = orgCode.trim().toUpperCase();
@@ -60,6 +68,75 @@ export function CareRelationsPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const stopStream = () => {
+    cancelAnimationFrame(animFrameRef.current);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  const closeScanner = () => {
+    stopStream();
+    setShowScanner(false);
+    setScanError(null);
+  };
+
+  const openScanner = async () => {
+    setScanError(null);
+    setShowScanner(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+      // wait for videoRef to mount via the modal
+      const waitForVideo = () => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play();
+          startDetect();
+        } else {
+          requestAnimationFrame(waitForVideo);
+        }
+      };
+      requestAnimationFrame(waitForVideo);
+    } catch {
+      setScanError('카메라 접근 권한이 필요합니다. 브라우저 설정에서 허용해 주세요.');
+    }
+  };
+
+  const startDetect = () => {
+    if (!('BarcodeDetector' in window)) {
+      setScanError('이 브라우저에서는 QR 스캔을 지원하지 않습니다. 코드를 직접 입력해 주세요.');
+      stopStream();
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+    const tick = async () => {
+      if (!videoRef.current || videoRef.current.readyState < 2) {
+        animFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const barcodes: any[] = await detector.detect(videoRef.current);
+        if (barcodes.length > 0) {
+          const raw: string = barcodes[0].rawValue ?? '';
+          const code = raw.trim().toUpperCase();
+          if (code) {
+            setOrgCode(code);
+            closeScanner();
+            return;
+          }
+        }
+      } catch {
+        // detection frame error — continue
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
   };
 
   return (
@@ -174,18 +251,31 @@ export function CareRelationsPage() {
           <form className={styles.linkForm} onSubmit={handleRequestLink}>
             <label className={styles.formLabel}>
               기관 코드 입력
-              <input
-                type="text"
-                className={styles.input}
-                placeholder="예: KNU001"
-                value={orgCode}
-                onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
-                required
-                disabled={submitting}
-                aria-label="연결할 기관 코드"
-              />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="예: KNU001"
+                  value={orgCode}
+                  onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                  required
+                  disabled={submitting}
+                  aria-label="연결할 기관 코드"
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+                <button
+                  type="button"
+                  className={styles.btnPrimary}
+                  style={{ flexShrink: 0, padding: '0 14px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  onClick={() => void openScanner()}
+                  disabled={submitting}
+                  aria-label="QR 코드 스캔으로 입력"
+                >
+                  QR 스캔
+                </button>
+              </div>
               <span className={styles.inputHint}>
-                연결하고자 하는 복지관 또는 돌봄 기관의 코드를 입력하세요.
+                기관에서 받은 QR 코드를 스캔하거나 코드를 직접 입력하세요.
               </span>
             </label>
 
@@ -198,6 +288,88 @@ export function CareRelationsPage() {
             </button>
           </form>
         </section>
+      )}
+
+      {/* QR 스캐너 모달 */}
+      {showScanner && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: 20,
+            boxSizing: 'border-box',
+          }}
+        >
+          <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 600, margin: '0 0 16px', textAlign: 'center' }}>
+            기관 QR 코드를 카메라에 비춰주세요
+          </p>
+          {scanError ? (
+            <div
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '20px 16px',
+                maxWidth: 300,
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ color: '#c0392b', fontSize: '0.88rem', margin: '0 0 12px', lineHeight: 1.5 }}>
+                {scanError}
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                position: 'relative',
+                width: 260,
+                height: 260,
+                borderRadius: 16,
+                overflow: 'hidden',
+                border: '3px solid #3CAB7E',
+              }}
+            >
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                ref={videoRef}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                playsInline
+              />
+              {/* 스캔 가이드 오버레이 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: '2px solid rgba(60,171,126,0.6)',
+                  borderRadius: 14,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={closeScanner}
+            style={{
+              marginTop: 20,
+              background: '#fff',
+              color: '#1a1a1a',
+              border: 'none',
+              borderRadius: 10,
+              padding: '10px 28px',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            닫기
+          </button>
+        </div>
       )}
     </div>
     </AppShell>

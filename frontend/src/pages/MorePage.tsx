@@ -137,6 +137,16 @@ export function MorePage() {
     });
   }
 
+  if (user?.role === 'SUPPORT_WORKER') {
+    sections.push({
+      title: '돌봄 협업',
+      items: [
+        { label: '기관 연결 확인', to: '/worker/organization' },
+        { label: '돌봄 내용 수정 요청', pending: true },
+      ],
+    });
+  }
+
   sections.push(...BASE_MENU_SECTIONS);
 
   return (

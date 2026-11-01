@@ -187,13 +187,14 @@ export default function CareInfoDetailPage() {
     setError(null);
 
     Promise.allSettled([
-      getRecordsByCategory(selectedRecipientId, meta.normalizedCategory),
+      getRecordsByCategory(selectedRecipientId, meta.normalizedCategory, 1, 100),
       getCareInfoByCategory(selectedRecipientId, meta.normalizedCategory),
     ]).then(([recResult, infoResult]) => {
       if (!isCurrent) return;
       if (recResult.status === 'fulfilled') {
-        setRecords(recResult.value.items ?? []);
-        setTotalCount(recResult.value.pagination?.totalItems ?? recResult.value.items?.length ?? 0);
+        const categoryRecords = (recResult.value.items ?? []).filter(record => record.category === meta.normalizedCategory);
+        setRecords(categoryRecords);
+        setTotalCount(categoryRecords.length);
       } else {
         setError(recResult.reason instanceof Error ? recResult.reason.message : '기록을 불러오지 못했어요.');
       }
@@ -270,9 +271,6 @@ export default function CareInfoDetailPage() {
           <div className={styles.bannerText}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h2 className={styles.bannerTitle}>{meta.label}</h2>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: meta.color, background: 'white', padding: '2px 8px', borderRadius: '12px' }}>
-                전체 기록 {totalCount}개
-              </span>
             </div>
             <p className={styles.bannerDesc}>{meta.desc}</p>
           </div>

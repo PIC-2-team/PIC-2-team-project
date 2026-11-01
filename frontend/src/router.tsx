@@ -19,6 +19,7 @@ import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
+import { WorkerOrganizationPage } from './pages/WorkerOrganizationPage';
 import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LegacyRecordDetailRedirect } from './components/LegacyRecordDetailRedirect';
@@ -86,6 +87,17 @@ export const router = createBrowserRouter([
             { path: '/care-relations', element: <CareRelationsPage /> },
           ],
         }],
+      },
+    ],
+  },
+
+  // SUPPORT_WORKER 전용 — 활동지원사 돌봄 내용 수정 요청
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <RequireRole role="SUPPORT_WORKER" />,
+        children: [{ path: '/worker/organization', element: <WorkerOrganizationPage /> }],
       },
     ],
   },

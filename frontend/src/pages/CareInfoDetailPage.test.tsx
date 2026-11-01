@@ -57,7 +57,7 @@ it('식사(MEAL) 카테고리 진입 시 중요 정보만 표시하고 전체 �
   expect(screen.getAllByText('점심 식사로 된장국을 잘 먹었습니다.').length).toBeGreaterThan(0);
   expect(screen.getByText('아침 식사 후 간식을 섭취했습니다.')).toBeInTheDocument();
   expect(screen.getByText('📌 중요 정보')).toBeInTheDocument();
-  expect(screen.getByText('전체 기록 2개')).toBeInTheDocument();
+  expect(screen.getByText('전체 기록 (2)')).toBeInTheDocument();
 });
 
 it('보호자가 핀 토글 클릭 시 pinRecord API를 호출하고 고정 상태를 반영한다', async () => {
@@ -166,4 +166,27 @@ it('잘못된 카테고리에서 정상 카테고리로 이동해도 Hook 순서
   expect(screen.getByText('존재하지 않는 카테고리입니다.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('link', { name: '정상 카테고리로 이동' }));
   expect(await screen.findByRole('heading', { name: '식사', level: 1 })).toBeInTheDocument();
+});
+
+
+it('생활습관 2개와 다른 카테고리 1개가 반환되어도 생활습관 기록만 표시하고 센다', async () => {
+  vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
+    items: [
+      { id: 1, content: '아침 산책을 했습니다.', category: 'LIFESTYLE', recordedAt: '2026-10-23T03:00:00Z', pinned: false } as any,
+      { id: 2, content: '식사를 잘 했습니다.', category: 'MEAL', recordedAt: '2026-10-22T03:00:00Z', pinned: true } as any,
+      { id: 3, content: '식사 후 산책을 했습니다.', category: 'LIFESTYLE', recordedAt: '2026-10-21T03:00:00Z', pinned: true } as any,
+    ],
+    pagination: { page: 1, pageSize: 100, totalItems: 3, totalPages: 1 },
+  });
+  vi.spyOn(careInfoApi, 'getCareInfoByCategory').mockRejectedValue(new Error('Not found'));
+  render(
+    <MemoryRouter initialEntries={['/care-info/LIFESTYLE']}>
+      <Routes><Route path="/care-info/:categoryId" element={<CareInfoDetailPage />} /></Routes>
+    </MemoryRouter>
+  );
+  expect(await screen.findByText('아침 산책을 했습니다.')).toBeInTheDocument();
+  expect(screen.getByText('전체 기록 (2)')).toBeInTheDocument();
+  expect(screen.queryByText('전체 기록 (3)')).not.toBeInTheDocument();
+  expect(screen.queryByText('식사를 잘 했습니다.')).not.toBeInTheDocument();
+  expect(screen.getAllByText('식사 후 산책을 했습니다.')).toHaveLength(2);
 });

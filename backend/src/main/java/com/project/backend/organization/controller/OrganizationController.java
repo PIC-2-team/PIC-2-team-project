@@ -30,6 +30,13 @@ public class OrganizationController {
     private final CareAssignmentService careAssignmentService;
     private final CareRecipientService careRecipientService;
 
+    @Operation(summary = "활동지원사 소속 기관 QR 코드 확인")
+    @PostMapping("/worker/verify")
+    public ApiResponse<OrganizationResponse> verifyWorkerOrganization(@AuthenticationPrincipal Long userId,
+                                                                       @Valid @RequestBody VerifyWorkerOrganizationRequest request) {
+        return ApiResponse.ok(organizationService.verifyWorkerOrganization(userId, request.organizationCode()));
+    }
+
     @Operation(summary = "기관 등록 (6자리 코드)")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

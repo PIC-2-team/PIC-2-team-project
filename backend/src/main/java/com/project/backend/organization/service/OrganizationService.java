@@ -50,12 +50,26 @@ public class OrganizationService {
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
+    public OrganizationResponse verifyWorkerOrganization(Long userId, String code) {
+        User worker = findUser(userId);
+        if (worker.getRole() != UserRole.SUPPORT_WORKER) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "활동지원사 계정만 기관을 확인할 수 있습니다.");
+        }
+        Organization org = organizationRepository.findByOrganizationCode(code.trim().toUpperCase())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관 코드를 찾을 수 없습니다."));
+        if (!organizationMemberRepository.existsByOrganizationIdAndUserIdAndStatus(org.getId(), userId, OrganizationMemberStatus.ACTIVE)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ORGANIZATION_MEMBER", "소속 활동지원사로 등록되어 있지 않습니다. 기관 담당자에게 등록을 요청해 주세요.");
+        }
+        return OrganizationResponse.from(org);
+    }
+
     public OrganizationResponse register(Long ownerId, RegisterOrganizationRequest request) {
         User owner = findUser(ownerId);
         if (owner.getRole() != UserRole.INSTITUTION) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "기관 계정만 기관을 등록할 수 있습니다.");
         }
-        if (organizationRepository.findByOwnerId(ownerId).isPresent()) {
+        if (organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_EXISTS", "이미 기관을 보유하고 있습니다.");
         }
 
@@ -75,7 +89,7 @@ public class OrganizationService {
         if (owner.getRole() != UserRole.INSTITUTION) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "기관 계정만 기관을 생성할 수 있습니다.");
         }
-        if (organizationRepository.findByOwnerId(ownerId).isPresent()) {
+        if (organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "ORGANIZATION_ALREADY_EXISTS", "이미 기관을 보유하고 있습니다.");
         }
 
@@ -373,7 +387,7 @@ public class OrganizationService {
     }
 
     private Organization findOrgByOwner(Long ownerId) {
-        return organizationRepository.findByOwnerId(ownerId)
+        return organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
     }
 

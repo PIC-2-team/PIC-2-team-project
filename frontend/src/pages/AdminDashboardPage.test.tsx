@@ -224,6 +224,9 @@ it('기관 관리에서 기관 목록 조회, 신규 생성, 수정, 삭제가 �
   expect(statusBanner).toHaveTextContent('새솔복지관');
   expect(statusBanner).toHaveTextContent('성공적으로 등록되었습니다');
   expect(statusBanner).toHaveTextContent('NEW003');
+  fireEvent.click(within(statusBanner).getByRole('button', { name: '새솔복지관 QR 코드 인쇄' }));
+  expect(screen.getByRole('dialog', { name: '새솔복지관 QR 코드 인쇄' })).toHaveTextContent('NEW003');
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }));
 
   // 2. 기관 수정 모달
   const editButtons = screen.getAllByRole('button', { name: '수정' });
