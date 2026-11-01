@@ -11,6 +11,12 @@ import { Skeleton } from '../components/Skeleton/Skeleton';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
+const CATEGORY_LABEL: Record<RecordCategory, string> = {
+  COMMUNICATION: '의사소통', LIFESTYLE: '생활습관', MEAL: '식사',
+  PREFERENCE: '선호·비선호', CHALLENGING_BEHAVIOR: '도전행동',
+  HEALTH: '건강·복약', EMERGENCY: '위기대처', OTHER: '기타',
+};
+
 const CATEGORY_COLOR: Record<RecordCategory, string> = {
   COMMUNICATION: '#e8f5ee',
   LIFESTYLE: '#f3e8fb',
