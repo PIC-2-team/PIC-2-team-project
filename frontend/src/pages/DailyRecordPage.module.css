@@ -96,9 +96,9 @@
   padding: 0.25rem;
 }
 
-/* 달력 있을 때 스크롤바 공간을 양쪽 동일하게 예약해 가운데 정렬 유지 */
+/* design-system의 scrollbar-gutter: stable을 다른 페이지와 동일하게 되돌림 */
 :global(.app-shell .app-main:has(.calendar-grid)) {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: auto;
 }
 
 /* Calendar */
