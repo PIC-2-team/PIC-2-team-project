@@ -66,7 +66,7 @@ function formatRelativeTime(dateString: string): string {
 export function NotificationInboxPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [tab, setTab] = useState<'all' | 'summary' | 'unread'>('all');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +88,8 @@ export function NotificationInboxPage() {
   }, []);
 
   useEffect(() => {
-    fetchList(filter);
-  }, [filter, fetchList]);
+    if (tab !== 'summary') fetchList(tab);
+  }, [tab, fetchList]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -99,7 +99,7 @@ export function NotificationInboxPage() {
       setTimeout(() => setFeedback(null), 3000);
     } catch {
       // 갱신 재시도
-      fetchList(filter);
+      fetchList(tab === 'unread' ? 'unread' : 'all');
     }
   };
 
@@ -125,7 +125,7 @@ export function NotificationInboxPage() {
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className={styles.title}>알림함</h1>
-          {notifications.length > 0 && (
+          {tab !== 'summary' && notifications.length > 0 && (
             <button
               type="button"
               className={styles.markAllBtn}
@@ -155,27 +155,38 @@ export function NotificationInboxPage() {
           <button
             type="button"
             role="tab"
-            aria-selected={filter === 'all'}
-            className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('all')}
+            aria-selected={tab === 'all'}
+            className={`${styles.tab} ${tab === 'all' ? styles.tabActive : ''}`}
+            onClick={() => setTab('all')}
           >
             전체
           </button>
+          {user?.role === 'GUARDIAN' && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'summary'}
+              className={`${styles.tab} ${tab === 'summary' ? styles.tabActive : ''}`}
+              onClick={() => setTab('summary')}
+            >
+              요약 리포트
+            </button>
+          )}
           <button
             type="button"
             role="tab"
-            aria-selected={filter === 'unread'}
-            className={`${styles.tab} ${filter === 'unread' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('unread')}
+            aria-selected={tab === 'unread'}
+            className={`${styles.tab} ${tab === 'unread' ? styles.tabActive : ''}`}
+            onClick={() => setTab('unread')}
           >
             읽지 않음
             {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
           </button>
         </div>
 
-        {user?.role === 'GUARDIAN' && <UnreadNotificationSummaryCard />}
-
-        {loading ? (
+        {tab === 'summary' ? (
+          <UnreadNotificationSummaryCard />
+        ) : loading ? (
           <p className="muted" role="status">
             알림을 불러오는 중입니다…
           </p>
