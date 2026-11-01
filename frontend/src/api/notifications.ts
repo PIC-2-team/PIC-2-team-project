@@ -2,6 +2,16 @@ import type { NotificationItem } from '../types/notification';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
+export type NotificationSummary = {
+  unreadCount: number;
+  summary: string | null;
+  generatedAt: string;
+};
+
+export function summarizeUnreadNotifications(): Promise<NotificationSummary> {
+  return apiRequest('/api/notifications/summary', { method: 'POST', body: {} });
+}
+
 export function getNotifications(params?: {
   read?: boolean;
   page?: number;

@@ -101,7 +101,7 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
   expect(await screen.findByText('김당사 님')).toBeInTheDocument();
   expect(screen.getByText(/REC-2026-0001/)).toBeInTheDocument();
   expect(screen.getByText(/2010-05-15/)).toBeInTheDocument();
-  expect(screen.getByText(/1급/)).toBeInTheDocument();
+  expect(screen.getByText(/심한 장애 \(1–3급\)/)).toBeInTheDocument();
 
   // 닫기 버튼 클릭
   const closeBtn = screen.getByRole('button', { name: '닫기' });

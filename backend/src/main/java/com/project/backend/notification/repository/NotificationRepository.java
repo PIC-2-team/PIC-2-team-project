@@ -9,12 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     Page<Notification> findByUserId(Long userId, Pageable pageable);
     Page<Notification> findByUserIdAndRead(Long userId, boolean read, Pageable pageable);
     Optional<Notification> findByIdAndUserId(Long id, Long userId);
     long countByUserIdAndRead(Long userId, boolean read);
+    List<Notification> findByUserIdAndReadOrderByCreatedAtDescIdDesc(Long userId, boolean read);
 
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.userId = :userId AND n.read = false")

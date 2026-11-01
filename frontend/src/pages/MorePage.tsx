@@ -281,11 +281,17 @@ export function MorePage() {
                       {recipient.gender === 'MALE' ? '(남)' : recipient.gender === 'FEMALE' ? '(여)' : ''}
                     </p>
                   )}
-                  {recipient.disabilityGrade && (
+                  {(recipient.disabilitySeverity || recipient.disabilityGrade != null) && (
                     <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
-                      장애 정도: {recipient.disabilityGrade}급
+                      장애 정도: {recipient.disabilitySeverity === 'SEVERE' || (recipient.disabilitySeverity == null && recipient.disabilityGrade != null && recipient.disabilityGrade <= 3)
+                        ? '심한 장애 (1–3급)' : '덜 심한 장애'}
                     </p>
                   )}
+                  {recipient.guardianPhone && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>보호자 연락처: {recipient.guardianPhone}</p>}
+                  {recipient.emergencyContactPhone && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>비상연락처: {recipient.emergencyContactPhone}</p>}
+                  {recipient.doctorHospital && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>주치의·병원: {recipient.doctorHospital}</p>}
+                  {recipient.medicationInfo && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>복약 정보: {recipient.medicationInfo}</p>}
+                  {recipient.allergyNotes && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>알레르기·주의사항: {recipient.allergyNotes}</p>}
                 </div>
               </div>
             ) : (

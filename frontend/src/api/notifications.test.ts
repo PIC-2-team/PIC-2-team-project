@@ -5,6 +5,7 @@ import {
   getUnreadNotificationCount,
   markNotificationRead,
   markAllNotificationsRead,
+  summarizeUnreadNotifications,
 } from './notifications';
 
 describe('notifications API', () => {
@@ -65,6 +66,20 @@ describe('notifications API', () => {
       body: {},
     });
     expect(res.updatedCount).toBe(5);
+  });
+
+  it('summarizeUnreadNotifications requests an AI summary without marking notifications read', async () => {
+    const spy = vi.spyOn(client, 'apiRequest').mockResolvedValue({
+      unreadCount: 2,
+      summary: '새 기록과 활동지원사 배정이 있습니다.',
+      generatedAt: '2026-11-01T10:00:00Z',
+    });
+
+    const res = await summarizeUnreadNotifications();
+
+    expect(spy).toHaveBeenCalledWith('/api/notifications/summary', { method: 'POST', body: {} });
+    expect(res.unreadCount).toBe(2);
+    expect(res.summary).toContain('활동지원사 배정');
   });
 });
 

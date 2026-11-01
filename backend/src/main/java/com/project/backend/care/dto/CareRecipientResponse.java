@@ -3,6 +3,7 @@ package com.project.backend.care.dto;
 import com.project.backend.care.entity.CareRecipient;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
+import com.project.backend.care.entity.DisabilitySeverity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,7 +21,12 @@ public record CareRecipientResponse(
         LocalDateTime latestRecordAt,
         LocalDateTime createdAt,
         String guardianName,
-        String guardianPhone
+        String guardianPhone,
+        DisabilitySeverity disabilitySeverity,
+        String emergencyContactPhone,
+        String doctorHospital,
+        String medicationInfo,
+        String allergyNotes
 ) {
     public CareRecipientResponse(
             Long id,
@@ -35,7 +41,17 @@ public record CareRecipientResponse(
             LocalDateTime createdAt
     ) {
         this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilityGrade,
-                otherDisabilityType, latestRecordAt, createdAt, null, null);
+                otherDisabilityType, latestRecordAt, createdAt, null, null,
+                DisabilitySeverity.fromLegacyGrade(disabilityGrade), null, null, null, null);
+    }
+
+    public CareRecipientResponse(Long id, String careRecipientNumber, String name, LocalDate birthDate,
+                                 Gender gender, List<DisabilityType> disabilityTypes, Integer disabilityGrade,
+                                 String otherDisabilityType, LocalDateTime latestRecordAt, LocalDateTime createdAt,
+                                 String guardianName, String guardianPhone) {
+        this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilityGrade,
+                otherDisabilityType, latestRecordAt, createdAt, guardianName, guardianPhone,
+                DisabilitySeverity.fromLegacyGrade(disabilityGrade), null, null, null, null);
     }
 
     public static CareRecipientResponse of(CareRecipient r, List<DisabilityType> disabilities) {
@@ -53,7 +69,10 @@ public record CareRecipientResponse(
                 r.getBirthDate(), r.getGender(), disabilities,
                 r.getDisabilityGrade(), r.getOtherDisabilityType(),
                 r.getLatestRecordAt(), r.getCreatedAt(),
-                guardianName, guardianPhone
+                guardianName,
+                r.getGuardianContactPhone() != null ? r.getGuardianContactPhone() : guardianPhone,
+                r.getDisabilitySeverity(), r.getEmergencyContactPhone(), r.getDoctorHospital(),
+                r.getMedicationInfo(), r.getAllergyNotes()
         );
     }
 }

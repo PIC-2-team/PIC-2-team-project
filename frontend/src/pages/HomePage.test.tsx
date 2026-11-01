@@ -52,6 +52,16 @@ it('INSTITUTION 사용자는 /home 접근 시 /agency로 리다이렉트된다',
   expect(mockNavigate).toHaveBeenCalledWith('/agency', { replace: true });
 });
 
+it('등록된 당사자가 없는 보호자에게 등록 안내와 시작 버튼을 표시한다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([]);
+
+  renderHomePage({ id: 3, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  expect(await screen.findByRole('heading', { name: '등록된 당사자가 없어요' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '당사자 등록하기' }));
+  expect(mockNavigate).toHaveBeenCalledWith('/care-recipients/new');
+});
+
 it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표시하지 않는다', async () => {
   const setSelectedRecipient = vi.fn();
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({

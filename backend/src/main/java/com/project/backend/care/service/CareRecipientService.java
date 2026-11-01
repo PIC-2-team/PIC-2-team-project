@@ -92,7 +92,13 @@ public class CareRecipientService {
                 .birthDate(request.birthDate())
                 .gender(request.gender())
                 .disabilityGrade(request.disabilityGrade())
+                .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
+                .guardianContactPhone(request.guardianPhone())
+                .emergencyContactPhone(request.emergencyContactPhone())
+                .doctorHospital(request.doctorHospital())
+                .medicationInfo(request.medicationInfo())
+                .allergyNotes(request.allergyNotes())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -180,7 +186,9 @@ public class CareRecipientService {
         CareRecipient recipient = findRecipient(careRecipientId);
 
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.otherDisabilityType());
+                request.disabilityGrade(), request.disabilitySeverity(), request.otherDisabilityType(),
+                request.guardianPhone(), request.emergencyContactPhone(), request.doctorHospital(),
+                request.medicationInfo(), request.allergyNotes());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(careRecipientId);
@@ -265,7 +273,8 @@ public class CareRecipientService {
                     Long gId = recipientToGuardianId.get(r.getId());
                     User gUser = gId != null ? guardianUserMap.get(gId) : null;
                     String gName = gUser != null ? gUser.getName() : null;
-                    String gPhone = gUser != null ? gUser.getPhone() : null;
+                    String gPhone = r.getGuardianContactPhone() != null
+                            ? r.getGuardianContactPhone() : gUser != null ? gUser.getPhone() : null;
                     return CareRecipientResponse.of(
                             r,
                             disabilityMap.getOrDefault(r.getId(), List.of()),
@@ -285,7 +294,13 @@ public class CareRecipientService {
                 .birthDate(request.birthDate())
                 .gender(request.gender())
                 .disabilityGrade(request.disabilityGrade())
+                .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
+                .guardianContactPhone(request.guardianPhone())
+                .emergencyContactPhone(request.emergencyContactPhone())
+                .doctorHospital(request.doctorHospital())
+                .medicationInfo(request.medicationInfo())
+                .allergyNotes(request.allergyNotes())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -317,7 +332,9 @@ public class CareRecipientService {
 
         CareRecipient recipient = findRecipient(recipientId);
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.otherDisabilityType());
+                request.disabilityGrade(), request.disabilitySeverity(), request.otherDisabilityType(),
+                request.guardianPhone(), request.emergencyContactPhone(), request.doctorHospital(),
+                request.medicationInfo(), request.allergyNotes());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(recipientId);

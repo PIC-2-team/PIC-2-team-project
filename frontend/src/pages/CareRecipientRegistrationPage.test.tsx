@@ -31,8 +31,9 @@ it('당사자 기본정보와 장애 유형을 제출하고 등록 완료 후 �
   fireEvent.change(screen.getByLabelText('이름'), { target: { value: '김하늘' } });
   fireEvent.change(screen.getByLabelText('생년월일'), { target: { value: '2010-01-01' } });
   fireEvent.click(screen.getByRole('radio', { name: '여성' }));
-  fireEvent.click(screen.getByRole('button', { name: '다음' }));
   fireEvent.click(screen.getByRole('checkbox', { name: '자폐성 장애' }));
+  fireEvent.click(screen.getByRole('button', { name: '다음' }));
+  fireEvent.change(screen.getByLabelText('보호자 연락처'), { target: { value: '010-1111-2222' } });
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
 
   await screen.findByText('홈 화면');
@@ -40,7 +41,8 @@ it('당사자 기본정보와 장애 유형을 제출하고 등록 완료 후 �
     method: 'POST',
     body: JSON.stringify({
       name: '김하늘', birthDate: '2010-01-01', gender: 'FEMALE', disabilityTypes: ['AUTISM'],
-      disabilityGrade: null, otherDisabilityType: null,
+      disabilityGrade: null, disabilitySeverity: null, otherDisabilityType: null,
+      guardianPhone: '010-1111-2222', emergencyContactPhone: '', doctorHospital: '', medicationInfo: '', allergyNotes: '',
     }),
   })));
 });
@@ -58,13 +60,47 @@ it('장애 유형을 선택하지 않으면 등록 요청을 보내지 않는다
   fireEvent.change(screen.getByLabelText('생년월일'), { target: { value: '2010-01-01' } });
   fireEvent.click(screen.getByRole('radio', { name: '여성' }));
   fireEvent.click(screen.getByRole('button', { name: '다음' }));
-  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('장애 유형을 하나 이상 선택해 주세요.');
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
-it('정수가 아닌 장애 정도를 등록하지 않는다', async () => {
-  const fetchMock = vi.spyOn(globalThis, 'fetch');
+it('장애 정도를 새 구분으로 전송한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true, data: { id: 42, name: '김하늘' },
+  }), { status: 201 }));
+  render(
+    <AuthProvider>
+      <MemoryRouter initialEntries={['/care-recipients/new']}>
+        <Routes>
+          <Route path="/care-recipients/new" element={<CareRecipientRegistrationPage />} />
+          <Route path="/home" element={<p>홈 화면</p>} />
+        </Routes>
+      </MemoryRouter>
+    </AuthProvider>,
+  );
+  fireEvent.change(screen.getByLabelText('이름'), { target: { value: '김하늘' } });
+  fireEvent.change(screen.getByLabelText('생년월일'), { target: { value: '2010-01-01' } });
+  fireEvent.click(screen.getByRole('radio', { name: '여성' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: '자폐성 장애' }));
+  fireEvent.click(screen.getByRole('radio', { name: '심한 장애 (1–3급)' }));
+  fireEvent.click(screen.getByRole('button', { name: '다음' }));
+  fireEvent.change(screen.getByLabelText('복약 정보 선택'), { target: { value: '복용 약 안내' } });
+  fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
+
+  await screen.findByText('홈 화면');
+  expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients', expect.objectContaining({
+    method: 'POST',
+    body: expect.stringContaining('"disabilitySeverity":"SEVERE"'),
+  }));
+  expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients', expect.objectContaining({
+    body: expect.stringContaining('"medicationInfo":"복용 약 안내"'),
+  }));
+});
+
+it('장애 정도를 숫자 대신 구분으로 선택할 수 있다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true, data: { id: 42, name: '김하늘' },
+  }), { status: 201 }));
   render(
     <AuthProvider>
       <MemoryRouter>
@@ -75,10 +111,13 @@ it('정수가 아닌 장애 정도를 등록하지 않는다', async () => {
   fireEvent.change(screen.getByLabelText('이름'), { target: { value: '김하늘' } });
   fireEvent.change(screen.getByLabelText('생년월일'), { target: { value: '2010-01-01' } });
   fireEvent.click(screen.getByRole('radio', { name: '여성' }));
-  fireEvent.click(screen.getByRole('button', { name: '다음' }));
   fireEvent.click(screen.getByRole('checkbox', { name: '자폐성 장애' }));
-  fireEvent.change(screen.getByLabelText('장애 정도'), { target: { value: '1.5' } });
+  fireEvent.click(screen.getByRole('radio', { name: '덜 심한 장애' }));
+  fireEvent.click(screen.getByRole('button', { name: '다음' }));
+  expect(screen.getByLabelText('알레르기·주의사항 선택')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('장애 정도는 정수로 입력해 주세요.');
-  expect(fetchMock).not.toHaveBeenCalled();
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"disabilitySeverity":"LESS_SEVERE"'),
+    })));
 });

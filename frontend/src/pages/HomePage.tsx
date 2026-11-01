@@ -9,6 +9,7 @@ import type { DailyRecord } from '../types/record';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
+import { UnreadNotificationSummaryCard } from '../components/UnreadNotificationSummaryCard';
 import styles from './HomePage.module.css';
 
 
@@ -29,6 +30,14 @@ const DISABILITY_MAP: Record<string, string> = {
 
 function formatDisability(type: string): string {
   return DISABILITY_MAP[type] ?? type;
+}
+
+function formatDisabilitySeverity(severity?: string | null, grade?: number | null): string | null {
+  if (severity === 'SEVERE') return '심한 장애 (1–3급)';
+  if (severity === 'LESS_SEVERE') return '덜 심한 장애';
+  if (grade != null && grade >= 1 && grade <= 3) return '심한 장애 (1–3급)';
+  if (grade != null) return '덜 심한 장애';
+  return null;
 }
 
 function getAgeAndGender(birthDate?: string, gender?: 'MALE' | 'FEMALE'): string {
@@ -144,12 +153,14 @@ export function HomePage() {
       );
     }
     return (
-      <div className="demo-page status-page">
-        <h1>안녕하세요, {user?.name}님!</h1>
-        <div className="empty-state">
-          <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
-          <button className="btn" type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
-        </div>
+      <div className={styles.emptyPage}>
+        <h1 className={styles.emptyGreeting}>안녕하세요, {user?.name}님!</h1>
+        <section className={styles.emptyRecipient} aria-labelledby="empty-recipient-title">
+          <div className={styles.emptyAvatar} aria-hidden="true">♙</div>
+          <h2 id="empty-recipient-title">등록된 당사자가 없어요</h2>
+          <p>돌봄을 지원받는 당사자의<br />정보를 등록해 시작하세요.</p>
+        </section>
+        <button className={styles.emptyRegisterButton} type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록하기</button>
       </div>
     );
   }
@@ -204,7 +215,8 @@ export function HomePage() {
               <span className={styles.detailLabel}>장애 유형</span>
               <span className={styles.detailValue}>
                 {recipient.disabilityTypes.map(formatDisability).join(', ')}
-                {recipient.disabilityGrade ? ` (${recipient.disabilityGrade}급)` : ''}
+                {formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)
+                  ? ` · ${formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)}` : ''}
               </span>
             </div>
           )}
@@ -242,6 +254,8 @@ export function HomePage() {
           </button>
         </div>
       </section>
+
+      {user?.role === 'GUARDIAN' && <UnreadNotificationSummaryCard />}
 
       {pinnedRecords.length > 0 && (
         <section className={styles.section} aria-labelledby="pinned-records-title">
@@ -361,10 +375,10 @@ export function HomePage() {
                     </span>
                   </div>
                 )}
-                {recipient.disabilityGrade && (
+                {formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade) && (
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>장애 정도</span>
-                    <span className={styles.infoValue}>{recipient.disabilityGrade}급</span>
+                    <span className={styles.infoValue}>{formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)}</span>
                   </div>
                 )}
                 {recipient.guardianName && (
@@ -377,6 +391,30 @@ export function HomePage() {
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>보호자 연락처</span>
                     <span className={styles.infoValue}>{recipient.guardianPhone}</span>
+                  </div>
+                )}
+                {recipient.emergencyContactPhone && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>비상연락처</span>
+                    <span className={styles.infoValue}>{recipient.emergencyContactPhone}</span>
+                  </div>
+                )}
+                {recipient.doctorHospital && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>주치의·병원</span>
+                    <span className={styles.infoValue}>{recipient.doctorHospital}</span>
+                  </div>
+                )}
+                {recipient.medicationInfo && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>복약 정보</span>
+                    <span className={styles.infoValue}>{recipient.medicationInfo}</span>
+                  </div>
+                )}
+                {recipient.allergyNotes && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>알레르기·주의사항</span>
+                    <span className={styles.infoValue}>{recipient.allergyNotes}</span>
                   </div>
                 )}
               </div>

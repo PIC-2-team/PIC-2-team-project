@@ -16,7 +16,13 @@ export type CreateCareRecipientPayload = {
   gender: 'MALE' | 'FEMALE';
   disabilityTypes: ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[];
   disabilityGrade: number | null;
+  disabilitySeverity: 'SEVERE' | 'LESS_SEVERE' | null;
   otherDisabilityType: string | null;
+  guardianPhone: string;
+  emergencyContactPhone: string;
+  doctorHospital: string;
+  medicationInfo: string;
+  allergyNotes: string;
 };
 
 export function createCareRecipient(payload: CreateCareRecipientPayload): Promise<CareRecipient> {

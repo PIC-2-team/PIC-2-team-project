@@ -5,6 +5,8 @@ import com.project.backend.common.response.PaginatedData;
 import com.project.backend.notification.dto.MarkNotificationReadRequest;
 import com.project.backend.notification.dto.NotificationResponse;
 import com.project.backend.notification.service.NotificationService;
+import com.project.backend.notification.service.NotificationSummaryResponse;
+import com.project.backend.notification.service.NotificationSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,13 @@ import java.util.Map;
 @SecurityRequirement(name = "bearerAuth")
 public class NotificationController {
     private final NotificationService service;
+    private final NotificationSummaryService summaryService;
+
+    @Operation(summary = "미확인 알림 AI 요약")
+    @PostMapping("/summary")
+    public ApiResponse<NotificationSummaryResponse> summarize(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(summaryService.summarize(userId));
+    }
 
     @Operation(summary = "내 알림 목록")
     @GetMapping

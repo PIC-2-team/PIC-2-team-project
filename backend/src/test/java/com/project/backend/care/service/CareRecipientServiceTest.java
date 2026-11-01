@@ -61,13 +61,20 @@ class CareRecipientServiceTest {
 
         CreateCareRecipientRequest req = new CreateCareRecipientRequest(
                 "김삶결", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.INTELLECTUAL), 1, null
+                List.of(DisabilityType.INTELLECTUAL), 1, null, DisabilitySeverity.SEVERE,
+                "010-1111-2222", "010-3333-4444", "서울병원", "복용 약 안내", "알레르기 주의"
         );
 
         CareRecipientResponse response = careRecipientService.register(1L, req);
 
         assertThat(response.careRecipientNumber()).isEqualTo("R-ABCD1234");
         assertThat(response.name()).isEqualTo("김삶결");
+        assertThat(response.disabilitySeverity()).isEqualTo(DisabilitySeverity.SEVERE);
+        assertThat(response.guardianPhone()).isEqualTo("010-1111-2222");
+        assertThat(response.emergencyContactPhone()).isEqualTo("010-3333-4444");
+        assertThat(response.doctorHospital()).isEqualTo("서울병원");
+        assertThat(response.medicationInfo()).isEqualTo("복용 약 안내");
+        assertThat(response.allergyNotes()).isEqualTo("알레르기 주의");
         verify(careRecipientRepository).save(any(CareRecipient.class));
         verify(careGuardianRepository).save(any(CareGuardian.class));
     }
