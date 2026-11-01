@@ -7,6 +7,7 @@ import {
   markAllNotificationsRead,
 } from '../api/notifications';
 import type { NotificationItem, NotificationType } from '../types/notification';
+import { UnreadNotificationSummaryCard } from '../components/UnreadNotificationSummaryCard';
 import styles from './NotificationInboxPage.module.css';
 
 const NOTIFICATION_LABELS: Record<NotificationType, string> = {
@@ -171,6 +172,8 @@ export function NotificationInboxPage() {
             {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
           </button>
         </div>
+
+        {user?.role === 'GUARDIAN' && <UnreadNotificationSummaryCard />}
 
         {loading ? (
           <p className="muted" role="status">

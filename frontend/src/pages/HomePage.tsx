@@ -9,7 +9,6 @@ import type { DailyRecord } from '../types/record';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
-import { UnreadNotificationSummaryCard } from '../components/UnreadNotificationSummaryCard';
 import styles from './HomePage.module.css';
 
 
@@ -254,8 +253,6 @@ export function HomePage() {
           </button>
         </div>
       </section>
-
-      {user?.role === 'GUARDIAN' && <UnreadNotificationSummaryCard />}
 
       {pinnedRecords.length > 0 && (
         <section className={styles.section} aria-labelledby="pinned-records-title">
