@@ -214,7 +214,7 @@ it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하
   fireEvent.change(searchInput, { target: { value: '김철수' } });
 
   // 당사자 드롭다운 및 지원사 드롭다운 선택, 배정 시작일 입력
-  fireEvent.change(screen.getByLabelText('돌봄 대상자'), { target: { value: '200' } });
+  fireEvent.click(screen.getByRole('radio', { name: /김철수/ }));
   fireEvent.click(screen.getByRole('radio', { name: /이지원/ }));
   fireEvent.change(screen.getByLabelText('배정 시작일'), { target: { value: '2026-10-20' } });
 
@@ -674,4 +674,121 @@ it('지원사 프로필에는 현재 담당 중인 당사자만 이름과 고유
   expect(within(dialog).queryByText(/당사자202/)).not.toBeInTheDocument();
   expect(within(dialog).queryByText(/당사자203/)).not.toBeInTheDocument();
   expect(within(dialog).queryByText(/당사자204/)).not.toBeInTheDocument();
+});
+
+type RecipientFixture = Record<string, unknown>;
+
+function mockRecipientProfilePage(
+  recipients: RecipientFixture[],
+  routines: Record<number, Array<{ id: number; time: string; title: string; memo: string | null }> | 'error'>,
+) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    const routineMatch = url.match(/\/api\/care-recipients\/(\d+)\/routines/);
+    if (routineMatch) {
+      const result = routines[Number(routineMatch[1])] ?? [];
+      if (result === 'error') return new Response(JSON.stringify({ success: false, error: { code: 'X', message: 'fail' } }), { status: 500 });
+      return new Response(JSON.stringify({ success: true, data: result.map(r => ({ ...r, careRecipientId: Number(routineMatch[1]) })) }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({ success: true, data: [
+        { id: 1, userId: 20, name: '활성지원사A', publicCode: 'S-ACTIVE0', status: 'ACTIVE', joinedAt: '2026-09-01T09:00:00' },
+      ] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/recipients')) {
+      return new Response(JSON.stringify({ success: true, data: recipients }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/guardians') || url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: true, data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' } }), { status: 200 });
+  });
+}
+
+const fullRecipient: RecipientFixture = {
+  id: 201, name: '이영희', careRecipientNumber: 'R-0003', birthDate: '2012-03-08', gender: 'FEMALE',
+  disabilityTypes: ['AUTISM', 'OTHER'], otherDisabilityType: '뇌병변', disabilitySeverity: 'SEVERE',
+  hospitalName: '삼결병원', doctorName: '김의사', hospitalPhone: '053-000-0000',
+  supportCenterName: '행복센터', supportCenterManagerName: '박담당', supportCenterPhone: '053-111-1111',
+  guardianName: '박보호', guardianPhone: '010-1234-5678',
+};
+const plainRecipient: RecipientFixture = {
+  id: 200, name: '김철수', careRecipientNumber: 'R-0002', birthDate: '2000-01-01', gender: 'MALE',
+};
+
+async function openAssignModal() {
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+}
+
+it('당사자 선택 목록에 고유번호를 표시하고 이름·번호로 검색할 수 있다', async () => {
+  mockRecipientProfilePage([plainRecipient, fullRecipient], {});
+  await openAssignModal();
+
+  expect(screen.getByRole('radio', { name: /김철수.*R-0002/ })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /이영희.*R-0003/ })).toBeInTheDocument();
+
+  fireEvent.change(screen.getByPlaceholderText('대상자 이름 또는 번호 검색…'), { target: { value: 'R-0003' } });
+  expect(screen.queryByRole('radio', { name: /김철수/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /이영희/ })).toBeInTheDocument();
+
+  fireEvent.change(screen.getByPlaceholderText('대상자 이름 또는 번호 검색…'), { target: { value: '없는사람' } });
+  expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+});
+
+it('당사자 프로필 보기를 누르면 상세 정보와 루틴을 보여주고 선택은 바뀌지 않는다', async () => {
+  mockRecipientProfilePage([plainRecipient, fullRecipient], {
+    201: [
+      { id: 1, time: '07:30', title: '기상', memo: '천천히' },
+      { id: 2, time: '19:00', title: '저녁 식사', memo: null },
+    ],
+  });
+  await openAssignModal();
+  expect(screen.getByRole('radio', { name: /김철수/ })).toBeChecked();
+
+  fireEvent.click(screen.getByRole('button', { name: '이영희 프로필 보기' }));
+
+  const dialog = await screen.findByRole('dialog', { name: '돌봄 당사자 프로필' });
+  expect(within(dialog).getByText('이영희')).toBeInTheDocument();
+  expect(within(dialog).getByText('R-0003')).toBeInTheDocument();
+  expect(within(dialog).getByText('2012-03-08 (여)')).toBeInTheDocument();
+  expect(within(dialog).getByText(/자폐성 장애/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/뇌병변/)).toBeInTheDocument();
+  expect(within(dialog).getByText('심한 장애')).toBeInTheDocument();
+  expect(within(dialog).getByText('삼결병원 · 김의사 · 053-000-0000')).toBeInTheDocument();
+  expect(within(dialog).getByText('행복센터 · 박담당 · 053-111-1111')).toBeInTheDocument();
+  expect(within(dialog).getByText('박보호 (010-1234-5678)')).toBeInTheDocument();
+
+  const items = await within(dialog).findAllByRole('listitem');
+  expect(items[0].textContent).toContain('07:30');
+  expect(items[0].textContent).toContain('기상');
+  expect(items[0].textContent).toContain('천천히');
+  expect(items[1].textContent).toContain('19:00');
+
+  expect(screen.getByRole('radio', { name: /김철수/ })).toBeChecked();
+  fireEvent.click(within(dialog).getByRole('button', { name: '닫기' }));
+  expect(screen.queryByRole('dialog', { name: '돌봄 당사자 프로필' })).not.toBeInTheDocument();
+});
+
+it('당사자 프로필에 입력된 정보가 없으면 안내 문구를 보여준다', async () => {
+  mockRecipientProfilePage([plainRecipient], { 200: [] });
+  await openAssignModal();
+
+  fireEvent.click(screen.getByRole('button', { name: '김철수 프로필 보기' }));
+
+  const dialog = await screen.findByRole('dialog', { name: '돌봄 당사자 프로필' });
+  expect(within(dialog).getAllByText('등록된 정보가 없어요.').length).toBeGreaterThanOrEqual(3);
+  expect(await within(dialog).findByText('등록된 루틴이 없어요.')).toBeInTheDocument();
+});
+
+it('루틴을 불러오지 못해도 당사자 프로필은 보여주고 오류를 안내한다', async () => {
+  mockRecipientProfilePage([fullRecipient], { 201: 'error' });
+  await openAssignModal();
+
+  fireEvent.click(screen.getByRole('button', { name: '이영희 프로필 보기' }));
+
+  const dialog = await screen.findByRole('dialog', { name: '돌봄 당사자 프로필' });
+  expect(within(dialog).getByText('이영희')).toBeInTheDocument();
+  expect(await within(dialog).findByText('루틴을 불러오지 못했어요.')).toBeInTheDocument();
 });

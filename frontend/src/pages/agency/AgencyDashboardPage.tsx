@@ -23,6 +23,7 @@ import {
 } from '../../api/organizations';
 import { ApiError } from '../../api/client';
 import { toSeoulDateKey } from '../../utils/date';
+import { RecipientProfileDialog } from './RecipientProfileDialog';
 import type {
   Organization,
   OrganizationMember,
@@ -140,6 +141,7 @@ export function AgencyDashboardPage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
   const [profileMember, setProfileMember] = useState<OrganizationMember | null>(null);
+  const [profileRecipient, setProfileRecipient] = useState<OrganizationCareRecipient | null>(null);
   const todayKey = toSeoulDateKey(new Date().toISOString());
   // 지원사가 현재 담당 중인 당사자 (같은 당사자에 대한 중복 배정은 한 명으로 센다)
   const currentRecipientsOf = (member: OrganizationMember) => {
@@ -1161,22 +1163,48 @@ export function AgencyDashboardPage() {
                             style={{ marginBottom: 6, fontSize: '0.82rem' }}
                           />
 
-                          <select
-                            aria-label="돌봄 대상자"
-                            value={assignCareRecipientId}
-                            onChange={(e) => setAssignCareRecipientId(e.target.value)}
-                            required
-                          >
+                          <div role="radiogroup" aria-label="돌봄 대상자" style={{ maxHeight: 240, overflowY: 'auto' }}>
                             {filteredRecipients.length > 0 ? (
-                              filteredRecipients.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.name} ({r.careRecipientNumber || `#${r.id}`})
-                                </option>
-                              ))
+                              filteredRecipients.map((r) => {
+                                const value = String(r.id);
+                                return (
+                                  <div
+                                    key={r.id}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #eef1f4' }}
+                                  >
+                                    <label style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 8, minWidth: 0, margin: 0 }}>
+                                      <input
+                                        type="radio"
+                                        name="assignRecipient"
+                                        value={value}
+                                        checked={assignCareRecipientId === value}
+                                        onChange={() => setAssignCareRecipientId(value)}
+                                        required
+                                        style={{ width: 'auto', margin: 0, flexShrink: 0 }}
+                                      />
+                                      <span style={{ minWidth: 0 }}>
+                                        <strong>{r.name}</strong>{' '}
+                                        <span className="muted">{r.careRecipientNumber || `#${r.id}`}</span>
+                                      </span>
+                                    </label>
+                                    <button
+                                      type="button"
+                                      aria-label={`${r.name} 프로필 보기`}
+                                      onClick={() => setProfileRecipient(r)}
+                                      style={{
+                                        minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
+                                        background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
+                                      }}
+                                    >
+                                      프로필 보기
+                                    </button>
+                                  </div>
+                                );
+                              })
                             ) : (
-                              <option disabled value="">검색 결과가 없습니다</option>
+                              <p className="muted" style={{ margin: '8px 0' }}>검색 결과가 없습니다</p>
                             )}
-                          </select>
+                          </div>
                         </>
                       ) : (
                         <div
@@ -1290,6 +1318,7 @@ export function AgencyDashboardPage() {
             )}
           </>
         )}
+        {profileRecipient && <RecipientProfileDialog recipient={profileRecipient} onClose={() => setProfileRecipient(null)} />}
         {profileMember && page.status === 'ok' && (() => {
           const recipients = currentRecipientsOf(profileMember);
           return (
