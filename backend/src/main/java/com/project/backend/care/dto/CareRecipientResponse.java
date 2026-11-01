@@ -1,6 +1,7 @@
 package com.project.backend.care.dto;
 
 import com.project.backend.care.entity.CareRecipient;
+import com.project.backend.care.entity.DisabilitySeverity;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 
@@ -15,12 +16,18 @@ public record CareRecipientResponse(
         LocalDate birthDate,
         Gender gender,
         List<DisabilityType> disabilityTypes,
-        Integer disabilityGrade,
+        DisabilitySeverity disabilitySeverity,
         String otherDisabilityType,
         LocalDateTime latestRecordAt,
         LocalDateTime createdAt,
         String guardianName,
-        String guardianPhone
+        String guardianPhone,
+        String hospitalName,
+        String doctorName,
+        String hospitalPhone,
+        String supportCenterName,
+        String supportCenterManagerName,
+        String supportCenterPhone
 ) {
     public CareRecipientResponse(
             Long id,
@@ -29,13 +36,14 @@ public record CareRecipientResponse(
             LocalDate birthDate,
             Gender gender,
             List<DisabilityType> disabilityTypes,
-            Integer disabilityGrade,
+            DisabilitySeverity disabilitySeverity,
             String otherDisabilityType,
             LocalDateTime latestRecordAt,
             LocalDateTime createdAt
     ) {
-        this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilityGrade,
-                otherDisabilityType, latestRecordAt, createdAt, null, null);
+        this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilitySeverity,
+                otherDisabilityType, latestRecordAt, createdAt, null, null,
+                null, null, null, null, null, null);
     }
 
     public static CareRecipientResponse of(CareRecipient r, List<DisabilityType> disabilities) {
@@ -51,9 +59,11 @@ public record CareRecipientResponse(
         return new CareRecipientResponse(
                 r.getId(), r.getCareRecipientNumber(), r.getName(),
                 r.getBirthDate(), r.getGender(), disabilities,
-                r.getDisabilityGrade(), r.getOtherDisabilityType(),
+                r.getDisabilitySeverity(), r.getOtherDisabilityType(),
                 r.getLatestRecordAt(), r.getCreatedAt(),
-                guardianName, guardianPhone
+                guardianName, guardianPhone,
+                r.getHospitalName(), r.getDoctorName(), r.getHospitalPhone(),
+                r.getSupportCenterName(), r.getSupportCenterManagerName(), r.getSupportCenterPhone()
         );
     }
 }

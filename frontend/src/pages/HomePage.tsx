@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
-import type { CareRecipient } from '../types/careRecipient';
+import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
@@ -204,7 +204,7 @@ export function HomePage() {
               <span className={styles.detailLabel}>장애 유형</span>
               <span className={styles.detailValue}>
                 {recipient.disabilityTypes.map(formatDisability).join(', ')}
-                {recipient.disabilityGrade ? ` (${recipient.disabilityGrade}급)` : ''}
+                {recipient.disabilitySeverity ? ` (${DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]})` : ''}
               </span>
             </div>
           )}
@@ -361,10 +361,22 @@ export function HomePage() {
                     </span>
                   </div>
                 )}
-                {recipient.disabilityGrade && (
+                {recipient.disabilitySeverity && (
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>장애 정도</span>
-                    <span className={styles.infoValue}>{recipient.disabilityGrade}급</span>
+                    <span className={styles.infoValue}>{DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>주치의·병원</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone)}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>활동지원센터</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone)}</span>
                   </div>
                 )}
                 {recipient.guardianName && (

@@ -1,3 +1,5 @@
+import type { DisabilitySeverity } from './careRecipient';
+
 export type Organization = {
   id: number;
   name: string;
@@ -47,7 +49,7 @@ export type OrganizationCareRecipient = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   disabilityTypes?: string[];
-  disabilityGrade?: number | null;
+  disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
   latestRecordAt?: string | null;
   createdAt?: string;

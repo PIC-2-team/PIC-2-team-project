@@ -1,3 +1,4 @@
+import type { DisabilitySeverity } from '../types/careRecipient';
 import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian } from '../types/agency';
 import { apiRequest } from './client';
 
@@ -81,7 +82,7 @@ export function createOrganizationRecipient(payload: {
   birthDate: string;
   gender: string;
   disabilityTypes?: string[];
-  disabilityGrade?: number | null;
+  disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
 }): Promise<OrganizationCareRecipient> {
   return apiRequest('/api/organizations/me/recipients', {
@@ -100,7 +101,7 @@ export function updateOrganizationRecipient(
     birthDate: string;
     gender: string;
     disabilityTypes?: string[];
-    disabilityGrade?: number | null;
+    disabilitySeverity?: DisabilitySeverity | null;
     otherDisabilityType?: string | null;
   }>
 ): Promise<OrganizationCareRecipient> {

@@ -1,3 +1,4 @@
+import type { DisabilitySeverity } from '../types/careRecipient';
 import { apiRequest } from './client';
 
 export type AdminOrganization = {
@@ -127,7 +128,7 @@ export type AdminCareRecipient = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE';
   disabilityTypes: ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[];
-  disabilityGrade: number | null;
+  disabilitySeverity: DisabilitySeverity | null;
   otherDisabilityType: string | null;
   guardianName: string | null;
   guardianEmail: string | null;
@@ -140,7 +141,7 @@ export type CreateAdminCareRecipientPayload = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE';
   disabilityTypes?: ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[];
-  disabilityGrade?: number | null;
+  disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
 };
 
