@@ -178,6 +178,7 @@ export function DailyRecordPage() {
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
+  const trailingDays = 42 - firstDayOfWeek - daysInMonth;
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
 
   const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
@@ -279,6 +280,9 @@ export function DailyRecordPage() {
               </button>
             );
           })}
+          {Array.from({ length: trailingDays }).map((_, i) => (
+            <div key={`empty-after-${i}`} />
+          ))}
         </div>
       </section>}
 
