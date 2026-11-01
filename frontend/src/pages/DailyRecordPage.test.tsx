@@ -210,6 +210,7 @@ it.each(['GUARDIAN', 'SUPPORT_WORKER'])('%s는 일정 추가 UI를 사용할 수
   await screen.findByText('이 날의 일정이 없어요.');
   expect(screen.getByRole('button', { name: '+ 일정 추가' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '+ 일정 추가' }));
+  expect(screen.queryByText('이 날의 일정이 없어요.')).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: '일정 제목' }), { target: { value: '병원 방문' } });
   fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
   await waitFor(() => expect(create).toHaveBeenCalledWith(42, expect.objectContaining({ title: '병원 방문' })));

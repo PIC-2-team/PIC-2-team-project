@@ -393,7 +393,7 @@ export function DailyRecordPage() {
           )}
 
           {selectedSchedules.length === 0 ? (
-            <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 일정이 없어요.</p>
+            !scheduleFormOpen && <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 일정이 없어요.</p>
           ) : (
             <div className={styles.records}>
               {selectedSchedules.map(schedule => (
