@@ -14,12 +14,15 @@ import java.util.regex.Pattern;
 public class ExpressionSoftener {
     private static final Map<Pattern, String> REPLACEMENTS = new LinkedHashMap<>();
 
+    // "정상인 체온"처럼 정상 판정으로 쓰이는 경우가 흔해, 사람을 가리키는 조사가 바로 붙을 때만 치환한다
+    private static final String PERSON_PARTICLE = "(?:들(?:과|와|이|가|은|는|을|를|의|에게|처럼|보다|도)?|과|와|이|가|은|는|을|를|의|에게|처럼|보다|도)";
+
     static {
-        add("정상인", "비장애인");
+        add("(?<![가-힣])정상인(?=" + PERSON_PARTICLE + "(?![가-힣]))", "비장애인");
         add("장애우", "장애인");
-        add("정신지체", "지적장애");
-        add("정신박약", "지적장애");
-        add("문제\\s?행동", "도전적 행동");
+        add("정신(?:지체|박약)(?=\\s?장애)", "지적");
+        add("정신(?:지체|박약)", "지적장애");
+        add("(?<!도전적\\s?)문제\\s?행동", "도전적 행동");
     }
 
     private static void add(String regex, String replacement) {

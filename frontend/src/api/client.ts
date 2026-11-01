@@ -67,7 +67,7 @@ function refreshAccessToken(): Promise<RefreshResult> {
           method: 'POST',
           credentials: 'include',
         });
-        if (response.status >= 500) return REFRESH_UNAVAILABLE;
+        if (response.status >= 500 || response.status === 408 || response.status === 429) return REFRESH_UNAVAILABLE;
         if (!response.ok) return null;
         const json = (await response.json()) as ApiResponse<{ accessToken: string }>;
         if (!json.success || !json.data.accessToken) return null;
@@ -122,7 +122,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       ? latestToken
       : token ? await refreshAccessToken() : null;
     if (refreshed === REFRESH_UNAVAILABLE) {
-      throw new ApiError('NETWORK_ERROR', '네트워크 상태를 확인하고 다시 시도해 주세요.', 0);
+      throw new ApiError('NETWORK_ERROR', '일시적으로 연결할 수 없어요. 잠시 후 다시 시도해 주세요.', 0);
     }
     const refreshedToken = refreshed;
     if (refreshedToken) res = await sendRequest(path, options, refreshedToken);

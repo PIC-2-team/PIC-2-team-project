@@ -245,12 +245,24 @@ class RecordDraftApiTest {
 
     @Test
     void stigmatizingTermsInTheDraftAreSoftenedBeforeReturning() throws Exception {
-        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"정상인 앞에서 문제행동이 있었습니다.\"}"));
+        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"정상인과 있을 때 문제행동이 있었습니다.\"}"));
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
                         .content(textRequest("관찰 내용"))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content").value("비장애인 앞에서 도전적 행동이 있었습니다."));
+                .andExpect(jsonPath("$.data.content").value("비장애인과 있을 때 도전적 행동이 있었습니다."));
+    }
+
+    @Test
+    void draftStaysValidWhenSofteningMakesItLongerThanTheLimit() throws Exception {
+        String content = "문제행동 ".repeat(100).trim();
+        org.assertj.core.api.Assertions.assertThat(content.length()).isLessThanOrEqualTo(500);
+        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"" + content + "\"}"));
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용"))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value(content));
     }
 
     @Test
@@ -262,7 +274,7 @@ class RecordDraftApiTest {
         org.mockito.ArgumentCaptor<ChatCompletionCreateParams> params = org.mockito.ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
         verify(completions).create(params.capture());
         org.assertj.core.api.Assertions.assertThat(params.getValue().toString())
-                .contains("낙인").contains("횟수").contains("지어내지");
+                .contains("낙인").contains("횟수").contains("지어내지").contains("묶지 말");
     }
 
     @Test
