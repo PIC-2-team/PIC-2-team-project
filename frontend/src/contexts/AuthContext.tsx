@@ -19,6 +19,10 @@ type Action =
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET': {
+      if (!action.payload) {
+        console.error('[AuthContext] SET dispatched with null payload', new Error().stack);
+        return state;
+      }
       try {
         localStorage.setItem('sam_token', action.payload.accessToken);
         localStorage.setItem('sam_user', JSON.stringify(action.payload.user));
