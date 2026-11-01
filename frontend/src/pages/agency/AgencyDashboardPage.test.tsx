@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -215,7 +215,7 @@ it('배정 탭에서 등록된 대상자와 돌봄 지원사를 검색/선택하
 
   // 당사자 드롭다운 및 지원사 드롭다운 선택, 배정 시작일 입력
   fireEvent.change(screen.getByLabelText('돌봄 대상자'), { target: { value: '200' } });
-  fireEvent.change(screen.getByLabelText('돌봄 지원사'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('radio', { name: /이지원/ }));
   fireEvent.change(screen.getByLabelText('배정 시작일'), { target: { value: '2026-10-20' } });
 
   // 배정 제출
@@ -261,9 +261,8 @@ it('배정할 때 비활성 지원사는 선택지에서 제외하고 활성 지
   await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
   fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
 
-  expect(screen.getByRole('combobox', { name: '돌봄 지원사' })).toHaveValue('20');
-  expect(screen.queryByRole('option', { name: /비활성지원사/ })).not.toBeInTheDocument();
-  expect(screen.getByRole('option', { name: /활성지원사/ })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /활성지원사/ })).toBeChecked();
+  expect(screen.queryByRole('radio', { name: /비활성지원사/ })).not.toBeInTheDocument();
 });
 
 it('활성 지원사가 없으면 배정할 수 없다고 안내하고 제출을 막는다', async () => {
@@ -591,4 +590,88 @@ it('기관은 고유 코드로 연결한 지원사 계정의 이름과 전화번
   expect(await screen.findByText('기존 지원사')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '비활성화' })).toBeInTheDocument();
+});
+
+function seoulDate(offsetDays: number) {
+  const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+}
+
+function mockAssignmentPageWithAssignments() {
+  const assign = (id: number, recipientId: number, worker: number, start: string, end: string | null, endedAt: string | null) => ({
+    id, organizationId: 1, careRecipientId: recipientId, supportWorkerId: worker,
+    startDate: start, endDate: end, endedAt, createdAt: '2026-10-01T00:00:00',
+  });
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/api/organizations/me/members')) {
+      return new Response(JSON.stringify({ success: true, data: [
+        { id: 1, userId: 20, name: '활성지원사A', publicCode: 'S-ACTIVE0', status: 'ACTIVE', joinedAt: '2026-09-01T09:00:00' },
+        { id: 2, userId: 30, name: '활성지원사B', publicCode: 'S-ACTIVE1', status: 'ACTIVE', joinedAt: '2026-09-15T09:00:00' },
+      ] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/recipients')) {
+      return new Response(JSON.stringify({ success: true, data: [200, 201, 202, 203, 204].map(id => (
+        { id, name: `당사자${id}`, careRecipientNumber: `R-${id}`, birthDate: '2000-01-01', gender: 'MALE' })) }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/assignments')) {
+      return new Response(JSON.stringify({ success: true, data: [
+        assign(1, 200, 20, seoulDate(-1), null, null),                       // 진행 중
+        assign(2, 201, 20, seoulDate(0), seoulDate(1), null),                // 진행 중 (오늘 시작, 내일 종료)
+        assign(3, 202, 20, seoulDate(-10), null, '2026-10-20T00:00:00'),     // 종료됨
+        assign(4, 203, 20, seoulDate(1), null, null),                        // 내일 시작
+        assign(5, 204, 20, seoulDate(-10), seoulDate(-1), null),             // 종료일 지남
+        assign(6, 200, 20, seoulDate(-3), null, null),                       // 같은 당사자 중복 배정
+      ] }), { status: 200 });
+    }
+    if (url.includes('/api/organizations/me/guardians')) {
+      return new Response(JSON.stringify({ success: true, data: [] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ success: true, data: { id: 1, name: '희망 복지관', organizationCode: 'HOPE01' } }), { status: 200 });
+  });
+}
+
+it('지원사 선택 목록에 고유번호와 현재 담당 중인 당사자 수를 표시한다', async () => {
+  mockAssignmentPageWithAssignments();
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+
+  expect(screen.getByRole('radio', { name: /활성지원사A.*S-ACTIVE0.*담당 2명/ })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /활성지원사B.*S-ACTIVE1.*담당 0명/ })).toBeInTheDocument();
+});
+
+it('프로필 보기를 누르면 지원사 상세와 현재 담당 당사자를 보여주고 선택은 바뀌지 않는다', async () => {
+  mockAssignmentPageWithAssignments();
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+  expect(screen.getByRole('radio', { name: /활성지원사A/ })).toBeChecked();
+
+  fireEvent.click(screen.getByRole('button', { name: '활성지원사B 프로필 보기' }));
+
+  const dialog = screen.getByRole('dialog', { name: '돌봄 지원사 프로필' });
+  expect(within(dialog).getByText('활성지원사B')).toBeInTheDocument();
+  expect(within(dialog).getByText('S-ACTIVE1')).toBeInTheDocument();
+  expect(within(dialog).getByText('담당 중인 당사자가 없어요.')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /활성지원사A/ })).toBeChecked();
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '닫기' }));
+  expect(screen.queryByRole('dialog', { name: '돌봄 지원사 프로필' })).not.toBeInTheDocument();
+});
+
+it('지원사 프로필에는 현재 담당 중인 당사자만 이름과 고유번호로 보여준다', async () => {
+  mockAssignmentPageWithAssignments();
+  renderWithProviders(['/agency?tab=assignments']);
+  await screen.findByRole('heading', { level: 2, name: '희망 복지관' });
+  fireEvent.click(screen.getByRole('button', { name: '+ 배정하기' }));
+
+  fireEvent.click(screen.getByRole('button', { name: '활성지원사A 프로필 보기' }));
+
+  const dialog = screen.getByRole('dialog', { name: '돌봄 지원사 프로필' });
+  expect(within(dialog).getByText(/당사자200/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/당사자201/)).toBeInTheDocument();
+  expect(within(dialog).queryByText(/당사자202/)).not.toBeInTheDocument();
+  expect(within(dialog).queryByText(/당사자203/)).not.toBeInTheDocument();
+  expect(within(dialog).queryByText(/당사자204/)).not.toBeInTheDocument();
 });
