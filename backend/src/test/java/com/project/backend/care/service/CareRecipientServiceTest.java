@@ -3,6 +3,7 @@ package com.project.backend.care.service;
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
+import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
@@ -61,15 +62,36 @@ class CareRecipientServiceTest {
 
         CreateCareRecipientRequest req = new CreateCareRecipientRequest(
                 "김삶결", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.INTELLECTUAL), 1, null
+                List.of(DisabilityType.INTELLECTUAL), DisabilitySeverity.SEVERE, null
         );
 
         CareRecipientResponse response = careRecipientService.register(1L, req);
 
         assertThat(response.careRecipientNumber()).isEqualTo("R-ABCD1234");
         assertThat(response.name()).isEqualTo("김삶결");
+        assertThat(response.disabilitySeverity()).isEqualTo(DisabilitySeverity.SEVERE);
         verify(careRecipientRepository).save(any(CareRecipient.class));
         verify(careGuardianRepository).save(any(CareGuardian.class));
+    }
+
+    @Test
+    void update_장애_정도를_심하지_않은_장애로_변경하면_응답에_반영() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0001").name("김삶결")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE)
+                .disabilitySeverity(DisabilitySeverity.SEVERE).build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findById(100L)).willReturn(Optional.of(recipient));
+
+        UpdateCareRecipientRequest req = new UpdateCareRecipientRequest(
+                null, null, null, null, DisabilitySeverity.NOT_SEVERE, null);
+
+        CareRecipientResponse response = careRecipientService.update(1L, 100L, req);
+
+        assertThat(response.disabilitySeverity()).isEqualTo(DisabilitySeverity.NOT_SEVERE);
+        assertThat(recipient.getDisabilitySeverity()).isEqualTo(DisabilitySeverity.NOT_SEVERE);
     }
 
     @Test

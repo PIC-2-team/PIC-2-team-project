@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient, listCareRecipients } from '../api/careRecipients';
-import type { CareRecipient } from '../types/careRecipient';
+import { DISABILITY_SEVERITY_LABELS, type CareRecipient } from '../types/careRecipient';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
 
@@ -281,9 +281,9 @@ export function MorePage() {
                       {recipient.gender === 'MALE' ? '(남)' : recipient.gender === 'FEMALE' ? '(여)' : ''}
                     </p>
                   )}
-                  {recipient.disabilityGrade && (
+                  {recipient.disabilitySeverity && (
                     <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
-                      장애 정도: {recipient.disabilityGrade}급
+                      장애 정도: {DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}
                     </p>
                   )}
                 </div>

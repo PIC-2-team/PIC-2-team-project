@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createCareRecipient } from '../api/careRecipients';
 import { useAuth } from '../contexts/AuthContext';
 import type { CreateCareRecipientPayload } from '../api/careRecipients';
+import { DISABILITY_SEVERITY_LABELS, type DisabilitySeverity } from '../types/careRecipient';
 import styles from './CareRecipientRegistrationPage.module.css';
 
 const DISABILITIES: { value: CreateCareRecipientPayload['disabilityTypes'][number]; label: string }[] = [
@@ -20,7 +21,7 @@ export function CareRecipientRegistrationPage() {
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<CreateCareRecipientPayload['gender'] | ''>('');
   const [disabilityTypes, setDisabilityTypes] = useState<CreateCareRecipientPayload['disabilityTypes']>([]);
-  const [disabilityGrade, setDisabilityGrade] = useState('');
+  const [disabilitySeverity, setDisabilitySeverity] = useState<DisabilitySeverity | null>(null);
   const [otherDisabilityType, setOtherDisabilityType] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,17 +41,12 @@ export function CareRecipientRegistrationPage() {
       setError('장애 유형을 입력해 주세요.');
       return;
     }
-    const grade = disabilityGrade.trim() ? Number(disabilityGrade) : null;
-    if (grade !== null && !Number.isInteger(grade)) {
-      setError('장애 정도는 정수로 입력해 주세요.');
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
       const recipient = await createCareRecipient({
         name: name.trim(), birthDate, gender: gender as CreateCareRecipientPayload['gender'],
-        disabilityTypes, disabilityGrade: grade,
+        disabilityTypes, disabilitySeverity,
         otherDisabilityType: disabilityTypes.includes('OTHER') ? otherDisabilityType.trim() : null,
       });
       setSelectedRecipient(recipient.id);
@@ -96,9 +92,12 @@ export function CareRecipientRegistrationPage() {
                 </label>)}
               </div>
               {disabilityTypes.includes('OTHER') && <label className={styles.field}>장애 유형<input value={otherDisabilityType} onChange={e => setOtherDisabilityType(e.target.value)} placeholder="장애 유형을 입력해 주세요" /></label>}
-              <label className={styles.field}>장애 정도 <span className={styles.optional}>선택</span>
-                <input type="number" inputMode="numeric" step={1} aria-label="장애 정도" value={disabilityGrade} onChange={e => setDisabilityGrade(e.target.value)} placeholder="숫자로 입력해 주세요" />
-              </label>
+              <fieldset className={styles.gender}>
+                <legend>장애 정도 <span className={styles.optional}>선택</span></legend>
+                {(Object.keys(DISABILITY_SEVERITY_LABELS) as DisabilitySeverity[]).map(value => (
+                  <label key={value}><input type="radio" name="disabilitySeverity" value={value} checked={disabilitySeverity === value} onChange={() => setDisabilitySeverity(value)} /> {DISABILITY_SEVERITY_LABELS[value]}</label>
+                ))}
+              </fieldset>
               <p className={styles.privacy}>입력한 정보는 당사자 돌봄을 위해서만 사용돼요.</p>
               <button className={styles.primary} type="button" disabled={saving} onClick={() => { void submit(); }}>{saving ? '등록 중…' : '등록하기'}</button>
             </>

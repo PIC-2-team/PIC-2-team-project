@@ -91,7 +91,7 @@ public class CareRecipientService {
                 .name(request.name())
                 .birthDate(request.birthDate())
                 .gender(request.gender())
-                .disabilityGrade(request.disabilityGrade())
+                .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
                 .build();
         recipient = careRecipientRepository.save(recipient);
@@ -180,7 +180,7 @@ public class CareRecipientService {
         CareRecipient recipient = findRecipient(careRecipientId);
 
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.otherDisabilityType());
+                request.disabilitySeverity(), request.otherDisabilityType());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(careRecipientId);
@@ -284,7 +284,7 @@ public class CareRecipientService {
                 .name(request.name())
                 .birthDate(request.birthDate())
                 .gender(request.gender())
-                .disabilityGrade(request.disabilityGrade())
+                .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
                 .build();
         recipient = careRecipientRepository.save(recipient);
@@ -317,7 +317,7 @@ public class CareRecipientService {
 
         CareRecipient recipient = findRecipient(recipientId);
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.otherDisabilityType());
+                request.disabilitySeverity(), request.otherDisabilityType());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(recipientId);

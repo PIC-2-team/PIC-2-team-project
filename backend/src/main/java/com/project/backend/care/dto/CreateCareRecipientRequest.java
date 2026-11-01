@@ -1,5 +1,6 @@
 package com.project.backend.care.dto;
 
+import com.project.backend.care.entity.DisabilitySeverity;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 import jakarta.validation.constraints.NotBlank;
@@ -14,6 +15,6 @@ public record CreateCareRecipientRequest(
         @NotNull LocalDate birthDate,
         @NotNull Gender gender,
         @NotEmpty List<DisabilityType> disabilityTypes,
-        Integer disabilityGrade,
+        DisabilitySeverity disabilitySeverity,
         String otherDisabilityType
 ) {}

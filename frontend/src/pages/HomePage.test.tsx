@@ -109,7 +109,7 @@ it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고
       birthDate: '2000-01-01',
       gender: 'MALE',
       disabilityTypes: ['AUTISM'],
-      disabilityGrade: 1,
+      disabilitySeverity: 'SEVERE',
       guardianName: '김보호',
       guardianPhone: '010-1234-5678',
     } as any,

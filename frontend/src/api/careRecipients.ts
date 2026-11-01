@@ -1,4 +1,4 @@
-import type { CareRecipient } from '../types/careRecipient';
+import type { CareRecipient, DisabilitySeverity } from '../types/careRecipient';
 import { apiRequest } from './client';
 
 export function listCareRecipients(): Promise<CareRecipient[]> {
@@ -15,7 +15,7 @@ export type CreateCareRecipientPayload = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE';
   disabilityTypes: ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[];
-  disabilityGrade: number | null;
+  disabilitySeverity: DisabilitySeverity | null;
   otherDisabilityType: string | null;
 };
 

@@ -1,6 +1,7 @@
 package com.project.backend.care.dto;
 
 import com.project.backend.care.entity.CareRecipient;
+import com.project.backend.care.entity.DisabilitySeverity;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 
@@ -15,7 +16,7 @@ public record CareRecipientResponse(
         LocalDate birthDate,
         Gender gender,
         List<DisabilityType> disabilityTypes,
-        Integer disabilityGrade,
+        DisabilitySeverity disabilitySeverity,
         String otherDisabilityType,
         LocalDateTime latestRecordAt,
         LocalDateTime createdAt,
@@ -29,12 +30,12 @@ public record CareRecipientResponse(
             LocalDate birthDate,
             Gender gender,
             List<DisabilityType> disabilityTypes,
-            Integer disabilityGrade,
+            DisabilitySeverity disabilitySeverity,
             String otherDisabilityType,
             LocalDateTime latestRecordAt,
             LocalDateTime createdAt
     ) {
-        this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilityGrade,
+        this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilitySeverity,
                 otherDisabilityType, latestRecordAt, createdAt, null, null);
     }
 
@@ -51,7 +52,7 @@ public record CareRecipientResponse(
         return new CareRecipientResponse(
                 r.getId(), r.getCareRecipientNumber(), r.getName(),
                 r.getBirthDate(), r.getGender(), disabilities,
-                r.getDisabilityGrade(), r.getOtherDisabilityType(),
+                r.getDisabilitySeverity(), r.getOtherDisabilityType(),
                 r.getLatestRecordAt(), r.getCreatedAt(),
                 guardianName, guardianPhone
         );

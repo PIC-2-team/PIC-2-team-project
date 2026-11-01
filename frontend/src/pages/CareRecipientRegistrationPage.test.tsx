@@ -40,7 +40,7 @@ it('당사자 기본정보와 장애 유형을 제출하고 등록 완료 후 �
     method: 'POST',
     body: JSON.stringify({
       name: '김하늘', birthDate: '2010-01-01', gender: 'FEMALE', disabilityTypes: ['AUTISM'],
-      disabilityGrade: null, otherDisabilityType: null,
+      disabilitySeverity: null, otherDisabilityType: null,
     }),
   })));
 });
@@ -63,12 +63,18 @@ it('장애 유형을 선택하지 않으면 등록 요청을 보내지 않는다
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
-it('정수가 아닌 장애 정도를 등록하지 않는다', async () => {
-  const fetchMock = vi.spyOn(globalThis, 'fetch');
+it('선택한 장애 정도를 심한 장애 값으로 제출한다', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    success: true,
+    data: { id: 42, name: '김하늘' },
+  }), { status: 201 }));
   render(
     <AuthProvider>
-      <MemoryRouter>
-        <CareRecipientRegistrationPage />
+      <MemoryRouter initialEntries={['/care-recipients/new']}>
+        <Routes>
+          <Route path="/care-recipients/new" element={<CareRecipientRegistrationPage />} />
+          <Route path="/home" element={<p>홈 화면</p>} />
+        </Routes>
       </MemoryRouter>
     </AuthProvider>,
   );
@@ -77,8 +83,14 @@ it('정수가 아닌 장애 정도를 등록하지 않는다', async () => {
   fireEvent.click(screen.getByRole('radio', { name: '여성' }));
   fireEvent.click(screen.getByRole('button', { name: '다음' }));
   fireEvent.click(screen.getByRole('checkbox', { name: '자폐성 장애' }));
-  fireEvent.change(screen.getByLabelText('장애 정도'), { target: { value: '1.5' } });
+  fireEvent.click(screen.getByRole('radio', { name: '심한 장애' }));
   fireEvent.click(screen.getByRole('button', { name: '등록하기' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('장애 정도는 정수로 입력해 주세요.');
-  expect(fetchMock).not.toHaveBeenCalled();
+
+  await screen.findByText('홈 화면');
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/care-recipients', expect.objectContaining({
+    body: JSON.stringify({
+      name: '김하늘', birthDate: '2010-01-01', gender: 'FEMALE', disabilityTypes: ['AUTISM'],
+      disabilitySeverity: 'SEVERE', otherDisabilityType: null,
+    }),
+  })));
 });

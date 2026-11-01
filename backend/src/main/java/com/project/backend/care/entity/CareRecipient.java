@@ -29,8 +29,9 @@ public class CareRecipient {
     @Column(nullable = false, length = 10)
     private Gender gender;
 
-    @Column
-    private Integer disabilityGrade;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private DisabilitySeverity disabilitySeverity;
 
     @Column(length = 100)
     private String otherDisabilityType;
@@ -43,22 +44,22 @@ public class CareRecipient {
 
     @Builder
     public CareRecipient(String careRecipientNumber, String name, LocalDate birthDate,
-                         Gender gender, Integer disabilityGrade, String otherDisabilityType) {
+                         Gender gender, DisabilitySeverity disabilitySeverity, String otherDisabilityType) {
         this.careRecipientNumber = careRecipientNumber;
         this.name = name;
         this.birthDate = birthDate;
         this.gender = gender;
-        this.disabilityGrade = disabilityGrade;
+        this.disabilitySeverity = disabilitySeverity;
         this.otherDisabilityType = otherDisabilityType;
         this.createdAt = LocalDateTime.now();
     }
 
     public void update(String name, LocalDate birthDate, Gender gender,
-                       Integer disabilityGrade, String otherDisabilityType) {
+                       DisabilitySeverity disabilitySeverity, String otherDisabilityType) {
         if (name != null) this.name = name;
         if (birthDate != null) this.birthDate = birthDate;
         if (gender != null) this.gender = gender;
-        this.disabilityGrade = disabilityGrade;
+        this.disabilitySeverity = disabilitySeverity;
         this.otherDisabilityType = otherDisabilityType;
     }
 
