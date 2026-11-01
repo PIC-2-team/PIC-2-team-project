@@ -156,7 +156,7 @@ export function DailyRecordPage() {
   };
 
   return (
-    <div className="demo-page">
+    <div className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1>{listOnly ? '돌봄 기록 목록' : '생활기록'}</h1>
       </div>

@@ -53,7 +53,7 @@ export function DeletedRecordsPage() {
   };
 
   return (
-    <main className="demo-page">
+    <main className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
       <h1>삭제된 기록</h1>
       <p className="muted">내가 삭제한 기록은 삭제 후 30일 동안 복원할 수 있어요.</p>
       <Link to="/records" className={styles.viewAll}>← 기록 목록으로</Link>
