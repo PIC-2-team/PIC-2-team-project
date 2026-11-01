@@ -6,8 +6,9 @@ import * as recordsApi from '../api/records';
 import * as schedulesApi from '../api/schedules';
 
 let mockRole = 'GUARDIAN';
-vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { role: mockRole } }) }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); mockRole = 'GUARDIAN'; });
+let mockUserId = 1;
+vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { id: mockUserId, role: mockRole } }) }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); mockRole = 'GUARDIAN'; mockUserId = 1; });
 
 it('활동지원사에게 기록 작성 버튼이 표시된다', async () => {
   mockRole = 'SUPPORT_WORKER';
@@ -156,6 +157,7 @@ it('"일정" 탭 전환 시 일정 목록을 표시한다', async () => {
 
 it('활동지원사 일정 탭에 일정 추가와 삭제 기능을 표시한다', async () => {
   mockRole = 'SUPPORT_WORKER';
+  mockUserId = 2;
   mockEmpty();
   vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
     { id: 1, careRecipientId: 42, createdById: 2, title: '병원 예약', scheduledAt: new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -231,4 +233,37 @@ it('일정 입력의 오전 9시는 서울 시간 기준으로 저장한다', as
   await waitFor(() => expect(create).toHaveBeenCalledWith(42, expect.objectContaining({
     title: '병원 방문', scheduledAt: expect.stringMatching(/T00:00:00\.000Z$/),
   })));
+});
+
+it.each(['GUARDIAN', 'SUPPORT_WORKER'])('%s는 일정 추가 UI를 사용할 수 있다', async role => {
+  mockRole = role;
+  mockEmpty();
+  const create = vi.spyOn(schedulesApi, 'createSchedule').mockResolvedValue({
+    id: 1, careRecipientId: 42, createdById: 2, title: '병원 방문',
+    scheduledAt: '2026-11-01T00:00:00.000Z', createdAt: '2026-11-01T00:00:00.000Z', updatedAt: '2026-11-01T00:00:00.000Z',
+  });
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('이 날의 일정이 없어요.');
+  expect(screen.getByRole('button', { name: '+ 일정 추가' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '+ 일정 추가' }));
+  expect(screen.queryByText('이 날의 일정이 없어요.')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', { name: '일정 제목' }), { target: { value: '병원 방문' } });
+  fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
+  await waitFor(() => expect(create).toHaveBeenCalledWith(42, expect.objectContaining({ title: '병원 방문' })));
+});
+
+it('일정 삭제 버튼은 작성자 본인의 일정에만 표시한다', async () => {
+  mockUserId = 1;
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
+  const now = new Date().toISOString();
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 1, careRecipientId: 42, createdById: 1, title: '내 일정', scheduledAt: now, createdAt: now, updatedAt: now },
+    { id: 2, careRecipientId: 42, createdById: 2, title: '다른 보호자 일정', scheduledAt: now, createdAt: now, updatedAt: now },
+  ]);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('다른 보호자 일정');
+  expect(screen.getByRole('button', { name: '내 일정 삭제' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '다른 보호자 일정 삭제' })).not.toBeInTheDocument();
 });
