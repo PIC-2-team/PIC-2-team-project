@@ -3,9 +3,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 18px;
-  border: 1px solid #d8ebe1;
+  border: 1px solid #85c9a2;
   border-radius: 16px;
-  background: #f2f8f4;
+  background: #ffffff;
 }
 
 .header {
@@ -17,14 +17,14 @@
 
 .eyebrow {
   margin: 0 0 4px;
-  color: #438064;
+  color: #3d9a6b;
   font-size: 0.75rem;
   font-weight: 700;
 }
 
 .title {
   margin: 0;
-  color: #1a2533;
+  color: #1a2633;
   font-size: 1rem;
   font-weight: 750;
 }
@@ -42,25 +42,25 @@
 .description,
 .note,
 .status {
-  color: #68786f;
+  color: #4a5568;
   font-size: 0.8125rem;
 }
 
 .result {
   padding: 12px;
   border-radius: 12px;
-  background: #fff;
+  background: #f2faf6;
 }
 
 .count {
   margin-bottom: 6px;
-  color: #438064;
+  color: #3d9a6b;
   font-size: 0.75rem;
   font-weight: 700;
 }
 
 .summary {
-  color: #26352d;
+  color: #1a2633;
   font-size: 0.875rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -75,12 +75,16 @@
   min-height: 44px;
   border: 0;
   border-radius: 10px;
-  background: #269966;
+  background: #3d9a6b;
   color: #fff;
   font: inherit;
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #347f5a;
 }
 
 .button:disabled {
