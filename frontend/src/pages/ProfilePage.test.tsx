@@ -9,8 +9,9 @@ import type { CareRecipient } from '../types/careRecipient';
 import type { Routine } from '../types/routine';
 
 let mockRole = 'GUARDIAN';
+let mockRecipientId = 42;
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ selectedRecipientId: 42, user: { id: 1, role: mockRole } }),
+  useAuth: () => ({ selectedRecipientId: mockRecipientId, user: { id: 1, role: mockRole } }),
 }));
 
 const recipient: CareRecipient = {
@@ -28,7 +29,7 @@ beforeEach(() => {
   vi.spyOn(careApi, 'getCareRecipient').mockResolvedValue(recipient);
   vi.spyOn(routinesApi, 'listRoutines').mockResolvedValue(routines);
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; mockRecipientId = 42; });
 
 async function renderPage() {
   render(<MemoryRouter><ProfilePage /></MemoryRouter>);
@@ -133,4 +134,26 @@ it('활동지원사는 프로필과 루틴을 읽기만 할 수 있다', async (
   expect(screen.queryByRole('button', { name: '프로필 저장' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '루틴 추가' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '기상 삭제' })).not.toBeInTheDocument();
+});
+
+it('당사자를 전환하면 이전 당사자의 폼과 루틴을 지우고 새 데이터가 올 때까지 편집할 수 없다', async () => {
+  const other: CareRecipient = { ...recipient, id: 43, name: '이하늘', hospitalName: '다른병원' };
+  const view = render(<MemoryRouter><ProfilePage /></MemoryRouter>);
+  await screen.findByText('김삼결');
+  expect(screen.getByText('기상')).toBeInTheDocument();
+
+  let resolveOther!: (r: CareRecipient) => void;
+  vi.spyOn(careApi, 'getCareRecipient').mockImplementation(() => new Promise(resolve => { resolveOther = resolve; }));
+  vi.spyOn(routinesApi, 'listRoutines').mockResolvedValue([]);
+  mockRecipientId = 43;
+  view.rerender(<MemoryRouter><ProfilePage /></MemoryRouter>);
+
+  await waitFor(() => expect(screen.queryByText('김삼결')).not.toBeInTheDocument());
+  expect(screen.queryByLabelText('병원명')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '프로필 저장' })).not.toBeInTheDocument();
+  expect(screen.queryByText('기상')).not.toBeInTheDocument();
+
+  resolveOther(other);
+  expect(await screen.findByText('이하늘')).toBeInTheDocument();
+  expect(screen.getByLabelText('병원명')).toHaveValue('다른병원');
 });

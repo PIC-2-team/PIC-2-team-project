@@ -58,6 +58,15 @@ export function ProfilePage() {
   useEffect(() => {
     if (!selectedRecipientId) return;
     let current = true;
+    // 이전 당사자의 폼이 남아 새 당사자 id로 저장되지 않도록 먼저 비운다
+    setRecipient(null);
+    setRoutines([]);
+    setError(null);
+    setSaved(false);
+    setEditingId(null);
+    setRoutineTime('');
+    setRoutineTitle('');
+    setRoutineMemo('');
     setLoading(true);
     Promise.all([getCareRecipient(selectedRecipientId), listRoutines(selectedRecipientId)])
       .then(([data, items]) => {
