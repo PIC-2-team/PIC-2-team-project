@@ -61,6 +61,8 @@ export function WorkerOrganizationPage() {
         }
       } catch {
         setError('QR 코드를 읽지 못했습니다. 다시 시도하거나 코드를 직접 입력해 주세요.');
+        stopScanning();
+        return;
       }
       if (active) frame = requestAnimationFrame(tick);
     };

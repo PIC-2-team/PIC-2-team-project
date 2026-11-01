@@ -122,7 +122,7 @@ export function MorePage() {
 
   const handleLogoutConfirm = () => {
     logout();
-    navigate('/', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   const sections: MenuSection[] = [];
@@ -142,7 +142,7 @@ export function MorePage() {
       title: '돌봄 협업',
       items: [
         { label: '기관 연결 확인', to: '/worker/organization' },
-        { label: '돌봄 내용 수정 요청', to: '/record-requests/new' },
+        { label: '돌봄 내용 수정 요청', pending: true },
       ],
     });
   }

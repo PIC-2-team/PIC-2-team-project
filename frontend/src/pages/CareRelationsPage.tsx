@@ -48,6 +48,8 @@ export function CareRelationsPage() {
     void fetchRelations();
   }, [fetchRelations]);
 
+  useEffect(() => () => { stopStream(); }, []);
+
   const handleRequestLink = async (e: FormEvent) => {
     e.preventDefault();
     const code = orgCode.trim().toUpperCase();
