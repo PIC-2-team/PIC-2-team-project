@@ -20,6 +20,13 @@ export function getMyOrganization(): Promise<Organization> {
   return apiRequest('/api/organizations/me');
 }
 
+export function verifyWorkerOrganization(organizationCode: string): Promise<Organization> {
+  return apiRequest('/api/organizations/worker/verify', {
+    method: 'POST',
+    body: { organizationCode },
+  });
+}
+
 export function getMembers(): Promise<OrganizationMember[]> {
   return apiRequest('/api/organizations/me/members');
 }

@@ -21,6 +21,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { RecordRequestPage } from './pages/RecordRequestPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
+import { WorkerOrganizationPage } from './pages/WorkerOrganizationPage';
 import { RecordSuggestionsPage } from './pages/RecordSuggestionsPage';
 import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -87,6 +88,10 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      {
+        element: <RequireRole role="SUPPORT_WORKER" />,
+        children: [{ path: '/worker/organization', element: <WorkerOrganizationPage /> }],
+      },
       {
         element: <RequireRole role="SUPPORT_WORKER" />,
         children: [{

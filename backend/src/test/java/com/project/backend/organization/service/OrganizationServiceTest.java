@@ -55,6 +55,40 @@ class OrganizationServiceTest {
     @InjectMocks OrganizationService organizationService;
 
     @Test
+    void verifyWorkerOrganization_등록된_활동지원사만_기관을_확인할_수_있다() {
+        User worker = User.builder().name("지원사").email("worker@example.com").role(UserRole.SUPPORT_WORKER).build();
+        given(userRepository.findById(2L)).willReturn(Optional.of(worker));
+        Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(1L).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOrganizationCode("KNU001")).willReturn(Optional.of(org));
+        given(organizationMemberRepository.existsByOrganizationIdAndUserIdAndStatus(10L, 2L, OrganizationMemberStatus.ACTIVE)).willReturn(true);
+
+        assertThat(organizationService.verifyWorkerOrganization(2L, " knu001 ").name()).isEqualTo("행복복지관");
+    }
+
+    @Test
+    void verifyWorkerOrganization_미등록_활동지원사는_거부한다() {
+        User worker = User.builder().name("지원사").email("worker@example.com").role(UserRole.SUPPORT_WORKER).build();
+        given(userRepository.findById(2L)).willReturn(Optional.of(worker));
+        Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(1L).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        given(organizationRepository.findByOrganizationCode("KNU001")).willReturn(Optional.of(org));
+
+        assertThatThrownBy(() -> organizationService.verifyWorkerOrganization(2L, "KNU001"))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void verifyWorkerOrganization_활동지원사가_아닌_계정은_거부한다() {
+        given(userRepository.findById(3L)).willReturn(Optional.of(guardianUser(3L)));
+
+        assertThatThrownBy(() -> organizationService.verifyWorkerOrganization(3L, "KNU001"))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void register_INSTITUTION_사용자가_유효한_6자리_코드로_기관_등록() {
         User owner = institutionUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(owner));
