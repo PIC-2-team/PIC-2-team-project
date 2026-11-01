@@ -67,7 +67,7 @@ describe('NotificationInboxPage 역할별 알림 확인 및 딥링크 테스트'
     });
   });
 
-  it('활동지원사(SUPPORT_WORKER): 정보요청 알림 클릭 시 /record-requests/new로 이동한다', async () => {
+  it('활동지원사(SUPPORT_WORKER): 정보요청 알림 클릭 시 홈으로 이동한다', async () => {
     currentRole = 'SUPPORT_WORKER';
     const notifs: NotificationItem[] = [
       {
@@ -98,7 +98,7 @@ describe('NotificationInboxPage 역할별 알림 확인 및 딥링크 테스트'
 
     await waitFor(() => {
       expect(notificationApi.markNotificationRead).toHaveBeenCalledWith(20, true);
-      expect(mockNavigate).toHaveBeenCalledWith('/record-requests/new');
+      expect(mockNavigate).toHaveBeenCalledWith('/home');
     });
   });
 

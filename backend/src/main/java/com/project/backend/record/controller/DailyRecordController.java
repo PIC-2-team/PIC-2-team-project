@@ -41,6 +41,14 @@ public class DailyRecordController {
         return ApiResponse.ok(service.today(userId, careRecipientId));
     }
 
+    @Operation(summary = "복원 가능한 본인 삭제 기록 목록")
+    @GetMapping("/deleted")
+    public ApiResponse<PaginatedData<DeletedRecordResponse>> deleted(@AuthenticationPrincipal Long userId,
+            @PathVariable Long careRecipientId, @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return ApiResponse.ok(service.deleted(userId, careRecipientId, page, pageSize));
+    }
+
     @Operation(summary = "생활기록 작성")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

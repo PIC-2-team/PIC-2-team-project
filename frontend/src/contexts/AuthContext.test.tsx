@@ -76,4 +76,16 @@ describe('useAuth', () => {
     });
     expect(result.current.selectedRecipientId).toBe(42);
   });
+
+  it('login() 응답이 비어 있으면 오류를 던지고 로그인 상태가 되지 않는다', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(authApi, 'login').mockResolvedValue(null as never);
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await act(async () => {
+      await expect(result.current.login('a@b.com', 'pw')).rejects.toThrow('로그인 응답이 올바르지 않습니다.');
+    });
+    expect(result.current.user).toBeNull();
+    expect(result.current.token).toBeNull();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
 });

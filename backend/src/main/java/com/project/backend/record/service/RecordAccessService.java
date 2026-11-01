@@ -33,7 +33,7 @@ public class RecordAccessService {
         boolean allowed = switch (user.getRole()) {
             case GUARDIAN -> isGuardian(userId, recipientId);
             case SUPPORT_WORKER -> isAssigned(userId, recipientId);
-            case INSTITUTION -> organizations.findByOwnerId(userId)
+            case INSTITUTION -> organizations.findFirstByOwnerIdOrderByIdAsc(userId)
                     .map(org -> links.existsByOrganizationIdAndCareRecipientIdAndStatus(
                             org.getId(), recipientId, LinkStatus.ACCEPTED)).orElse(false);
             case ADMIN -> true;
@@ -49,17 +49,11 @@ public class RecordAccessService {
 
     public void verifyEdit(Long userId, Long recipientId, Long authorId) {
         verifyCreate(userId, recipientId);
-        require(isGuardian(userId, recipientId) || userId.equals(authorId));
+        require(userId.equals(authorId));
     }
 
     public void verifyGuardian(Long userId, Long recipientId) {
         require(user(userId).getRole() == UserRole.GUARDIAN && isGuardian(userId, recipientId));
-    }
-
-    public void verifySuggestionCreate(Long userId, Long recipientId) {
-        User actor = user(userId);
-        require(actor.getRole() == UserRole.SUPPORT_WORKER || actor.getRole() == UserRole.INSTITUTION);
-        verifyRead(userId, recipientId);
     }
 
     private boolean isAssigned(Long userId, Long recipientId) {

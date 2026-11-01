@@ -46,6 +46,7 @@ public class User {
     private boolean recordUpdated = true;
     @Column(nullable = false)
     private boolean assignmentChanged = true;
+    // 기존 운영 DB의 NOT NULL 컬럼은 별도 스키마 이행 전까지 매핑을 유지한다.
     @Column(nullable = false)
     private boolean suggestionReceived = true;
     @Column(nullable = false)
@@ -83,13 +84,10 @@ public class User {
     }
 
     public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged,
-                                           boolean suggestionReceived, boolean informationRequestReceived,
-                                           boolean recordRequestReceived) {
+                                           boolean informationRequestReceived) {
         this.recordCreated = recordCreated;
         this.recordUpdated = recordUpdated;
         this.assignmentChanged = assignmentChanged;
-        this.suggestionReceived = suggestionReceived;
         this.informationRequestReceived = informationRequestReceived;
-        this.recordRequestReceived = recordRequestReceived;
     }
 }

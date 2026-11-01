@@ -24,6 +24,7 @@ import {
 import { AppShell } from '../components/AppShell';
 import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { OrganizationQrPrint } from '../components/OrganizationQrPrint';
 import styles from './AdminDashboardPage.module.css';
 
 type Stats = {
@@ -101,6 +102,7 @@ export function AdminDashboardPage() {
   const [newOrgName, setNewOrgName] = useState('');
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [createdOrgBanner, setCreatedOrgBanner] = useState<{ name: string; code: string } | null>(null);
+  const [qrOrganization, setQrOrganization] = useState<{ name: string; code: string } | null>(null);
   const [orgFormError, setOrgFormError] = useState<string | null>(null);
 
   // 기관 수정 모달 상태
@@ -468,7 +470,7 @@ export function AdminDashboardPage() {
   const handleLogoutConfirm = async () => {
     setShowLogoutDialog(false);
     await logout();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const getRoleBadgeClass = (role: string) => {
@@ -833,15 +835,10 @@ export function AdminDashboardPage() {
                     발급 기관 코드: <code className={styles.userCode}>{createdOrgBanner.code}</code>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className={styles.codeCopyBtn}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(createdOrgBanner.code);
-                  }}
-                >
-                  코드 복사
-                </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <button type="button" className={styles.codeCopyBtn} onClick={() => { void navigator.clipboard.writeText(createdOrgBanner.code); }}>코드 복사</button>
+                  <button type="button" className={styles.codeCopyBtn} aria-label={`${createdOrgBanner.name} QR 코드 인쇄`} onClick={() => setQrOrganization(createdOrgBanner)}>QR 코드 인쇄</button>
+                </div>
               </div>
             )}
 
@@ -868,6 +865,7 @@ export function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className={styles.cardActions}>
+                      <button type="button" className={styles.btnAction} aria-label={`${org.name} QR 코드 인쇄`} onClick={() => setQrOrganization({ name: org.name, code: org.organizationCode })}>QR 코드 인쇄</button>
                       <button
                         type="button"
                         className={`${styles.btnAction} ${styles.btnActionPrimary}`}
@@ -1419,6 +1417,8 @@ export function AdminDashboardPage() {
       {userEditError && <p role="alert" className={styles.errorBanner}>{userEditError}</p>}
       {selfDeleteError && <p role="alert" className={styles.errorBanner}>{selfDeleteError}</p>}
       {deleteUserError && <p role="alert" className={styles.errorBanner}>{deleteUserError}</p>}
+
+      {qrOrganization && <OrganizationQrPrint name={qrOrganization.name} code={qrOrganization.code} onClose={() => setQrOrganization(null)} />}
 
       <ConfirmDialog
         open={showDeleteOrgDialog}

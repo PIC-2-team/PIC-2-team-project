@@ -137,7 +137,7 @@ describe('NotificationInboxPage', () => {
 
     await waitFor(() => {
       expect(markReadSpy).toHaveBeenCalledWith(1, true);
-      expect(mockNavigate).toHaveBeenCalledWith('/record-suggestions');
+      expect(mockNavigate).toHaveBeenCalledWith('/records');
     });
   });
 

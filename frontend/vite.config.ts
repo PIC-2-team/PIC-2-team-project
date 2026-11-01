@@ -1,3 +1,4 @@
+// demo backend: backend-demo-production-2301.up.railway.app
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';

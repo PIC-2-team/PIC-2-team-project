@@ -6,9 +6,11 @@ import com.project.backend.common.exception.ApiException;
 import com.project.backend.organization.dto.AssignSupportWorkerRequest;
 import com.project.backend.organization.dto.CareAssignmentResponse;
 import com.project.backend.organization.entity.LinkStatus;
+import com.project.backend.organization.entity.OrganizationMember;
 import com.project.backend.organization.entity.OrganizationMemberStatus;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
+import com.project.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +35,7 @@ class CareAssignmentServiceTest {
     @Mock OrganizationMemberRepository organizationMemberRepository;
     @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock com.project.backend.notification.service.NotificationService notificationService;
+    @Mock UserRepository userRepository;
 
     @InjectMocks CareAssignmentService careAssignmentService;
 
@@ -41,6 +45,9 @@ class CareAssignmentServiceTest {
                 1L, 10L, OrganizationMemberStatus.ACTIVE)).willReturn(true);
         given(organizationRecipientLinkRepository.existsByOrganizationIdAndCareRecipientIdAndStatus(
                 1L, 20L, LinkStatus.ACCEPTED)).willReturn(true);
+        given(userRepository.findByIdForUpdate(30L)).willReturn(Optional.of(org.mockito.Mockito.mock(com.project.backend.user.entity.User.class)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(30L, OrganizationMemberStatus.ACTIVE))
+                .willReturn(List.of(OrganizationMember.builder().organizationId(1L).userId(30L).build()));
         given(careAssignmentRepository.existsByIdempotencyKey("idem-001")).willReturn(false);
         given(careAssignmentRepository.save(any())).willAnswer(inv -> {
             CareAssignment a = inv.getArgument(0);
@@ -59,6 +66,22 @@ class CareAssignmentServiceTest {
         assertThat(response.endedAt()).isNull();
         org.mockito.Mockito.verify(notificationService).notifyAssignmentChanged(30L, "새 당사자가 배정되었습니다.");
         org.mockito.Mockito.verify(notificationService).notifyAssignmentChangedGuardians(20L, "새 활동지원사가 배정되었습니다.");
+    }
+
+    @Test
+    void assign_소속이_해제된_지원사에게_다시_배정할_수_없다() {
+        given(organizationMemberRepository.existsByOrganizationIdAndUserIdAndStatus(
+                1L, 10L, OrganizationMemberStatus.ACTIVE)).willReturn(true);
+        given(organizationRecipientLinkRepository.existsByOrganizationIdAndCareRecipientIdAndStatus(
+                1L, 20L, LinkStatus.ACCEPTED)).willReturn(true);
+        given(userRepository.findByIdForUpdate(30L)).willReturn(Optional.of(org.mockito.Mockito.mock(com.project.backend.user.entity.User.class)));
+
+        AssignSupportWorkerRequest req = new AssignSupportWorkerRequest(
+                20L, 30L, LocalDate.now(), null, "revoked-worker");
+
+        assertThatThrownBy(() -> careAssignmentService.assign(1L, 10L, req))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -83,6 +106,9 @@ class CareAssignmentServiceTest {
                 1L, 10L, OrganizationMemberStatus.ACTIVE)).willReturn(true);
         given(organizationRecipientLinkRepository.existsByOrganizationIdAndCareRecipientIdAndStatus(
                 1L, 20L, LinkStatus.ACCEPTED)).willReturn(true);
+        given(userRepository.findByIdForUpdate(30L)).willReturn(Optional.of(org.mockito.Mockito.mock(com.project.backend.user.entity.User.class)));
+        given(organizationMemberRepository.findByUserIdAndStatusForUpdate(30L, OrganizationMemberStatus.ACTIVE))
+                .willReturn(List.of(OrganizationMember.builder().organizationId(1L).userId(30L).build()));
         given(careAssignmentRepository.existsByIdempotencyKey("dupe-key")).willReturn(true);
 
         AssignSupportWorkerRequest req = new AssignSupportWorkerRequest(

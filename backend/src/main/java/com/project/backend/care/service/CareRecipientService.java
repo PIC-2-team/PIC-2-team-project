@@ -59,7 +59,7 @@ public class CareRecipientService {
             recipientIds = careAssignmentRepository.findBySupportWorkerIdAndEndedAtIsNull(userId)
                     .stream().map(CareAssignment::getCareRecipientId).toList();
         } else if (user.getRole() == UserRole.INSTITUTION) {
-            Organization org = organizationRepository.findByOwnerId(userId).orElse(null);
+            Organization org = organizationRepository.findFirstByOwnerIdOrderByIdAsc(userId).orElse(null);
             if (org == null) return List.of();
             recipientIds = organizationRecipientLinkRepository.findByOrganizationId(org.getId()).stream()
                     .filter(l -> l.getStatus() == com.project.backend.organization.entity.LinkStatus.ACCEPTED)
@@ -352,7 +352,7 @@ public class CareRecipientService {
     }
 
     private Organization findOrgByOwner(Long ownerId) {
-        return organizationRepository.findByOwnerId(ownerId)
+        return organizationRepository.findFirstByOwnerIdOrderByIdAsc(ownerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORGANIZATION_NOT_FOUND", "기관을 찾을 수 없습니다."));
     }
 

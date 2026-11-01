@@ -70,9 +70,7 @@ public class InformationRequestService {
     @Transactional(readOnly = true)
     public PaginatedData<InformationRequestResponse> listRequester(Long userId, InformationRequestStatus status, int page, int pageSize) {
         requireRole(userId, UserRole.SUPPORT_WORKER);
-        Page<InformationRequest> result = status == null
-                ? requests.findByRequestedById(userId, pageable(page, pageSize))
-                : requests.findByRequestedByIdAndStatus(userId, status, pageable(page, pageSize));
+        Page<InformationRequest> result = requests.findVisibleByRequester(userId, status, pageable(page, pageSize));
         return page(result);
     }
 
@@ -138,7 +136,7 @@ public class InformationRequestService {
 
     private Organization organization(Long userId) {
         requireRole(userId, UserRole.INSTITUTION);
-        return organizations.findByOwnerId(userId).orElseThrow(this::forbidden);
+        return organizations.findFirstByOwnerIdOrderByIdAsc(userId).orElseThrow(this::forbidden);
     }
 
     private InformationRequest requestForUpdate(Long id) {

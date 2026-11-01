@@ -96,11 +96,15 @@
   padding: 0.25rem;
 }
 
+/* design-system의 scrollbar-gutter: stable을 다른 페이지와 동일하게 되돌림 */
+:global(.app-shell .app-main:has(.calendar-grid)) {
+  scrollbar-gutter: auto;
+}
+
 /* Calendar */
 .calendarSection {
-  background: #f0f7f3;
-  border-radius: 16px;
-  padding: 1.25rem;
+  background: var(--soft);
+  border-color: #cde2d3;
 }
 
 .monthNav {
@@ -316,4 +320,127 @@
 .pagination button {
   min-height: 44px;
   padding: 8px 16px;
+}
+
+/* Tab toggle */
+.scheduleCalendar {
+  background: white !important;
+  border-color: var(--line) !important;
+}
+
+.tabRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #edf0f3;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.tab {
+  min-height: 40px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tabActive {
+  background: var(--green);
+  color: white;
+}
+
+/* Time label on record/schedule cards */
+.recordTime {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Schedule cards */
+.scheduleCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  border-radius: 12px;
+  padding: 0.875rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.scheduleIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff8e8;
+  border-radius: 50%;
+}
+
+.scheduleBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.scheduleTitle {
+  font-size: 0.875rem;
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.scheduleDesc {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.deleteBtn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.deleteBtn:hover {
+  background: #ffe8e8;
+  color: #e05555;
+}
+
+/* Schedule add form */
+.scheduleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: white;
+  border-radius: 12px;
+  padding: 0.875rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.scheduleAddBtn {
+  align-self: flex-end;
+  min-height: 40px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
 }

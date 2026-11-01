@@ -20,19 +20,25 @@ export function getMyOrganization(): Promise<Organization> {
   return apiRequest('/api/organizations/me');
 }
 
+export function verifyWorkerOrganization(organizationCode: string): Promise<Organization> {
+  return apiRequest('/api/organizations/worker/verify', {
+    method: 'POST',
+    body: { organizationCode },
+  });
+}
+
 export function getMembers(): Promise<OrganizationMember[]> {
   return apiRequest('/api/organizations/me/members');
 }
 
-export function addMember(payload: number | { name?: string; phone?: string; userId?: number }): Promise<OrganizationMember> {
-  const body = typeof payload === 'number' ? { userId: payload } : payload;
+export function addMember(payload: { publicCode: string }): Promise<OrganizationMember> {
   return apiRequest('/api/organizations/me/members', {
     method: 'POST',
-    body,
+    body: payload,
   });
 }
 
-export function updateMember(memberId: number, payload: { active?: boolean; name?: string; phone?: string }): Promise<OrganizationMember> {
+export function updateMember(memberId: number, payload: { active: boolean }): Promise<OrganizationMember> {
   return apiRequest(`/api/organizations/me/members/${memberId}`, {
     method: 'PATCH',
     body: payload,
@@ -53,7 +59,7 @@ export function getOrganizationGuardians(): Promise<OrganizationGuardian[]> {
   return apiRequest('/api/organizations/me/guardians');
 }
 
-export function registerOrganizationGuardian(payload: { phone?: string; guardianCodeOrEmail?: string }): Promise<OrganizationGuardian> {
+export function registerOrganizationGuardian(payload: { publicCode: string }): Promise<OrganizationGuardian> {
   return apiRequest('/api/organizations/me/guardians', {
     method: 'POST',
     body: payload,
