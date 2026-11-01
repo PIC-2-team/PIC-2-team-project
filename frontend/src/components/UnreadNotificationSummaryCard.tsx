@@ -30,7 +30,10 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
           <h2 id="unread-summary-title" className={styles.title}>놓친 알림 한눈에</h2>
         </div>
       </div>
-      <p className={styles.description}>미확인 알림 핵심만 정리해요.</p>
+      <p className={styles.description}>
+        미확인 알림 핵심만 정리해요.
+        <span className={styles.note}>요약한 알림은 읽음 처리돼요.</span>
+      </p>
       {summary && summary.summary && (
         <div className={styles.result}>
           <p className={styles.count}>미확인 알림 {summary.unreadCount}건</p>
@@ -45,7 +48,6 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
       <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
         {loading ? '요약하는 중…' : summary?.summary ? '다시 요약' : '요약 시작'}
       </button>
-      <p className={styles.note}>요약한 알림은 읽음 처리돼요.</p>
     </section>
   );
 }
