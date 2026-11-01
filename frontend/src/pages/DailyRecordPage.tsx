@@ -226,7 +226,7 @@ export function DailyRecordPage() {
   const activeDots = activeTab === 'records' ? datesWithRecords : datesWithSchedules;
 
   return (
-    <div className="demo-page">
+    <div className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
       <h1>{listOnly ? '돌봄 기록 목록' : '일정·돌봄 기록'}</h1>
 
       {listOnly && <div className={styles.categoryFilter}>
