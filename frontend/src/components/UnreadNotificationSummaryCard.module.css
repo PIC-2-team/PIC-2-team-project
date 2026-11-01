@@ -29,18 +29,6 @@
   font-weight: 750;
 }
 
-.icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  background: #dcefe4;
-  color: #32815c;
-  font-size: 1.125rem;
-}
-
 .description,
 .note,
 .status,

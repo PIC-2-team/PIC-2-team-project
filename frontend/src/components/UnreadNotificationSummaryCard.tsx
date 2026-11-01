@@ -26,7 +26,6 @@ export function UnreadNotificationSummaryCard() {
           <p className={styles.eyebrow}>알림 정리</p>
           <h2 id="unread-summary-title" className={styles.title}>AI 미확인 알림 요약</h2>
         </div>
-        <span className={styles.icon} aria-hidden="true">✦</span>
       </div>
       <p className={styles.description}>아직 확인하지 않은 알림의 핵심 내용을 빠르게 확인해요.</p>
       {summary && summary.summary && (
