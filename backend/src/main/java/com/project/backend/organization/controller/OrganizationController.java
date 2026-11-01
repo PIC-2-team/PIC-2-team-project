@@ -128,7 +128,7 @@ public class OrganizationController {
     @PatchMapping("/me/recipients/{recipientId}")
     public ApiResponse<CareRecipientResponse> updateRecipient(@AuthenticationPrincipal Long userId,
                                                                @PathVariable Long recipientId,
-                                                               @RequestBody UpdateCareRecipientRequest request) {
+                                                               @Valid @RequestBody UpdateCareRecipientRequest request) {
         return ApiResponse.ok(careRecipientService.updateByOrganization(userId, recipientId, request));
     }
 

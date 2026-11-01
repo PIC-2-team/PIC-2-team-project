@@ -21,6 +21,7 @@ import {
   type PaginatedAdminUsers,
   type AdminCareRecipient,
 } from '../api/admin';
+import { DISABILITY_SEVERITY_LABELS, type DisabilitySeverity } from '../types/careRecipient';
 import { AppShell } from '../components/AppShell';
 import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -84,7 +85,7 @@ export function AdminDashboardPage() {
   const [recipientDisabilityTypes, setRecipientDisabilityTypes] = useState<
     ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[]
   >([]);
-  const [recipientDisabilityGrade, setRecipientDisabilityGrade] = useState('');
+  const [recipientDisabilitySeverity, setRecipientDisabilitySeverity] = useState<DisabilitySeverity | ''>('');
   const [recipientOtherDisabilityType, setRecipientOtherDisabilityType] = useState('');
   const [isCreatingRecipient, setIsCreatingRecipient] = useState(false);
   const [recipientMessage, setRecipientMessage] = useState<string | null>(null);
@@ -217,14 +218,13 @@ export function AdminDashboardPage() {
     setRecipientMessage(null);
     setRecipientCreatedCode(null);
 
-    const grade = recipientDisabilityGrade.trim() ? Number(recipientDisabilityGrade) : null;
     try {
       const created = await createAdminCareRecipient({
         name: recipientName.trim(),
         birthDate: recipientBirthDate,
         gender: recipientGender,
         disabilityTypes: recipientDisabilityTypes,
-        disabilityGrade: grade,
+        disabilitySeverity: recipientDisabilitySeverity || null,
         otherDisabilityType: recipientDisabilityTypes.includes('OTHER')
           ? recipientOtherDisabilityType.trim()
           : null,
@@ -233,7 +233,7 @@ export function AdminDashboardPage() {
       setRecipientName('');
       setRecipientBirthDate('');
       setRecipientDisabilityTypes([]);
-      setRecipientDisabilityGrade('');
+      setRecipientDisabilitySeverity('');
       setRecipientOtherDisabilityType('');
       setRecipientCreatedCode(created.careRecipientNumber);
       setRecipientMessage(`'${created.name}' 당사자 고유 코드 발급 완료`);
@@ -653,15 +653,16 @@ export function AdminDashboardPage() {
                   )}
 
                   <label>
-                    장애 정도 <span className="muted" style={{ fontWeight: 400 }}>(선택, 숫자)</span>
-                    <input
-                      type="number"
-                      value={recipientDisabilityGrade}
-                      onChange={(e) => setRecipientDisabilityGrade(e.target.value)}
-                      placeholder="예: 1 또는 2"
-                      min={1}
-                      max={6}
-                    />
+                    장애 정도 <span className="muted" style={{ fontWeight: 400 }}>(선택)</span>
+                    <select
+                      value={recipientDisabilitySeverity}
+                      onChange={(e) => setRecipientDisabilitySeverity(e.target.value as DisabilitySeverity | '')}
+                    >
+                      <option value="">선택 안 함</option>
+                      {(Object.keys(DISABILITY_SEVERITY_LABELS) as DisabilitySeverity[]).map((value) => (
+                        <option key={value} value={value}>{DISABILITY_SEVERITY_LABELS[value]}</option>
+                      ))}
+                    </select>
                   </label>
 
                   {recipientMessage && (
@@ -779,8 +780,8 @@ export function AdminDashboardPage() {
                                 {dt === 'OTHER' && r.otherDisabilityType ? `(${r.otherDisabilityType})` : ''}
                               </span>
                             ))}
-                            {r.disabilityGrade && (
-                              <span className={styles.tag}>{r.disabilityGrade}급(정도)</span>
+                            {r.disabilitySeverity && (
+                              <span className={styles.tag}>{DISABILITY_SEVERITY_LABELS[r.disabilitySeverity]}</span>
                             )}
                           </div>
                         )}

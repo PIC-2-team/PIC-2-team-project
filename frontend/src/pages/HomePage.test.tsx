@@ -109,9 +109,15 @@ it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고
       birthDate: '2000-01-01',
       gender: 'MALE',
       disabilityTypes: ['AUTISM'],
-      disabilityGrade: 1,
+      disabilitySeverity: 'SEVERE',
       guardianName: '김보호',
       guardianPhone: '010-1234-5678',
+      hospitalName: '삼결병원',
+      doctorName: '김의사',
+      hospitalPhone: '053-000-0000',
+      supportCenterName: '행복센터',
+      supportCenterManagerName: '박담당',
+      supportCenterPhone: '053-111-1111',
     } as any,
   ]);
   vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
@@ -152,4 +158,6 @@ it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고
 
   expect(await screen.findByRole('heading', { name: '담당 이용자 상세 프로필' })).toBeInTheDocument();
   expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
+  expect(screen.getByText('삼결병원 · 김의사 · 053-000-0000')).toBeInTheDocument();
+  expect(screen.getByText('행복센터 · 박담당 · 053-111-1111')).toBeInTheDocument();
 });

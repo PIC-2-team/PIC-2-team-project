@@ -172,7 +172,7 @@ class AdminServiceTest {
                 LocalDate.of(2005, 5, 5),
                 Gender.MALE,
                 List.of(DisabilityType.AUTISM),
-                1,
+                DisabilitySeverity.SEVERE,
                 null
         );
 

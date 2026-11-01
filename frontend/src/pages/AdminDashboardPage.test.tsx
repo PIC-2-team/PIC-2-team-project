@@ -53,7 +53,7 @@ const MOCK_RECIPIENTS: AdminCareRecipient[] = [
     birthDate: '2010-05-15',
     gender: 'MALE',
     disabilityTypes: ['AUTISM'],
-    disabilityGrade: 1,
+    disabilitySeverity: 'SEVERE',
     otherDisabilityType: null,
     guardianName: '김보호',
     guardianEmail: 'guardian1@test.com',
@@ -67,7 +67,7 @@ const MOCK_RECIPIENTS: AdminCareRecipient[] = [
     birthDate: '2015-08-20',
     gender: 'FEMALE',
     disabilityTypes: ['INTELLECTUAL'],
-    disabilityGrade: null,
+    disabilitySeverity: null,
     otherDisabilityType: null,
     guardianName: null,
     guardianEmail: null,
@@ -401,7 +401,7 @@ it('당사자 고유 코드 목록을 조회하고 신규 당사자 코드를 �
         birthDate: '2018-03-10',
         gender: 'MALE',
         disabilityTypes: ['AUTISM'],
-        disabilityGrade: 1,
+        disabilitySeverity: 'SEVERE',
         otherDisabilityType: null,
         guardianName: null,
         guardianEmail: null,
@@ -433,7 +433,7 @@ it('당사자 고유 코드 목록을 조회하고 신규 당사자 코드를 �
   fireEvent.change(screen.getByLabelText('신규 당사자 이름'), { target: { value: '박희망' } });
   fireEvent.change(screen.getByLabelText('당사자 생년월일'), { target: { value: '2018-03-10' } });
   fireEvent.click(screen.getByLabelText('자폐성 장애'));
-  fireEvent.change(screen.getByPlaceholderText('예: 1 또는 2'), { target: { value: '1' } });
+  fireEvent.change(screen.getByRole('combobox', { name: /장애 정도/ }), { target: { value: 'SEVERE' } });
 
   // 발급 버튼 클릭
   fireEvent.click(screen.getByRole('button', { name: '당사자 고유 코드 발급' }));
@@ -445,7 +445,7 @@ it('당사자 고유 코드 목록을 조회하고 신규 당사자 코드를 �
       birthDate: '2018-03-10',
       gender: 'MALE',
       disabilityTypes: ['AUTISM'],
-      disabilityGrade: 1,
+      disabilitySeverity: 'SEVERE',
       otherDisabilityType: null,
     }),
   }));
