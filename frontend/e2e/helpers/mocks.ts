@@ -73,7 +73,7 @@ export async function mockRecords(page: Page) {
       });
     }
     return route.fulfill({
-      json: ok({ content: [], pagination: { page: 1, size: 20, totalCount: 0, totalPages: 0 } }),
+      json: ok({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } }),
     });
   });
 }

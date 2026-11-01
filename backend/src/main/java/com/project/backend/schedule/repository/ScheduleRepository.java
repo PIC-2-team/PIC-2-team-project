@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
-    List<Schedule> findByCareRecipientIdAndScheduledAtBetweenOrderByScheduledAtAsc(
+    List<Schedule> findByCareRecipientIdAndScheduledAtGreaterThanEqualAndScheduledAtLessThanOrderByScheduledAtAsc(
             Long careRecipientId, Instant from, Instant to);
 
     Optional<Schedule> findByIdAndCareRecipientId(Long id, Long careRecipientId);

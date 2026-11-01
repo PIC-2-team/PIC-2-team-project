@@ -24,7 +24,6 @@ const NOTIFICATION_LABELS: Record<NotificationType, string> = {
 function getDestination(type: NotificationType, role?: string): string {
   switch (type) {
     case 'SUGGESTION_RECEIVED':
-      return '/record-suggestions';
     case 'SUGGESTION_DECIDED':
     case 'RECORD_CREATED':
     case 'RECORD_UPDATED':
@@ -37,7 +36,6 @@ function getDestination(type: NotificationType, role?: string): string {
       return '/records';
     case 'INFORMATION_REQUEST_RECEIVED':
       if (role === 'INSTITUTION') return '/agency';
-      if (role === 'SUPPORT_WORKER') return '/record-requests/new';
       return '/home';
     case 'ORGANIZATION_LINK_REQUESTED':
       return role === 'INSTITUTION' ? '/agency' : '/care-relations';

@@ -41,7 +41,7 @@ public class ScheduleService {
         LocalDate start = YearMonth.of(year, month).atDay(1);
         Instant from = start.atStartOfDay(SEOUL).toInstant();
         Instant to = start.plusMonths(1).atStartOfDay(SEOUL).toInstant();
-        return schedules.findByCareRecipientIdAndScheduledAtBetweenOrderByScheduledAtAsc(
+        return schedules.findByCareRecipientIdAndScheduledAtGreaterThanEqualAndScheduledAtLessThanOrderByScheduledAtAsc(
                 recipientId, from, to).stream().map(ScheduleResponse::of).toList();
     }
 

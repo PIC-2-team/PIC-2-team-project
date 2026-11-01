@@ -10,6 +10,7 @@ import com.project.backend.organization.entity.OrganizationMemberStatus;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.notification.service.NotificationService;
+import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class CareAssignmentService {
     private final OrganizationMemberRepository organizationMemberRepository;
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     public CareAssignmentResponse assign(Long organizationId, Long requesterId, AssignSupportWorkerRequest request) {
         if (!organizationMemberRepository.existsByOrganizationIdAndUserIdAndStatus(
@@ -36,6 +38,15 @@ public class CareAssignmentService {
                 organizationId, request.careRecipientId(), LinkStatus.ACCEPTED)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "NO_ACCEPTED_LINK",
                     "기관과 당사자 간의 연결이 수락되지 않았습니다.");
+        }
+
+        userRepository.findByIdForUpdate(request.supportWorkerId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SUPPORT_WORKER_NOT_FOUND", "활동지원사를 찾을 수 없습니다."));
+        if (organizationMemberRepository.findByUserIdAndStatusForUpdate(
+                request.supportWorkerId(), OrganizationMemberStatus.ACTIVE).stream()
+                .noneMatch(member -> member.getOrganizationId().equals(organizationId))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "SUPPORT_WORKER_NOT_IN_ORGANIZATION",
+                    "현재 기관에 소속된 활동지원사만 배정할 수 있습니다.");
         }
 
         if (careAssignmentRepository.existsByIdempotencyKey(request.idempotencyKey())) {

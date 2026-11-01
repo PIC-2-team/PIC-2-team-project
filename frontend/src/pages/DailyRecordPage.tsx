@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getRecordsByMonth } from '../api/records';
+import { getRecords, getRecordsByMonth } from '../api/records';
 import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
@@ -97,6 +97,12 @@ function toSeoulTimeLabel(instant: string): string {
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
+  const recordVersion = useOutletContext<{ recordVersion?: number } | undefined>()?.recordVersion;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listOnly = searchParams.get('view') === 'list';
+  const [category, setCategory] = useState<RecordCategory | ''>('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [activeTab, setActiveTab] = useState<'records' | 'schedules'>('records');
   const [today] = useState(() => {
     const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
@@ -129,7 +135,12 @@ export function DailyRecordPage() {
     else setMonthSchedules([]);
 
     const request = activeTab === 'records'
-      ? getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1).then(res => res.items)
+      ? (listOnly
+        ? getRecords(selectedRecipientId, category || undefined, page)
+        : getRecordsByMonth(selectedRecipientId, viewYear, viewMonth + 1)).then(res => {
+          if (isCurrent) setTotalPages(res.pagination.totalPages);
+          return res.items;
+        })
       : getSchedulesByMonth(selectedRecipientId, viewYear, viewMonth + 1);
 
     request
@@ -143,21 +154,28 @@ export function DailyRecordPage() {
       .finally(() => { if (isCurrent) setIsLoading(false); });
 
     return () => { isCurrent = false; };
-  }, [selectedRecipientId, activeTab, viewYear, viewMonth]);
+  }, [selectedRecipientId, activeTab, viewYear, viewMonth, listOnly, category, page, recordVersion]);
+
+  const recordUrl = (recordId: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('record', String(recordId));
+    return `/records?${params.toString()}`;
+  };
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
 
-  const selectedRecords = monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
-  const visibleRecords = showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
-  const hasMoreRecords = !showAllDayRecords && selectedRecords.length > 3;
+  const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
+  const visibleRecords = listOnly || showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
+  const hasMoreRecords = !listOnly && !showAllDayRecords && selectedRecords.length > 3;
   const datesWithRecords = new Set(monthRecords.map(r => toSeoulDateKey(r.recordedAt)));
 
   const selectedSchedules = monthSchedules.filter(s => toSeoulDateKey(s.scheduledAt) === selectedKey);
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
 
-  const canWrite = user?.role === 'GUARDIAN';
+  const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
+  const canWriteSchedule = user?.role === 'GUARDIAN';
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -171,8 +189,7 @@ export function DailyRecordPage() {
     if (!selectedRecipientId || !newScheduleTitle.trim()) return;
     setIsAddingSchedule(true);
     try {
-      const [h, m] = newScheduleTime.split(':').map(Number);
-      const scheduledAt = new Date(viewYear, viewMonth, selectedDay, h, m).toISOString();
+      const scheduledAt = new Date(`${selectedKey}T${newScheduleTime}:00+09:00`).toISOString();
       const created = await createSchedule(selectedRecipientId, {
         title: newScheduleTitle.trim(),
         scheduledAt,
@@ -190,6 +207,7 @@ export function DailyRecordPage() {
     }
   };
 
+
   const handleDeleteSchedule = async (scheduleId: number) => {
     if (!selectedRecipientId) return;
     try {
@@ -203,10 +221,17 @@ export function DailyRecordPage() {
   const activeDots = activeTab === 'records' ? datesWithRecords : datesWithSchedules;
 
   return (
-    <div className="demo-page">
-      <h1>일정·돌봄 기록</h1>
+    <div className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <h1>{listOnly ? '돌봄 기록 목록' : '일정·돌봄 기록'}</h1>
 
-      <section className={`demo-card accent ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
+      {listOnly && <div className={styles.categoryFilter}>
+        <select aria-label="카테고리" value={category} onChange={event => { setCategory(event.target.value as RecordCategory | ''); setPage(1); }}>
+          <option value="">전체</option>
+          {Object.entries(CATEGORY_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+      </div>}
+
+      {!listOnly && <section className={`demo-card accent ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
         <div className="calendar-heading">
           <button onClick={prevMonth} type="button" aria-label="이전 달">‹</button>
           <h2 style={{ margin: 0 }}>{viewYear}년 {viewMonth + 1}월</h2>
@@ -241,9 +266,9 @@ export function DailyRecordPage() {
             );
           })}
         </div>
-      </section>
+      </section>}
 
-      <div className={styles.tabRow} role="tablist" aria-label="기록 유형">
+      {!listOnly && <div className={styles.tabRow} role="tablist" aria-label="기록 유형">
         <button
           type="button"
           role="tab"
@@ -262,23 +287,28 @@ export function DailyRecordPage() {
         >
           일정
         </button>
-      </div>
+      </div>}
 
       {isLoading && <div role="status" aria-label="불러오는 중" data-testid="loading-skeleton"><Skeleton height={56} count={3} /></div>}
       {error && <p className="error" role="alert">{error}</p>}
 
-      {activeTab === 'records' && !isLoading && !error && (
+      {activeTab === 'records' && (
         <section>
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: '0 0 0.75rem' }}>
-            {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
+              {listOnly ? '전체 기록' : `${viewMonth + 1}월 ${selectedDay}일 (${getWeekdayLabel(viewYear, viewMonth, selectedDay)})`}
+            </h2>
+            <button type="button" className={styles.viewAll} onClick={() => { setPage(1); setCategory(''); setActiveTab('records'); setSearchParams(listOnly ? {} : { view: 'list' }); }}>
+              {listOnly ? '달력 보기' : '더보기 ›'}
+            </button>
+          </div>
 
-          {selectedRecords.length === 0 ? (
-            <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 기록이 없어요.</p>
+          {!isLoading && !error && (selectedRecords.length === 0 ? (
+            <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>{listOnly ? '조회된 기록이 없어요.' : '이 날의 기록이 없어요.'}</p>
           ) : (
             <div className={styles.records}>
               {visibleRecords.map(record => (
-                <Link key={record.id} to={`/records/${record.id}`} className={styles.recordCard}>
+                <Link key={record.id} to={recordUrl(record.id)} state={{ recordModalFromList: true }} className={styles.recordCard} aria-label={record.content}>
                   <div className={styles.recordIcon} style={{ background: CATEGORY_COLOR[record.category] }}>
                     {CATEGORY_ICON[record.category]}
                   </div>
@@ -292,8 +322,16 @@ export function DailyRecordPage() {
                 </button>
               )}
             </div>
-          )}
+          ))}
         </section>
+      )}
+
+      {listOnly && !isLoading && !error && totalPages > 1 && (
+        <nav aria-label="기록 페이지" className={styles.pagination}>
+          <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>이전</button>
+          <span>{page} / {totalPages}</span>
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>다음</button>
+        </nav>
       )}
 
       {activeTab === 'schedules' && !isLoading && !error && (
@@ -302,7 +340,7 @@ export function DailyRecordPage() {
             <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
               {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
             </h2>
-            {canWrite && (
+            {canWriteSchedule && (
               <button
                 type="button"
                 className={styles.viewAll}
@@ -313,7 +351,7 @@ export function DailyRecordPage() {
             )}
           </div>
 
-          {scheduleFormOpen && canWrite && (
+          {scheduleFormOpen && canWriteSchedule && (
             <div className={styles.scheduleForm}>
               <input
                 type="text"
@@ -354,7 +392,7 @@ export function DailyRecordPage() {
                     )}
                   </div>
                   <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canWrite && (
+                  {canWriteSchedule && (
                     <button
                       type="button"
                       className={styles.deleteBtn}
@@ -372,6 +410,8 @@ export function DailyRecordPage() {
       )}
 
       {activeTab === 'records' && canWrite && (
+        <>
+        <Link to="/records/deleted" className={styles.viewAll}>삭제된 기록 보기</Link>
         <button
           className={`btn ${styles.recordButton}`}
           type="button"
@@ -379,6 +419,7 @@ export function DailyRecordPage() {
         >
           기록하기
         </button>
+        </>
       )}
     </div>
   );

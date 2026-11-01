@@ -6,7 +6,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "organization_recipient_link")
+@Table(name = "organization_recipient_link",
+       uniqueConstraints = @UniqueConstraint(name = "uk_organization_recipient_link_org_recipient",
+               columnNames = {"organizationId", "careRecipientId"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrganizationRecipientLink {

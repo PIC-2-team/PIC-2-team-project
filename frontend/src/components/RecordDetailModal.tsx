@@ -1,18 +1,14 @@
-import { AppShell } from '../components/AppShell';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getRecord,
   updateRecord,
   deleteRecord,
-  createSuggestion,
   getRecordRevisions,
-  getRecordSuggestions,
-  type RecordSuggestion,
 } from '../api/records';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { DailyRecord, RecordCategory, RecordRevision } from '../types/record';
+import styles from './RecordDetailModal.module.css';
 
 function parseRecordContent(content: string): string {
   if (content.trimStart().startsWith('{')) {
@@ -46,10 +42,15 @@ const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'OTHER', label: '기타' },
 ];
 
-export function RecordDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
+  recordId: number;
+  onClose: () => void;
+  onChanged?: () => void;
+  onError?: (message: string) => void;
+}) {
   const { selectedRecipientId, user } = useAuth();
-  const navigate = useNavigate();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [record, setRecord] = useState<DailyRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,21 +67,10 @@ export function RecordDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // 수정 제안 상태 (활동지원사용)
-  const [showSuggestion, setShowSuggestion] = useState(false);
-  const [suggestionText, setSuggestionText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [suggestionDone, setSuggestionDone] = useState(false);
-  const [suggestionError, setSuggestionError] = useState<string | null>(null);
-
   // 수정 이력 상태 (보호자/열람자용)
   const [revisions, setRevisions] = useState<RecordRevision[]>([]);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
-
-  // 해당 기록에 대한 대기 중인 활동지원사 수정 제안 목록
-  const [pendingSuggestions, setPendingSuggestions] = useState<RecordSuggestion[]>([]);
-  const [pendingSuggestionCount, setPendingSuggestionCount] = useState(0);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -89,12 +79,26 @@ export function RecordDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedRecipientId || !id) {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    const scrollContainer = dialogRef.current?.closest<HTMLElement>('.app-main');
+    const previousScrollOverflow = scrollContainer?.style.overflow;
+    document.body.style.overflow = 'hidden';
+    if (scrollContainer) scrollContainer.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (scrollContainer) scrollContainer.style.overflow = previousScrollOverflow ?? '';
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRecipientId || !Number.isInteger(recordId) || recordId <= 0) {
       setIsLoading(false);
       return;
     }
     let isCurrent = true;
-    const recordId = Number(id);
     getRecord(selectedRecipientId, recordId)
       .then(res => { if (isCurrent) setRecord(res); })
       .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '기록을 불러올 수 없어요.'); })
@@ -106,20 +110,28 @@ export function RecordDetailPage() {
       .catch(() => { if (isCurrent) setRevisions([]); })
       .finally(() => { if (isCurrent) setRevisionsLoading(false); });
 
-    if (user?.role === 'GUARDIAN') {
-      // TODO: 백엔드에 /records/{id}/suggestions 엔드포인트 추가 시 교체
-      getRecordSuggestions(selectedRecipientId, 'PENDING', 1, 20, recordId)
-        .then(res => {
-          if (!isCurrent) return;
-          setPendingSuggestions(res?.items ?? []);
-          setPendingSuggestionCount(res?.pagination.totalItems ?? 0);
-        })
-        .catch(() => {
-          if (isCurrent) { setPendingSuggestions([]); setPendingSuggestionCount(0); }
-        });
-    }
     return () => { isCurrent = false; };
-  }, [id, selectedRecipientId, user?.role]);
+  }, [recordId, selectedRecipientId]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (showDeleteDialog) return;
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      onClose();
+    }
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), a[href]'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const startEditing = () => {
     if (!record) return;
@@ -136,70 +148,67 @@ export function RecordDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedRecipientId || !id) return;
+    if (!selectedRecipientId) return;
     setShowDeleteDialog(false);
     setIsDeleting(true);
     setError(null);
     try {
-      await deleteRecord(selectedRecipientId, Number(id));
-      navigate('/records', { replace: true });
+      await deleteRecord(selectedRecipientId, recordId);
+      onChanged?.();
+      if (isMountedRef.current) onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.');
-      setIsDeleting(false);
+      const message = e instanceof Error ? e.message : '기록 삭제 중 오류가 발생했어요.';
+      if (isMountedRef.current) {
+        setError(message);
+        setIsDeleting(false);
+      } else onError?.(message);
     }
   };
 
   const submitEdit = async () => {
-    if (!selectedRecipientId || !id || !editContent.trim()) return;
+    if (!selectedRecipientId || !editContent.trim()) return;
     setIsSaving(true);
     setEditError(null);
     try {
-      const updated = await updateRecord(selectedRecipientId, Number(id), {
+      const updated = await updateRecord(selectedRecipientId, recordId, {
         content: editContent.trim(),
         category: editCategory,
       });
+      onChanged?.();
+      if (!isMountedRef.current) return;
       setRecord(updated);
       setIsEditing(false);
       setActionMsg('기록이 수정되었어요.');
-      getRecordRevisions(selectedRecipientId, Number(id))
+      getRecordRevisions(selectedRecipientId, recordId)
         .then(res => { if (isMountedRef.current) setRevisions(res?.items ?? []); })
         .catch(() => {});
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.');
+      const message = e instanceof Error ? e.message : '기록 수정 중 오류가 발생했어요.';
+      if (isMountedRef.current) setEditError(message);
+      else onError?.(message);
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) setIsSaving(false);
     }
   };
 
-  const submitSuggestion = async () => {
-    if (!selectedRecipientId || !id || !suggestionText.trim()) return;
-    setSubmitting(true);
-    setSuggestionError(null);
-    try {
-      await createSuggestion(selectedRecipientId, Number(id), suggestionText.trim());
-      setSuggestionDone(true);
-      setShowSuggestion(false);
-    } catch (e) {
-      setSuggestionError(e instanceof Error ? e.message : '제안 제출 중 오류가 발생했어요.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const canEdit = (user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER')
+    && record?.author?.id === user.id;
 
   return (
-    <AppShell role={user?.role}>
+    <div className={styles.backdrop} onMouseDown={event => { if (event.target === event.currentTarget && !showDeleteDialog) onClose(); }}>
+      <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="record-detail-title" onKeyDown={handleKeyDown}>
       <ConfirmDialog open={showDeleteDialog} title="기록을 삭제할까요?"
-        description="삭제 후 되돌릴 수 없습니다." confirmLabel="삭제" variant="danger"
+        description="삭제 후 30일 동안 기록 목록에서 복원할 수 있습니다." confirmLabel="삭제" variant="danger"
         onConfirm={() => { void handleDelete(); }} onCancel={() => setShowDeleteDialog(false)} />
-      <main className="demo-page">
-        <div className="page-heading">
-          <button type="button" className="back" onClick={() => navigate(-1)} aria-label="뒤로가기">←</button>
-          <h1>{isEditing ? '기록 수정' : '기록 상세'}</h1>
+      <div className={styles.body}>
+        <div className={styles.header}>
+          <h2 id="record-detail-title">{isEditing ? '기록 수정' : '기록 상세'}</h2>
+          <button ref={closeButtonRef} type="button" className={styles.close} onClick={onClose} aria-label="기록 상세 닫기">✕</button>
         </div>
         {isLoading ? <p className="empty-state" role="status">불러오는 중…</p> : error ? (
-          <><p className="error" role="alert">{error}</p><Link className="btn secondary" to="/records">← 목록으로</Link></>
+          <p className="error" role="alert">{error}</p>
         ) : !record ? (
-          <><p className="empty-state">기록을 찾을 수 없어요.</p><Link className="btn secondary" to="/records">← 목록으로</Link></>
+          <p className="empty-state">기록을 찾을 수 없어요.</p>
         ) : (
           <>
             {isEditing ? (
@@ -279,53 +288,6 @@ export function RecordDetailPage() {
               </>
             ) : (
               <>
-                {user?.role === 'GUARDIAN' && pendingSuggestionCount > 0 && (
-                  <aside
-                    aria-label="활동지원사 수정 제안"
-                    style={{
-                      background: '#fffbeb',
-                      border: '1.5px solid #f59e0b',
-                      borderRadius: '12px',
-                      padding: '1rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <strong style={{ color: '#b45309', fontSize: '0.95rem' }}>
-                        📢 활동지원사의 수정 제안이 {pendingSuggestionCount}건 있어요
-                      </strong>
-                      <Link
-                        to="/record-suggestions"
-                        className="btn secondary"
-                        style={{ fontSize: '0.8rem', padding: '4px 10px', textDecoration: 'none' }}
-                      >
-                        검토하기
-                      </Link>
-                    </div>
-                    {pendingSuggestions.map(sug => (
-                      <div
-                        key={sug.id}
-                        style={{
-                          marginTop: '0.5rem',
-                          padding: '0.625rem',
-                          background: '#ffffff',
-                          borderRadius: '8px',
-                          border: '1px solid #fde68a',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600, color: '#4b5563' }}>
-                          {sug.suggestedBy?.name ?? '활동지원사'} 님의 제안
-                          {sug.reason && <span style={{ fontWeight: 400, color: '#6b7280' }}> · 사유: {sug.reason}</span>}
-                        </p>
-                        <p style={{ margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
-                          {sug.proposed?.content ?? sug.suggestedContent}
-                        </p>
-                      </div>
-                    ))}
-                  </aside>
-                )}
-
                 <article className="demo-card">
                   <time className="record-meta" dateTime={record.recordedAt}>
                     {new Date(record.recordedAt).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -334,7 +296,7 @@ export function RecordDetailPage() {
                   <p className="record-content">{parseRecordContent(record.content)}</p>
                 </article>
                 {actionMsg && <p role="status" className="hint">{actionMsg}</p>}
-                {user?.role === 'GUARDIAN' && (
+                {canEdit && (
                   <div className="actions">
                     <button type="button" className="btn secondary" style={{ color: '#1a2533' }} onClick={startEditing}>수정</button>
                     <button
@@ -347,38 +309,6 @@ export function RecordDetailPage() {
                     </button>
                   </div>
                 )}
-                {user?.role === 'SUPPORT_WORKER' && (
-                  <>
-                    {suggestionDone ? (
-                      <p role="status">제안 전송 완료 — 보호자에게 전달됐어요.</p>
-                    ) : showSuggestion ? (
-                      <div>
-                        <textarea
-                          aria-label="수정 제안 내용"
-                          value={suggestionText}
-                          onChange={e => setSuggestionText(e.target.value)}
-                          rows={4}
-                          placeholder="수정할 내용을 입력해 주세요."
-                        />
-                        <div className="actions">
-                          <button type="button" className="btn secondary" onClick={() => setShowSuggestion(false)}>취소</button>
-                          <button
-                            type="button"
-                            className="btn primary"
-                            disabled={!suggestionText.trim() || submitting}
-                            onClick={() => { void submitSuggestion(); }}
-                          >
-                            {submitting ? '제출 중…' : '제안하기'}
-                          </button>
-                        </div>
-                        {suggestionError && <p role="alert" className="error" style={{ marginTop: '0.5rem' }}>{suggestionError}</p>}
-                      </div>
-                    ) : (
-                      <button type="button" className="btn secondary" onClick={() => setShowSuggestion(true)}>수정 제안</button>
-                    )}
-                  </>
-                )}
-
                 <section style={{ marginTop: '1.5rem' }} aria-labelledby="revisions-heading">
                   <button
                     type="button"
@@ -490,7 +420,8 @@ export function RecordDetailPage() {
             )}
           </>
         )}
-      </main>
-    </AppShell>
+      </div>
+      </div>
+    </div>
   );
 }

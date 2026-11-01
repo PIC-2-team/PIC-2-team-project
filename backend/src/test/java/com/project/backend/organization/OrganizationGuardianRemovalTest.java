@@ -116,6 +116,7 @@ class OrganizationGuardianRemovalTest {
     }
 
     private CareAssignment assign(Organization org, Long recipientId, Long workerId) {
+        members.save(OrganizationMember.builder().organizationId(org.getId()).userId(workerId).build());
         return assignments.save(CareAssignment.builder().organizationId(org.getId()).careRecipientId(recipientId)
                 .supportWorkerId(workerId).idempotencyKey("assignment-" + workerId)
                 .startDate(LocalDate.now()).build());

@@ -13,8 +13,23 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface InformationRequestRepository extends JpaRepository<InformationRequest, Long> {
-    Page<InformationRequest> findByRequestedByIdAndStatus(Long userId, InformationRequestStatus status, Pageable pageable);
-    Page<InformationRequest> findByRequestedById(Long userId, Pageable pageable);
+    @Query(value = """
+            select r from InformationRequest r
+            where r.requestedById = :userId
+              and (:status is null or r.status = :status)
+              and exists (select m.id from OrganizationMember m
+                          where m.organizationId = r.organizationId and m.userId = :userId
+                            and m.status = com.project.backend.organization.entity.OrganizationMemberStatus.ACTIVE)
+            """, countQuery = """
+            select count(r) from InformationRequest r
+            where r.requestedById = :userId
+              and (:status is null or r.status = :status)
+              and exists (select m.id from OrganizationMember m
+                          where m.organizationId = r.organizationId and m.userId = :userId
+                            and m.status = com.project.backend.organization.entity.OrganizationMemberStatus.ACTIVE)
+            """)
+    Page<InformationRequest> findVisibleByRequester(@Param("userId") Long userId,
+            @Param("status") InformationRequestStatus status, Pageable pageable);
     Page<InformationRequest> findByOrganizationIdAndStatus(Long organizationId, InformationRequestStatus status, Pageable pageable);
     Page<InformationRequest> findByOrganizationId(Long organizationId, Pageable pageable);
     Page<InformationRequest> findByCareRecipientIdAndStatus(Long recipientId, InformationRequestStatus status, Pageable pageable);

@@ -49,17 +49,11 @@ public class RecordAccessService {
 
     public void verifyEdit(Long userId, Long recipientId, Long authorId) {
         verifyCreate(userId, recipientId);
-        require(isGuardian(userId, recipientId) || userId.equals(authorId));
+        require(userId.equals(authorId));
     }
 
     public void verifyGuardian(Long userId, Long recipientId) {
         require(user(userId).getRole() == UserRole.GUARDIAN && isGuardian(userId, recipientId));
-    }
-
-    public void verifySuggestionCreate(Long userId, Long recipientId) {
-        User actor = user(userId);
-        require(actor.getRole() == UserRole.SUPPORT_WORKER || actor.getRole() == UserRole.INSTITUTION);
-        verifyRead(userId, recipientId);
     }
 
     private boolean isAssigned(Long userId, Long recipientId) {
