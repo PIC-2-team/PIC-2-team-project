@@ -73,10 +73,10 @@
 
 .button {
   min-height: 44px;
-  border: 0;
+  border: 1px solid #b5d8c0;
   border-radius: 10px;
-  background: #3d9a6b;
-  color: #fff;
+  background: #dceee2;
+  color: #285d42;
   font: inherit;
   font-size: 0.875rem;
   font-weight: 700;
@@ -84,7 +84,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: #347f5a;
+  background: #cbe5d3;
 }
 
 .button:disabled {
