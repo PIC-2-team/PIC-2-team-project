@@ -244,6 +244,28 @@ class RecordDraftApiTest {
     }
 
     @Test
+    void stigmatizingTermsInTheDraftAreSoftenedBeforeReturning() throws Exception {
+        given(gptMessage.content()).willReturn(Optional.of("{\"content\":\"정상인 앞에서 문제행동이 있었습니다.\"}"));
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용"))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value("비장애인 앞에서 도전적 행동이 있었습니다."));
+    }
+
+    @Test
+    void systemPromptAsksForRespectfulToneAndFrequencySummary() throws Exception {
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용"))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk());
+        org.mockito.ArgumentCaptor<ChatCompletionCreateParams> params = org.mockito.ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
+        verify(completions).create(params.capture());
+        org.assertj.core.api.Assertions.assertThat(params.getValue().toString())
+                .contains("낙인").contains("횟수").contains("지어내지");
+    }
+
+    @Test
     void textDraftRequiresAnAccessibleCareRecipient() throws Exception {
         mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
                         .content("{\"inputType\":\"TEXT\",\"text\":\"관찰 내용\"}")

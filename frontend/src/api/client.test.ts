@@ -286,6 +286,34 @@ describe('apiRequest', () => {
     expect(onUnauth).toHaveBeenCalledTimes(1);
   });
 
+  it('refresh가 네트워크 오류로 실패하면 로그아웃하지 않고 오류만 던진다', async () => {
+    setTokenProvider(() => 'expired-token');
+    const onUnauth = vi.fn();
+    setUnauthorizedHandler(onUnauth);
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 401 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(apiRequest('/protected')).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+
+    expect(onUnauth).not.toHaveBeenCalled();
+  });
+
+  it('refresh가 서버 오류(5xx)면 로그아웃하지 않고 오류만 던진다', async () => {
+    setTokenProvider(() => 'expired-token');
+    const onUnauth = vi.fn();
+    setUnauthorizedHandler(onUnauth);
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(new Response('', { status: 401 }))
+      .mockResolvedValueOnce(new Response('', { status: 503 }));
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(apiRequest('/protected')).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+
+    expect(onUnauth).not.toHaveBeenCalled();
+  });
+
   it('401 ApiError는 status 401을 포함한다', async () => {
     setUnauthorizedHandler(() => {});
     vi.stubGlobal(

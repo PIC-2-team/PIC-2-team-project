@@ -49,6 +49,9 @@ public class RecordDraftService {
             돌봄정보를 해당 관찰을 해석하고 개인에게 맞는 표현을 정할 때 참고하세요.
             단, 이번 관찰 내용에 없는 돌봄정보 자체를 오늘 발생한 일처럼 기록하지 마세요.
             입력에 없는 사실을 만들거나 의료 진단·치료 조언을 덧붙이지 말고, 한국어로 간결한 기록을 작성하세요.
+            당사자를 낙인찍거나 비하하는 표현(예: 정상인, 장애우, 문제행동)은 쓰지 말고 비장애인, 장애인, 도전적 행동처럼 존중하는 표현으로 바꾸세요.
+            행동은 평가나 감정 섞인 말 없이 있었던 일과 상황 중심으로 기술하세요.
+            같은 내용이 입력에서 여러 번 반복되면 하나로 묶고 "하루 3회"처럼 횟수로 요약하세요. 입력에 횟수가 분명하지 않으면 횟수를 지어내지 말고 "여러 차례"로 표현하세요.
             content는 500자 이내로 작성하고 JSON 객체 {"content":"..."}만 반환하세요.
             """;
 
@@ -58,6 +61,7 @@ public class RecordDraftService {
     private final CareInfoRepository careInfos;
     private final ObjectMapper objectMapper;
     private final KeywordCategoryClassifier classifier;
+    private final ExpressionSoftener softener;
 
     public RecordDraftResponse create(Long userId, RecordDraftRequest request) {
         if (request == null || request.careRecipientId() == null || request.inputType() == null) invalidInput();
@@ -117,11 +121,11 @@ public class RecordDraftService {
         } catch (Exception e) {
             throw invalidAiResponse();
         }
-        if (fields.content() == null || fields.content().isBlank() || fields.content().length() > MAX_DRAFT_LENGTH) {
-            throw invalidAiResponse();
-        }
-        RecordCategory category = classifier.classify(transcript, fields.content());
-        return new RecordDraftResponse(transcript, fields.content().trim(), category);
+        if (fields.content() == null || fields.content().isBlank()) throw invalidAiResponse();
+        String content = softener.soften(fields.content()).trim();
+        if (content.length() > MAX_DRAFT_LENGTH) throw invalidAiResponse();
+        RecordCategory category = classifier.classify(transcript, content);
+        return new RecordDraftResponse(transcript, content, category);
     }
 
     private String draftInput(Long recipientId, String transcript) {

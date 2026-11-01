@@ -24,7 +24,9 @@ let _getToken: () => string | null = getFallbackToken;
 let _tokenOverride: string | null | undefined;
 let _updateAccessToken: (token: string) => void = () => {};
 let _onUnauthorized: (() => void) | null = null;
-let _refreshPromise: Promise<string | null> | null = null;
+const REFRESH_UNAVAILABLE = Symbol('refresh-unavailable');
+type RefreshResult = string | null | typeof REFRESH_UNAVAILABLE;
+let _refreshPromise: Promise<RefreshResult> | null = null;
 
 export function setTokenProvider(fn: () => string | null) {
   _getToken = fn;
@@ -56,7 +58,8 @@ function currentToken() {
   return getFallbackToken();
 }
 
-function refreshAccessToken(): Promise<string | null> {
+// null은 서버가 세션을 거부한 경우, REFRESH_UNAVAILABLE은 일시적 장애라 로그인은 유지해야 한다
+function refreshAccessToken(): Promise<RefreshResult> {
   if (!_refreshPromise) {
     _refreshPromise = (async () => {
       try {
@@ -64,6 +67,7 @@ function refreshAccessToken(): Promise<string | null> {
           method: 'POST',
           credentials: 'include',
         });
+        if (response.status >= 500) return REFRESH_UNAVAILABLE;
         if (!response.ok) return null;
         const json = (await response.json()) as ApiResponse<{ accessToken: string }>;
         if (!json.success || !json.data.accessToken) return null;
@@ -71,7 +75,7 @@ function refreshAccessToken(): Promise<string | null> {
         _updateAccessToken(json.data.accessToken);
         return json.data.accessToken;
       } catch {
-        return null;
+        return REFRESH_UNAVAILABLE;
       }
     })().finally(() => {
       _refreshPromise = null;
@@ -114,9 +118,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (res.status === 401) {
     const latestToken = currentToken();
-    const refreshedToken = token && latestToken && latestToken !== token
+    const refreshed: RefreshResult = token && latestToken && latestToken !== token
       ? latestToken
       : token ? await refreshAccessToken() : null;
+    if (refreshed === REFRESH_UNAVAILABLE) {
+      throw new ApiError('NETWORK_ERROR', '네트워크 상태를 확인하고 다시 시도해 주세요.', 0);
+    }
+    const refreshedToken = refreshed;
     if (refreshedToken) res = await sendRequest(path, options, refreshedToken);
     if (!refreshedToken || res.status === 401) {
       _tokenOverride = null;
