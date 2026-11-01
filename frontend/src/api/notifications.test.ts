@@ -68,7 +68,7 @@ describe('notifications API', () => {
     expect(res.updatedCount).toBe(5);
   });
 
-  it('summarizeUnreadNotifications requests an AI summary without marking notifications read', async () => {
+  it('summarizeUnreadNotifications requests an AI summary of unread notifications', async () => {
     const spy = vi.spyOn(client, 'apiRequest').mockResolvedValue({
       unreadCount: 2,
       summary: '새 기록과 활동지원사 배정이 있습니다.',

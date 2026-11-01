@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { summarizeUnreadNotifications, type NotificationSummary } from '../api/notifications';
 import styles from './UnreadNotificationSummaryCard.module.css';
 
-export function UnreadNotificationSummaryCard() {
+export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummaryGenerated?: () => void }) {
   const [summary, setSummary] = useState<NotificationSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,6 +12,7 @@ export function UnreadNotificationSummaryCard() {
     setError(null);
     try {
       setSummary(await summarizeUnreadNotifications());
+      onSummaryGenerated?.();
     } catch {
       setError(summary?.summary
         ? '새 요약을 만들지 못했어요. 이전 요약을 계속 보여드릴게요.'
@@ -44,7 +45,7 @@ export function UnreadNotificationSummaryCard() {
       <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
         {loading ? '요약하는 중…' : summary?.summary ? '다시 요약하기' : '요약 리포트 만들기'}
       </button>
-      <p className={styles.note}>요약 리포트를 만들어도 원본 알림은 읽음 처리되지 않아요.</p>
+      <p className={styles.note}>요약이 완료되면 포함된 원본 알림은 자동으로 읽음 처리돼요.</p>
     </section>
   );
 }

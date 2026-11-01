@@ -9,6 +9,7 @@ import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -40,13 +41,15 @@ class NotificationSummaryServiceTest {
     private NotificationSummaryService service;
 
     @Test
-    void summarizesAllUnreadNotificationsWithoutChangingTheirReadState() {
+    void summarizesAndMarksTheIncludedUnreadNotificationsAsRead() {
         User guardian = User.builder().name("보호자").email("guardian@example.com")
                 .publicCode("G-1").role(UserRole.GUARDIAN).build();
         Notification newest = new Notification(1L, NotificationType.RECORD_CREATED,
                 "새 기록이 등록되었습니다.", Instant.parse("2026-11-01T09:00:00Z"));
         Notification older = new Notification(1L, NotificationType.ASSIGNMENT_CHANGED,
                 "새 활동지원사가 배정되었습니다.", Instant.parse("2026-10-31T09:00:00Z"));
+        ReflectionTestUtils.setField(newest, "id", 11L);
+        ReflectionTestUtils.setField(older, "id", 12L);
         List<Notification> unread = List.of(newest, older);
         given(users.findById(1L)).willReturn(Optional.of(guardian));
         given(notifications.findByUserIdAndReadOrderByCreatedAtDescIdDesc(1L, false)).willReturn(unread);
@@ -57,8 +60,8 @@ class NotificationSummaryServiceTest {
         assertThat(response.unreadCount()).isEqualTo(2);
         assertThat(response.summary()).isEqualTo("새 기록과 활동지원사 배정이 있습니다.");
         assertThat(response.generatedAt()).isEqualTo(Instant.parse("2026-11-01T10:00:00Z"));
-        assertThat(unread).allMatch(notification -> !notification.isRead());
         verify(notifications).findByUserIdAndReadOrderByCreatedAtDescIdDesc(1L, false);
+        verify(notifications).markReadByUserIdAndIds(1L, List.of(11L, 12L));
     }
 
     @Test

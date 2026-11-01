@@ -185,7 +185,7 @@ export function NotificationInboxPage() {
         </div>
 
         {tab === 'summary' ? (
-          <UnreadNotificationSummaryCard />
+          <UnreadNotificationSummaryCard onSummaryGenerated={() => void fetchList('unread')} />
         ) : loading ? (
           <p className="muted" role="status">
             알림을 불러오는 중입니다…

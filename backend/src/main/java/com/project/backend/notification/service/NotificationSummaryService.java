@@ -29,6 +29,10 @@ public class NotificationSummaryService {
 
         List<Notification> unread = notifications.findByUserIdAndReadOrderByCreatedAtDescIdDesc(userId, false);
         String summary = unread.isEmpty() ? null : generator.generate(unread);
+        if (summary != null) {
+            List<Long> summarizedIds = unread.stream().map(Notification::getId).toList();
+            notifications.markReadByUserIdAndIds(userId, summarizedIds);
+        }
         return new NotificationSummaryResponse(unread.size(), summary, clock.instant());
     }
 }
