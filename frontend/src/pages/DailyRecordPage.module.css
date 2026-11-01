@@ -96,11 +96,15 @@
   padding: 0.25rem;
 }
 
+/* design-system의 scrollbar-gutter: stable을 다른 페이지와 동일하게 되돌림 */
+:global(.app-shell .app-main:has(.calendar-grid)) {
+  scrollbar-gutter: auto;
+}
+
 /* Calendar */
 .calendarSection {
-  background: #f0f7f3;
-  border-radius: 16px;
-  padding: 1.25rem;
+  background: var(--soft);
+  border-color: #cde2d3;
 }
 
 .monthNav {
@@ -320,9 +324,8 @@
 
 /* Tab toggle */
 .scheduleCalendar {
-  --calendar-accent: #b85c12;
-  background: #fff4e8 !important;
-  border-color: #f3d2b4 !important;
+  background: white !important;
+  border-color: var(--line) !important;
 }
 
 .tabRow {
