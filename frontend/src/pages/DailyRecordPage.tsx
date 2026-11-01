@@ -3,6 +3,7 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-rout
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
 import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
+import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
 import { toSeoulDateKey } from '../utils/date';
@@ -156,7 +157,14 @@ export function DailyRecordPage() {
           else setMonthSchedules(items as Schedule[]);
         }
       })
-      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패'); })
+      .catch(e => {
+        if (!isCurrent) return;
+        if (activeTab === 'schedules' && e instanceof ApiError && e.status === 404) {
+          setMonthSchedules([]);
+        } else {
+          setError(e instanceof Error ? e.message : '불러오기 실패');
+        }
+      })
       .finally(() => { if (isCurrent) setIsLoading(false); });
 
     return () => { isCurrent = false; };
@@ -237,7 +245,7 @@ export function DailyRecordPage() {
         </select>
       </div>}
 
-      {!listOnly && <section className={`demo-card accent ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
+      {!listOnly && <section className={`demo-card ${styles.calendarSection} ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
         <div className="calendar-heading">
           <button onClick={prevMonth} type="button" aria-label="이전 달">‹</button>
           <h2 style={{ margin: 0 }}>{viewYear}년 {viewMonth + 1}월</h2>

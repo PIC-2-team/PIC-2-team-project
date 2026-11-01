@@ -98,9 +98,8 @@
 
 /* Calendar */
 .calendarSection {
-  background: #f0f7f3;
-  border-radius: 16px;
-  padding: 1.25rem;
+  background: white !important;
+  border-color: var(--line) !important;
 }
 
 .monthNav {
@@ -321,8 +320,6 @@
 /* Tab toggle */
 .scheduleCalendar {
   --calendar-accent: #b85c12;
-  background: #fff4e8 !important;
-  border-color: #f3d2b4 !important;
 }
 
 .tabRow {
