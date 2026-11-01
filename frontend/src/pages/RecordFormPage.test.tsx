@@ -11,6 +11,7 @@ vi.mock('../api/records', () => ({
   createRecord: vi.fn(),
   createRecordDraft: vi.fn(),
   uploadRecordAudio: vi.fn(),
+  uploadRecordMedia: vi.fn(),
   deleteRecordMedia: vi.fn(),
 }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: authState.user }) }));
@@ -36,6 +37,19 @@ function renderPage() {
     </MemoryRouter>,
   );
 }
+
+it('기록 날짜를 직접 바꾸면 표시 날짜도 갱신된다', () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText('기록 날짜 선택'), { target: { value: '2026-10-30' } });
+  expect(screen.getByText('2026년 10월 30일 (금)')).toBeInTheDocument();
+});
+
+it('음성 기록 입력 중에도 사진과 영상을 첨부할 수 있다', () => {
+  renderPage();
+  expect(screen.getByRole('button', { name: '음성으로 기록하기' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '사진·영상 추가' })).toBeInTheDocument();
+  expect(screen.getByLabelText('사진·영상 선택')).toHaveAttribute('accept', 'image/*,video/*');
+});
 
 it('텍스트를 AI 초안으로 바꾸고 자동 분류를 확인한 뒤 기록을 저장한다', async () => {
   vi.mocked(records.createRecordDraft).mockResolvedValue({

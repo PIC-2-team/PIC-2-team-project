@@ -29,6 +29,7 @@ export type CreateRecordPayload = {
   category: RecordCategory;
   recordedAt: string;
   pinned?: boolean;
+  mediaIds?: number[];
 };
 
 export type UpdateRecordPayload = {

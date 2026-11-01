@@ -3,6 +3,7 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-rout
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
 import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
+import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
 import { toSeoulDateKey } from '../utils/date';
@@ -156,7 +157,14 @@ export function DailyRecordPage() {
           else setMonthSchedules(items as Schedule[]);
         }
       })
-      .catch(e => { if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패'); })
+      .catch(e => {
+        if (!isCurrent) return;
+        if (activeTab === 'schedules' && e instanceof ApiError && e.status === 404) {
+          setMonthSchedules([]);
+        } else {
+          setError(e instanceof Error ? e.message : '불러오기 실패');
+        }
+      })
       .finally(() => { if (isCurrent) setIsLoading(false); });
 
     return () => { isCurrent = false; };
@@ -181,7 +189,7 @@ export function DailyRecordPage() {
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
-  const canWriteSchedule = user?.role === 'GUARDIAN';
+  const canDeleteSchedule = (schedule: Schedule) => canWrite && schedule.createdById === user?.id;
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -237,7 +245,7 @@ export function DailyRecordPage() {
         </select>
       </div>}
 
-      {!listOnly && <section className={`demo-card accent ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
+      {!listOnly && <section className={`demo-card ${styles.calendarSection} ${activeTab === 'schedules' ? styles.scheduleCalendar : ''}`} aria-label={activeTab === 'records' ? '돌봄 기록 달력' : '일정 달력'}>
         <div className="calendar-heading">
           <button onClick={prevMonth} type="button" aria-label="이전 달">‹</button>
           <h2 style={{ margin: 0 }}>{viewYear}년 {viewMonth + 1}월</h2>
@@ -346,7 +354,7 @@ export function DailyRecordPage() {
             <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
               {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
             </h2>
-            {canWriteSchedule && (
+            {canWrite && (
               <button
                 type="button"
                 className={styles.viewAll}
@@ -357,7 +365,7 @@ export function DailyRecordPage() {
             )}
           </div>
 
-          {scheduleFormOpen && canWriteSchedule && (
+          {scheduleFormOpen && canWrite && (
             <div className={styles.scheduleForm}>
               <input
                 type="text"
@@ -385,7 +393,7 @@ export function DailyRecordPage() {
           )}
 
           {selectedSchedules.length === 0 ? (
-            <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 일정이 없어요.</p>
+            !scheduleFormOpen && <p className="muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>이 날의 일정이 없어요.</p>
           ) : (
             <div className={styles.records}>
               {selectedSchedules.map(schedule => (
@@ -398,7 +406,7 @@ export function DailyRecordPage() {
                     )}
                   </div>
                   <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canWriteSchedule && (
+                  {canDeleteSchedule(schedule) && (
                     <button
                       type="button"
                       className={styles.deleteBtn}
