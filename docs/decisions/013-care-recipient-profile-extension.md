@@ -27,10 +27,10 @@ date: 2026-11-01
 
 ### 2. 루틴: 별도 테이블
 
-- `care_recipient_routine(id, care_recipient_id, time, title, memo)`로 당사자와 1:N 관계를 둔다.
-- 시간은 `HH:mm`, 제목은 필수, 메모는 선택이다.
+- `care_recipient_routine(id, care_recipient_id, routine_time, title, memo)`로 당사자와 1:N 관계를 둔다. `time`은 SQL 예약어와 겹쳐 컬럼명을 `routine_time`으로 했다.
+- 시간은 API에서 `HH:mm`, 제목은 필수, 메모는 선택이다.
 - 반복 요일, 알림, 수행 체크 기록은 범위에서 제외한다.
-- 조회·수정 권한은 기존 당사자 프로필의 역할별 접근 제어(`CareAccessService`)를 따른다.
+- 조회는 당사자에 접근 권한이 있는 사용자(보호자·배정된 활동지원사 등), 추가·수정·삭제는 보호자만 가능하다(`RecordAccessService`의 `verifyRead`·`verifyGuardian`).
 
 **검토한 대안**: `care_recipient`에 JSON 컬럼으로 저장하는 방식. 항목 단위 수정·삭제와 정렬이 어렵고, 개발(H2)·운영(MySQL) 간 JSON 지원 차이가 있어 채택하지 않았다.
 
