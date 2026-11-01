@@ -96,12 +96,16 @@
   padding: 0.25rem;
 }
 
-/* design-system의 scrollbar-gutter: stable을 다른 페이지와 동일하게 되돌림 */
-:global(.app-shell .app-main:has(.calendar-grid)) {
-  scrollbar-gutter: auto;
+/* Calendar */
+:global(.app-shell .app-main .demo-page:has(.calendar-grid)) {
+  gap: 0.75rem;
+  padding-bottom: 0;
 }
 
-/* Calendar */
+:global(#root:has(.app-shell .calendar-grid)) {
+  display: flow-root;
+}
+
 .calendarSection {
   background: var(--soft);
   border-color: #cde2d3;

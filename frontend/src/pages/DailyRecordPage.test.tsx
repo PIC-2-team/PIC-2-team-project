@@ -8,7 +8,7 @@ import * as schedulesApi from '../api/schedules';
 let mockRole = 'GUARDIAN';
 let mockUserId = 1;
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { id: mockUserId, role: mockRole } }) }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; mockUserId = 1; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); mockRole = 'GUARDIAN'; mockUserId = 1; });
 
 it('활동지원사에게 기록 작성 버튼이 표시된다', async () => {
   mockRole = 'SUPPORT_WORKER';
@@ -155,6 +155,21 @@ it('"일정" 탭 전환 시 일정 목록을 표시한다', async () => {
   expect(await screen.findByText('병원 예약')).toBeInTheDocument();
 });
 
+it('활동지원사 일정 탭에 일정 추가와 삭제 기능을 표시한다', async () => {
+  mockRole = 'SUPPORT_WORKER';
+  mockUserId = 2;
+  mockEmpty();
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 1, careRecipientId: 42, createdById: 2, title: '병원 예약', scheduledAt: new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  ]);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('병원 예약');
+
+  expect(screen.getByRole('button', { name: '+ 일정 추가' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '병원 예약 삭제' })).toBeInTheDocument();
+});
+
 it('"돌봄 기록" 탭이 기본 선택된다', async () => {
   mockEmpty();
   render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
@@ -179,6 +194,27 @@ it('기록과 일정 달력은 각각 월과 선택 날짜를 기억한다', asy
   fireEvent.click(screen.getByRole('tab', { name: '돌봄 기록' }));
   expect(screen.getByRole('heading', { level: 2, name: /년.*월/ }).textContent).toBe(recordMonth);
   expect(screen.getByRole('button', { name: /월 5일/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('기록과 일정 탭을 전환하고 월을 바꿔도 달력은 6주 높이를 유지한다', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-02-15T03:00:00Z'));
+  mockEmpty();
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  vi.useRealTimers();
+
+  await screen.findByText('이 날의 기록이 없어요.');
+  const calendarGrid = () => screen.getByRole('region', { name: /달력/ }).querySelector('.calendar-grid')!;
+  const cellCount = () => calendarGrid().children.length;
+
+  expect(cellCount()).toBe(49);
+  fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
+  expect(cellCount()).toBe(49);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('이 날의 일정이 없어요.');
+  expect(cellCount()).toBe(49);
+  fireEvent.click(screen.getByRole('tab', { name: '돌봄 기록' }));
+  expect(cellCount()).toBe(49);
 });
 
 it('일정 입력의 오전 9시는 서울 시간 기준으로 저장한다', async () => {
