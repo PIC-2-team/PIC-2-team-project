@@ -6,8 +6,9 @@ import * as recordsApi from '../api/records';
 import * as schedulesApi from '../api/schedules';
 
 let mockRole = 'GUARDIAN';
-vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { role: mockRole } }) }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; });
+let mockUserId = 1;
+vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ selectedRecipientId: 42, user: { id: mockUserId, role: mockRole } }) }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); mockRole = 'GUARDIAN'; mockUserId = 1; });
 
 it('활동지원사에게 기록 작성 버튼이 표시된다', async () => {
   mockRole = 'SUPPORT_WORKER';
@@ -196,4 +197,29 @@ it('일정 입력의 오전 9시는 서울 시간 기준으로 저장한다', as
   await waitFor(() => expect(create).toHaveBeenCalledWith(42, expect.objectContaining({
     title: '병원 방문', scheduledAt: expect.stringMatching(/T00:00:00\.000Z$/),
   })));
+});
+
+it('활동지원사도 일정을 추가할 수 있다', async () => {
+  mockRole = 'SUPPORT_WORKER';
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('이 날의 일정이 없어요.');
+  expect(screen.getByRole('button', { name: '+ 일정 추가' })).toBeInTheDocument();
+});
+
+it('일정 삭제 버튼은 작성자 본인의 일정에만 표시한다', async () => {
+  mockUserId = 1;
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
+  const now = new Date().toISOString();
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 1, careRecipientId: 42, createdById: 1, title: '내 일정', scheduledAt: now, createdAt: now, updatedAt: now },
+    { id: 2, careRecipientId: 42, createdById: 2, title: '다른 보호자 일정', scheduledAt: now, createdAt: now, updatedAt: now },
+  ]);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('다른 보호자 일정');
+  expect(screen.getByRole('button', { name: '내 일정 삭제' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '다른 보호자 일정 삭제' })).not.toBeInTheDocument();
 });

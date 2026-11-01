@@ -189,7 +189,7 @@ export function DailyRecordPage() {
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
-  const canWriteSchedule = user?.role === 'GUARDIAN';
+  const canWriteSchedule = canWrite;
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -406,7 +406,7 @@ export function DailyRecordPage() {
                     )}
                   </div>
                   <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canWriteSchedule && (
+                  {canWriteSchedule && schedule.createdById === user?.id && (
                     <button
                       type="button"
                       className={styles.deleteBtn}

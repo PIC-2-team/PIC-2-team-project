@@ -38,6 +38,9 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public List<ScheduleResponse> listByMonth(Long userId, Long recipientId, int year, int month) {
         access.verifyRead(userId, recipientId);
+        if (month < 1 || month > 12 || year < 1900 || year > 9999) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", "조회할 연월이 올바르지 않습니다.");
+        }
         LocalDate start = YearMonth.of(year, month).atDay(1);
         Instant from = start.atStartOfDay(SEOUL).toInstant();
         Instant to = start.plusMonths(1).atStartOfDay(SEOUL).toInstant();
