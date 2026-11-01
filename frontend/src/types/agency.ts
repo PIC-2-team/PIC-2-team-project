@@ -51,6 +51,12 @@ export type OrganizationCareRecipient = {
   disabilityTypes?: string[];
   disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
+  hospitalName?: string | null;
+  doctorName?: string | null;
+  hospitalPhone?: string | null;
+  supportCenterName?: string | null;
+  supportCenterManagerName?: string | null;
+  supportCenterPhone?: string | null;
   latestRecordAt?: string | null;
   createdAt?: string;
   guardianName?: string | null;
