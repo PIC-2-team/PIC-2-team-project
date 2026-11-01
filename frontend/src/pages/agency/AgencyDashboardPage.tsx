@@ -22,6 +22,7 @@ import {
   removeMember,
 } from '../../api/organizations';
 import { ApiError } from '../../api/client';
+import { toSeoulDateKey } from '../../utils/date';
 import type {
   Organization,
   OrganizationMember,
@@ -48,6 +49,14 @@ interface CardActionButtonProps {
   label: string;
   onClick: () => void;
   variant?: 'default' | 'danger' | 'success';
+}
+
+// 서버의 현재 담당 판정과 같은 기준: 종료되지 않았고 오늘이 시작일~종료일 안에 있는 배정
+function isCurrentAssignment(
+  a: { endedAt: string | null; startDate: string; endDate: string | null },
+  today: string,
+) {
+  return !a.endedAt && a.startDate <= today && (!a.endDate || a.endDate >= today);
 }
 
 function CardActionButton({ label, onClick, variant = 'default' }: CardActionButtonProps) {
@@ -130,6 +139,22 @@ export function AgencyDashboardPage() {
   const [searchParams] = useSearchParams();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
+  const [profileMember, setProfileMember] = useState<OrganizationMember | null>(null);
+  const todayKey = toSeoulDateKey(new Date().toISOString());
+  // 지원사가 현재 담당 중인 당사자 (같은 당사자에 대한 중복 배정은 한 명으로 센다)
+  const currentRecipientsOf = (member: OrganizationMember) => {
+    if (page.status !== 'ok') return [];
+    const workerId = member.userId ?? member.id;
+    const ids = new Set(
+      page.assignments
+        .filter((a) => a.supportWorkerId === workerId && isCurrentAssignment(a, todayKey))
+        .map((a) => a.careRecipientId),
+    );
+    return [...ids].map((id) => {
+      const recipient = page.recipients.find((r) => r.id === id);
+      return { id, name: recipient?.name ?? `당사자 #${id}`, number: recipient?.careRecipientNumber ?? null };
+    });
+  };
   const [orgCode, setOrgCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -1171,22 +1196,50 @@ export function AgencyDashboardPage() {
                     </div>
 
                     {/* 돌봄 지원사 선택 영역 */}
-                    <label style={{ marginTop: 12, fontWeight: 600 }}>
-                      돌봄 지원사
-                      <select
-                        aria-label="돌봄 지원사"
-                        value={assignWorkerId}
-                        onChange={(e) => setAssignWorkerId(e.target.value)}
-                        disabled={activeMembers.length === 0}
-                        required
-                      >
-                        {activeMembers.map((m) => (
-                          <option key={m.id} value={m.userId ?? m.id}>
-                            {m.name} ({m.publicCode || `#${m.id}`})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <fieldset
+                      disabled={activeMembers.length === 0}
+                      style={{ border: 0, padding: 0, margin: '12px 0 0' }}
+                    >
+                      <legend style={{ fontWeight: 600, marginBottom: 4, padding: 0 }}>돌봄 지원사</legend>
+                      {activeMembers.map((m) => {
+                        const value = String(m.userId ?? m.id);
+                        const count = currentRecipientsOf(m).length;
+                        return (
+                          <div
+                            key={m.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #eef1f4' }}
+                          >
+                            <label style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 8, minWidth: 0, margin: 0 }}>
+                              <input
+                                type="radio"
+                                name="assignWorker"
+                                value={value}
+                                checked={assignWorkerId === value}
+                                onChange={() => setAssignWorkerId(value)}
+                                required
+                                style={{ width: 'auto', margin: 0, flexShrink: 0 }}
+                              />
+                              <span style={{ minWidth: 0 }}>
+                                <strong>{m.name}</strong>{' '}
+                                <span className="muted">{m.publicCode || `#${m.id}`}</span>
+                                <span className="muted" style={{ display: 'block', fontSize: '0.85rem' }}>담당 {count}명</span>
+                              </span>
+                            </label>
+                            <button
+                              type="button"
+                              aria-label={`${m.name} 프로필 보기`}
+                              onClick={() => setProfileMember(m)}
+                              style={{
+                                minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
+                                background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
+                              }}
+                            >
+                              프로필 보기
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </fieldset>
                     {activeMembers.length === 0 && (
                       <p className="muted">활성 상태인 돌봄 지원사가 없습니다. 지원사를 활성화한 뒤 배정해 주세요.</p>
                     )}
@@ -1237,6 +1290,56 @@ export function AgencyDashboardPage() {
             )}
           </>
         )}
+        {profileMember && page.status === 'ok' && (() => {
+          const recipients = currentRecipientsOf(profileMember);
+          return (
+            <div
+              role="presentation"
+              onClick={() => setProfileMember(null)}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 12, boxSizing: 'border-box',
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="돌봄 지원사 프로필"
+                className="demo-card"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxWidth: 360, width: '100%', maxHeight: '88vh', overflowY: 'auto', background: '#fff',
+                  borderRadius: 14, padding: '20px 16px', boxSizing: 'border-box',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.15rem' }}>돌봄 지원사 프로필</h2>
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px' }}>
+                  <dt className="muted">이름</dt><dd style={{ margin: 0 }}>{profileMember.name}</dd>
+                  <dt className="muted">고유번호</dt><dd style={{ margin: 0 }}>{profileMember.publicCode || `#${profileMember.id}`}</dd>
+                  <dt className="muted">상태</dt><dd style={{ margin: 0 }}>{profileMember.status === 'ACTIVE' ? '활성' : '비활성'}</dd>
+                  {profileMember.joinedAt && (
+                    <>
+                      <dt className="muted">소속 시작일</dt><dd style={{ margin: 0 }}>{profileMember.joinedAt.slice(0, 10)}</dd>
+                    </>
+                  )}
+                </dl>
+                <h3 style={{ fontSize: '1rem', margin: '16px 0 6px' }}>현재 담당 당사자 ({recipients.length}명)</h3>
+                {recipients.length === 0 ? (
+                  <p className="muted" style={{ margin: 0 }}>담당 중인 당사자가 없어요.</p>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {recipients.map((r) => (
+                      <li key={r.id}>{r.name}{r.number ? ` (${r.number})` : ''}</li>
+                    ))}
+                  </ul>
+                )}
+                <button type="button" className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
+                  닫기
+                </button>
+              </div>
+            </div>
+          );
+        })()}
         {actionError && <p role="alert" className="error">{actionError}</p>}
         <ConfirmDialog open={confirmation !== null} title={confirmation?.title ?? ''}
           confirmLabel={confirmation?.confirmLabel} variant="danger"
