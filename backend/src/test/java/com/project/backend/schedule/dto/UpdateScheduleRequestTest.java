@@ -12,7 +12,7 @@ class UpdateScheduleRequestTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "   ", "\n"})
+    @ValueSource(strings = {"", "   ", "\n", "\u3000", " \u3000 "})
     void 빈_제목은_거부한다(String title) {
         assertThat(validator.validate(new UpdateScheduleRequest(title, null, null))).hasSize(1);
     }

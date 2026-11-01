@@ -17,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
@@ -48,5 +49,11 @@ class ScheduleServiceTest {
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
         verifyNoInteractions(schedules);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1900,1", "1900,12", "9999,1", "9999,12", "2026,1", "2026,12"})
+    void listByMonth_연월_경계값은_허용한다(int year, int month) {
+        assertThatCode(() -> service.listByMonth(1L, 42L, year, month)).doesNotThrowAnyException();
     }
 }
