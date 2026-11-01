@@ -189,7 +189,7 @@ export function DailyRecordPage() {
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
-  const canWriteSchedule = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
+  const canDeleteSchedule = (schedule: Schedule) => canWrite && schedule.createdById === user?.id;
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -354,7 +354,7 @@ export function DailyRecordPage() {
             <h2 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>
               {viewMonth + 1}월 {selectedDay}일 ({getWeekdayLabel(viewYear, viewMonth, selectedDay)})
             </h2>
-            {canWriteSchedule && (
+            {canWrite && (
               <button
                 type="button"
                 className={styles.viewAll}
@@ -365,7 +365,7 @@ export function DailyRecordPage() {
             )}
           </div>
 
-          {scheduleFormOpen && canWriteSchedule && (
+          {scheduleFormOpen && canWrite && (
             <div className={styles.scheduleForm}>
               <input
                 type="text"
@@ -406,7 +406,7 @@ export function DailyRecordPage() {
                     )}
                   </div>
                   <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canWriteSchedule && (
+                  {canDeleteSchedule(schedule) && (
                     <button
                       type="button"
                       className={styles.deleteBtn}
