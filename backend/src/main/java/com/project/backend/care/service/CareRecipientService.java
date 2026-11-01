@@ -93,6 +93,12 @@ public class CareRecipientService {
                 .gender(request.gender())
                 .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
+                .hospitalName(request.hospitalName())
+                .doctorName(request.doctorName())
+                .hospitalPhone(request.hospitalPhone())
+                .supportCenterName(request.supportCenterName())
+                .supportCenterManagerName(request.supportCenterManagerName())
+                .supportCenterPhone(request.supportCenterPhone())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -181,6 +187,8 @@ public class CareRecipientService {
 
         recipient.update(request.name(), request.birthDate(), request.gender(),
                 request.disabilitySeverity(), request.otherDisabilityType());
+        recipient.updateCareContacts(request.hospitalName(), request.doctorName(), request.hospitalPhone(),
+                request.supportCenterName(), request.supportCenterManagerName(), request.supportCenterPhone());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(careRecipientId);
@@ -286,6 +294,12 @@ public class CareRecipientService {
                 .gender(request.gender())
                 .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
+                .hospitalName(request.hospitalName())
+                .doctorName(request.doctorName())
+                .hospitalPhone(request.hospitalPhone())
+                .supportCenterName(request.supportCenterName())
+                .supportCenterManagerName(request.supportCenterManagerName())
+                .supportCenterPhone(request.supportCenterPhone())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -318,6 +332,8 @@ public class CareRecipientService {
         CareRecipient recipient = findRecipient(recipientId);
         recipient.update(request.name(), request.birthDate(), request.gender(),
                 request.disabilitySeverity(), request.otherDisabilityType());
+        recipient.updateCareContacts(request.hospitalName(), request.doctorName(), request.hospitalPhone(),
+                request.supportCenterName(), request.supportCenterManagerName(), request.supportCenterPhone());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(recipientId);

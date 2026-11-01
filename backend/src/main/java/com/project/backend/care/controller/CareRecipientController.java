@@ -59,7 +59,7 @@ public class CareRecipientController {
     @PatchMapping("/{id}")
     public ApiResponse<CareRecipientResponse> update(@AuthenticationPrincipal Long userId,
                                                       @PathVariable Long id,
-                                                      @RequestBody UpdateCareRecipientRequest request) {
+                                                      @Valid @RequestBody UpdateCareRecipientRequest request) {
         return ApiResponse.ok(careRecipientService.update(userId, id, request));
     }
 

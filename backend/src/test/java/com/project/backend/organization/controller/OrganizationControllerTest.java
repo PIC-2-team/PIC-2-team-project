@@ -85,7 +85,8 @@ class OrganizationControllerTest {
     @DisplayName("기관 돌봄 대상자 등록 API 호출 시 대상자를 생성하고 반환한다")
     void registerRecipient_endpoint() {
         CreateCareRecipientRequest request = new CreateCareRecipientRequest(
-                "김철수", LocalDate.of(2000, 1, 1), Gender.MALE, List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null);
+                "김철수", LocalDate.of(2000, 1, 1), Gender.MALE, List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null,
+                null, null, null, null, null, null);
         CareRecipientResponse mockRecipient = new CareRecipientResponse(
                 100L, "P-0001", "김철수", LocalDate.of(2000, 1, 1), Gender.MALE,
                 List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null, null, LocalDateTime.now());
@@ -101,7 +102,8 @@ class OrganizationControllerTest {
     @DisplayName("기관 돌봄 대상자 정보 수정 API 호출 시 수정된 정보를 반환한다")
     void updateRecipient_endpoint() {
         UpdateCareRecipientRequest request = new UpdateCareRecipientRequest(
-                "김철수_수정", null, null, null, null, null);
+                "김철수_수정", null, null, null, null, null,
+                null, null, null, null, null, null);
         CareRecipientResponse mockRecipient = new CareRecipientResponse(
                 100L, "P-0001", "김철수_수정", LocalDate.of(2000, 1, 1), Gender.MALE,
                 List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null, null, LocalDateTime.now());

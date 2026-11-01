@@ -23,6 +23,12 @@ export function CareRecipientRegistrationPage() {
   const [disabilityTypes, setDisabilityTypes] = useState<CreateCareRecipientPayload['disabilityTypes']>([]);
   const [disabilitySeverity, setDisabilitySeverity] = useState<DisabilitySeverity | null>(null);
   const [otherDisabilityType, setOtherDisabilityType] = useState('');
+  const [hospitalName, setHospitalName] = useState('');
+  const [doctorName, setDoctorName] = useState('');
+  const [hospitalPhone, setHospitalPhone] = useState('');
+  const [supportCenterName, setSupportCenterName] = useState('');
+  const [supportCenterManagerName, setSupportCenterManagerName] = useState('');
+  const [supportCenterPhone, setSupportCenterPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -48,6 +54,12 @@ export function CareRecipientRegistrationPage() {
         name: name.trim(), birthDate, gender: gender as CreateCareRecipientPayload['gender'],
         disabilityTypes, disabilitySeverity,
         otherDisabilityType: disabilityTypes.includes('OTHER') ? otherDisabilityType.trim() : null,
+        hospitalName: hospitalName.trim() || null,
+        doctorName: doctorName.trim() || null,
+        hospitalPhone: hospitalPhone.trim() || null,
+        supportCenterName: supportCenterName.trim() || null,
+        supportCenterManagerName: supportCenterManagerName.trim() || null,
+        supportCenterPhone: supportCenterPhone.trim() || null,
       });
       setSelectedRecipient(recipient.id);
       navigate('/home', { replace: true });
@@ -98,6 +110,14 @@ export function CareRecipientRegistrationPage() {
                   <label key={value}><input type="radio" name="disabilitySeverity" value={value} checked={disabilitySeverity === value} onChange={() => setDisabilitySeverity(value)} /> {DISABILITY_SEVERITY_LABELS[value]}</label>
                 ))}
               </fieldset>
+              <p className={styles.eyebrow}>주치의·병원 <span className={styles.optional}>선택</span></p>
+              <label className={styles.field}>병원명<input value={hospitalName} maxLength={100} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름" /></label>
+              <label className={styles.field}>주치의 이름<input value={doctorName} maxLength={50} onChange={e => setDoctorName(e.target.value)} placeholder="주치의 이름" /></label>
+              <label className={styles.field}>병원 연락처<input type="tel" value={hospitalPhone} maxLength={30} onChange={e => setHospitalPhone(e.target.value)} placeholder="병원 전화번호" /></label>
+              <p className={styles.eyebrow}>활동지원센터 <span className={styles.optional}>선택</span></p>
+              <label className={styles.field}>활동지원센터명<input value={supportCenterName} maxLength={100} onChange={e => setSupportCenterName(e.target.value)} placeholder="센터 이름" /></label>
+              <label className={styles.field}>센터 담당자 이름<input value={supportCenterManagerName} maxLength={50} onChange={e => setSupportCenterManagerName(e.target.value)} placeholder="담당자 이름" /></label>
+              <label className={styles.field}>센터 연락처<input type="tel" value={supportCenterPhone} maxLength={30} onChange={e => setSupportCenterPhone(e.target.value)} placeholder="센터 전화번호" /></label>
               <p className={styles.privacy}>입력한 정보는 당사자 돌봄을 위해서만 사용돼요.</p>
               <button className={styles.primary} type="button" disabled={saving} onClick={() => { void submit(); }}>{saving ? '등록 중…' : '등록하기'}</button>
             </>

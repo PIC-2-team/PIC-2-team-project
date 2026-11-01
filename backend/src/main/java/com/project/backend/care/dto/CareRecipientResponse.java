@@ -21,7 +21,13 @@ public record CareRecipientResponse(
         LocalDateTime latestRecordAt,
         LocalDateTime createdAt,
         String guardianName,
-        String guardianPhone
+        String guardianPhone,
+        String hospitalName,
+        String doctorName,
+        String hospitalPhone,
+        String supportCenterName,
+        String supportCenterManagerName,
+        String supportCenterPhone
 ) {
     public CareRecipientResponse(
             Long id,
@@ -36,7 +42,8 @@ public record CareRecipientResponse(
             LocalDateTime createdAt
     ) {
         this(id, careRecipientNumber, name, birthDate, gender, disabilityTypes, disabilitySeverity,
-                otherDisabilityType, latestRecordAt, createdAt, null, null);
+                otherDisabilityType, latestRecordAt, createdAt, null, null,
+                null, null, null, null, null, null);
     }
 
     public static CareRecipientResponse of(CareRecipient r, List<DisabilityType> disabilities) {
@@ -54,7 +61,9 @@ public record CareRecipientResponse(
                 r.getBirthDate(), r.getGender(), disabilities,
                 r.getDisabilitySeverity(), r.getOtherDisabilityType(),
                 r.getLatestRecordAt(), r.getCreatedAt(),
-                guardianName, guardianPhone
+                guardianName, guardianPhone,
+                r.getHospitalName(), r.getDoctorName(), r.getHospitalPhone(),
+                r.getSupportCenterName(), r.getSupportCenterManagerName(), r.getSupportCenterPhone()
         );
     }
 }

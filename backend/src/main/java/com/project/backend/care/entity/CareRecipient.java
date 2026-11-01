@@ -36,6 +36,24 @@ public class CareRecipient {
     @Column(length = 100)
     private String otherDisabilityType;
 
+    @Column(length = 100)
+    private String hospitalName;
+
+    @Column(length = 50)
+    private String doctorName;
+
+    @Column(length = 30)
+    private String hospitalPhone;
+
+    @Column(length = 100)
+    private String supportCenterName;
+
+    @Column(length = 50)
+    private String supportCenterManagerName;
+
+    @Column(length = 30)
+    private String supportCenterPhone;
+
     @Column
     private LocalDateTime latestRecordAt;
 
@@ -44,13 +62,22 @@ public class CareRecipient {
 
     @Builder
     public CareRecipient(String careRecipientNumber, String name, LocalDate birthDate,
-                         Gender gender, DisabilitySeverity disabilitySeverity, String otherDisabilityType) {
+                         Gender gender, DisabilitySeverity disabilitySeverity, String otherDisabilityType,
+                         String hospitalName, String doctorName, String hospitalPhone,
+                         String supportCenterName, String supportCenterManagerName,
+                         String supportCenterPhone) {
         this.careRecipientNumber = careRecipientNumber;
         this.name = name;
         this.birthDate = birthDate;
         this.gender = gender;
         this.disabilitySeverity = disabilitySeverity;
         this.otherDisabilityType = otherDisabilityType;
+        this.hospitalName = blankToNull(hospitalName);
+        this.doctorName = blankToNull(doctorName);
+        this.hospitalPhone = blankToNull(hospitalPhone);
+        this.supportCenterName = blankToNull(supportCenterName);
+        this.supportCenterManagerName = blankToNull(supportCenterManagerName);
+        this.supportCenterPhone = blankToNull(supportCenterPhone);
         this.createdAt = LocalDateTime.now();
     }
 
@@ -61,6 +88,23 @@ public class CareRecipient {
         if (gender != null) this.gender = gender;
         this.disabilitySeverity = disabilitySeverity;
         this.otherDisabilityType = otherDisabilityType;
+    }
+
+    // null은 변경 없음, 빈 문자열은 삭제. 일부 필드만 보내는 PATCH가 기존 정보를 지우지 않게 하기 위함
+    public void updateCareContacts(String hospitalName, String doctorName, String hospitalPhone,
+                                   String supportCenterName, String supportCenterManagerName,
+                                   String supportCenterPhone) {
+        if (hospitalName != null) this.hospitalName = blankToNull(hospitalName);
+        if (doctorName != null) this.doctorName = blankToNull(doctorName);
+        if (hospitalPhone != null) this.hospitalPhone = blankToNull(hospitalPhone);
+        if (supportCenterName != null) this.supportCenterName = blankToNull(supportCenterName);
+        if (supportCenterManagerName != null) this.supportCenterManagerName = blankToNull(supportCenterManagerName);
+        if (supportCenterPhone != null) this.supportCenterPhone = blankToNull(supportCenterPhone);
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 
     public void updateLatestRecordAt(LocalDateTime recordedAt) {

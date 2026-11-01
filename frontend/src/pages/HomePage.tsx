@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
-import { DISABILITY_SEVERITY_LABELS, type CareRecipient } from '../types/careRecipient';
+import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
@@ -365,6 +365,18 @@ export function HomePage() {
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>장애 정도</span>
                     <span className={styles.infoValue}>{DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>주치의·병원</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone)}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>활동지원센터</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone)}</span>
                   </div>
                 )}
                 {recipient.guardianName && (

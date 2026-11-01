@@ -85,6 +85,12 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
     birthDate: '2010-05-15',
     gender: 'MALE',
     disabilitySeverity: 'SEVERE',
+    hospitalName: '삼결병원',
+    doctorName: '김의사',
+    hospitalPhone: '053-000-0000',
+    supportCenterName: '행복센터',
+    supportCenterManagerName: '박담당',
+    supportCenterPhone: '053-111-1111',
   });
 
   render(
@@ -102,6 +108,8 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
   expect(screen.getByText(/REC-2026-0001/)).toBeInTheDocument();
   expect(screen.getByText(/2010-05-15/)).toBeInTheDocument();
   expect(screen.getByText(/심한 장애/)).toBeInTheDocument();
+  expect(screen.getByText('삼결병원 · 김의사 · 053-000-0000')).toBeInTheDocument();
+  expect(screen.getByText('행복센터 · 박담당 · 053-111-1111')).toBeInTheDocument();
 
   // 닫기 버튼 클릭
   const closeBtn = screen.getByRole('button', { name: '닫기' });
