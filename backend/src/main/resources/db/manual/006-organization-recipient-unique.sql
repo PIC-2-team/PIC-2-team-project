@@ -1,3 +1,6 @@
+-- 중복 연결 행을 삭제하므로 먼저 백업 테이블을 만든다. 적용 결과를 확인한 뒤 백업 테이블을 직접 삭제한다.
+CREATE TABLE organization_recipient_link_backup_006 AS SELECT * FROM organization_recipient_link;
+
 -- 운영 DB 적용 전 중복 연결은 ACCEPTED, PENDING, REJECTED 순으로 우선하여 하나만 유지한다.
 DELETE duplicate_link FROM organization_recipient_link duplicate_link
 JOIN organization_recipient_link retained_link
