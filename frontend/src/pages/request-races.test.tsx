@@ -6,6 +6,7 @@ import { CareInfoPage } from './CareInfoPage';
 import { DailyRecordPage } from './DailyRecordPage';
 import * as careApi from '../api/careInfo';
 import * as recordsApi from '../api/records';
+import * as schedulesApi from '../api/schedules';
 import type { DailyRecord } from '../types/record';
 import type { PaginatedData } from '../types/common';
 
@@ -59,6 +60,7 @@ it.each(['success', 'error'] as const)('월 변경 후 이전 요청의 %s를 �
   vi.spyOn(recordsApi, 'getRecordsByMonth').mockReturnValueOnce(old.promise).mockResolvedValueOnce({
     items: [{ id: 7, category: 'OTHER', content: '최신 월 기록', recordedAt } as DailyRecord], pagination,
   });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
   render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
   fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
   await screen.findByText('최신 월 기록');
