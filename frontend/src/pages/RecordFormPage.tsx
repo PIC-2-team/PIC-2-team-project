@@ -1,7 +1,7 @@
 import { AppShell } from '../components/AppShell';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { createRecord, createRecordDraft, deleteRecordMedia, uploadRecordAudio } from '../api/records';
+import { createRecord, createRecordDraft, deleteRecordMedia, uploadRecordAudio, uploadRecordMedia } from '../api/records';
 import { useAuth } from '../contexts/AuthContext';
 import type { RecordCategory } from '../types/record';
 import styles from './RecordFormPage.module.css';
@@ -17,10 +17,15 @@ const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'EMERGENCY', label: '위기대처' }, { id: 'OTHER', label: '기타' },
 ];
 
-function formatToday() {
-  const d = new Date();
+function formatDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
   const days = ['일', '월', '화', '수', '목', '금', '토'];
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  return `${y}년 ${m}월 ${d}일 (${days[new Date(y, m - 1, d).getDay()]})`;
+}
+
+function todayDateString(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 export function RecordFormPage() {
@@ -46,11 +51,15 @@ export function RecordFormPage() {
   const [cleanupPending, setCleanupPending] = useState(false);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recordDate, setRecordDate] = useState<string>(todayDateString);
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mountedRef = useRef(false);
   const discardRecordingRef = useRef(false);
   const durationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const createdUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!recording) { setElapsed(0); return; }
@@ -66,6 +75,7 @@ export function RecordFormPage() {
       if (durationTimerRef.current) clearTimeout(durationTimerRef.current);
       if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
       streamRef.current?.getTracks().forEach(track => track.stop());
+      createdUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -186,6 +196,28 @@ export function RecordFormPage() {
     }
   };
 
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const toAdd = files.slice(0, 5 - mediaFiles.length);
+    const newItems = toAdd.map(file => {
+      const previewUrl = URL.createObjectURL(file);
+      createdUrlsRef.current.push(previewUrl);
+      return { file, previewUrl };
+    });
+    setMediaFiles(prev => [...prev, ...newItems]);
+    e.target.value = '';
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadMediaFiles = async (): Promise<number[]> => {
+    if (!selectedRecipientId || mediaFiles.length === 0) return [];
+    const results = await Promise.all(mediaFiles.map(m => uploadRecordMedia(selectedRecipientId, m.file)));
+    return results.map(r => r.mediaId);
+  };
+
   const retryAudioCleanup = async () => {
     if (!selectedRecipientId || orphanedMediaId === null) return;
     setCleanupPending(true);
@@ -205,11 +237,14 @@ export function RecordFormPage() {
     setSaving(true);
     setError(null);
     try {
+      const mediaIds = await uploadMediaFiles();
+      const [y, m, d] = recordDate.split('-').map(Number);
       await createRecord(selectedRecipientId, {
         content: text.trim(),
         category,
-        recordedAt: new Date().toISOString(),
+        recordedAt: new Date(y, m - 1, d, 12, 0, 0).toISOString(),
         pinned: user?.role === 'GUARDIAN' ? showInCareInfo : false,
+        ...(mediaIds.length > 0 && { mediaIds }),
       });
       if (returnToCareInfo && category) {
         navigate(`/care-info/${category}`);
@@ -228,11 +263,14 @@ export function RecordFormPage() {
     setSaving(true);
     setError(null);
     try {
+      const mediaIds = await uploadMediaFiles();
+      const [y, m, d] = recordDate.split('-').map(Number);
       await createRecord(selectedRecipientId, {
         content: content.trim(),
         category,
-        recordedAt: new Date().toISOString(),
+        recordedAt: new Date(y, m - 1, d, 12, 0, 0).toISOString(),
         pinned: user?.role === 'GUARDIAN' ? showInCareInfo : false,
+        ...(mediaIds.length > 0 && { mediaIds }),
       });
       if (returnToCareInfo && category) {
         navigate(`/care-info/${category}`);
@@ -263,7 +301,18 @@ export function RecordFormPage() {
         </header>
 
         <div className={styles.body}>
-          <p className={styles.dateLabel}>{formatToday()}</p>
+          <div className={styles.dateRow}>
+            <span className={styles.dateLabel}>{formatDateLabel(recordDate)}</span>
+            <input
+              type="date"
+              value={recordDate}
+              max={todayDateString()}
+              onChange={e => { if (e.target.value) setRecordDate(e.target.value); }}
+              className={styles.dateInput}
+              aria-label="기록 날짜 선택"
+              disabled={recording || requestingMic || processing || saving}
+            />
+          </div>
           {stage === 'input' ? (
             <>
               <section className={styles.section}>
@@ -327,6 +376,31 @@ export function RecordFormPage() {
                   )}
                 </>
               )}
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>사진·영상 첨부</h2>
+                <div className={styles.mediaRow}>
+                  {mediaFiles.map((m, i) => (
+                    <div key={i} className={styles.mediaThumb}>
+                      {m.file.type.startsWith('video/') ? (
+                        <video src={m.previewUrl} className={styles.mediaPreview} />
+                      ) : (
+                        <img src={m.previewUrl} alt="" className={styles.mediaPreview} />
+                      )}
+                      <button type="button" className={styles.mediaRemoveBtn} onClick={() => removeMedia(i)} aria-label="첨부 제거" disabled={saving}>✕</button>
+                    </div>
+                  ))}
+                  {mediaFiles.length < 5 && (
+                    <button type="button" className={styles.mediaAddBtn} onClick={() => mediaInputRef.current?.click()} disabled={saving} aria-label="사진·영상 추가">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <span className={styles.charCount}>{mediaFiles.length}/5</span>
+                <input ref={mediaInputRef} type="file" accept="image/*,video/*" aria-label="사진·영상 선택" multiple className={styles.hiddenFileInput} onChange={handleMediaSelect} />
+              </section>
             </>
           ) : (
             <>
@@ -343,6 +417,31 @@ export function RecordFormPage() {
                 <div className={styles.chips} role="group" aria-label="기록 유형 선택">
                   {CATEGORIES.map(cat => <button key={cat.id} type="button" aria-pressed={category === cat.id} className={`${styles.chip} ${category === cat.id ? styles.chipActive : ''}`} onClick={() => setCategory(cat.id)}>{cat.label}</button>)}
                 </div>
+              </section>
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>사진·영상 첨부</h2>
+                <div className={styles.mediaRow}>
+                  {mediaFiles.map((m, i) => (
+                    <div key={i} className={styles.mediaThumb}>
+                      {m.file.type.startsWith('video/') ? (
+                        <video src={m.previewUrl} className={styles.mediaPreview} />
+                      ) : (
+                        <img src={m.previewUrl} alt="" className={styles.mediaPreview} />
+                      )}
+                      <button type="button" className={styles.mediaRemoveBtn} onClick={() => removeMedia(i)} aria-label="첨부 제거" disabled={saving}>✕</button>
+                    </div>
+                  ))}
+                  {mediaFiles.length < 5 && (
+                    <button type="button" className={styles.mediaAddBtn} onClick={() => mediaInputRef.current?.click()} disabled={saving} aria-label="사진·영상 추가">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <span className={styles.charCount}>{mediaFiles.length}/5</span>
+                <input ref={mediaInputRef} type="file" accept="image/*,video/*" aria-label="사진·영상 선택" multiple className={styles.hiddenFileInput} onChange={handleMediaSelect} />
               </section>
               {user?.role === 'GUARDIAN' && (
                 <section className={styles.pinSection}>
