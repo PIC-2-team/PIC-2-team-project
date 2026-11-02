@@ -52,12 +52,13 @@ public class CareMemoService {
 
     public MemoResponse create(Long userId, Long recipientId, CreateMemoRequest req) {
         access.verifyCreate(userId, recipientId);
+        Instant now = clock.instant();
         CareMemo memo = memos.save(CareMemo.builder()
                 .careRecipientId(recipientId)
                 .createdById(userId)
-                .date(req.date())
+                .date(now.atZone(SEOUL).toLocalDate())
                 .content(req.content())
-                .now(clock.instant())
+                .now(now)
                 .build());
         return MemoResponse.of(memo);
     }

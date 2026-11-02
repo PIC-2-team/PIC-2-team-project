@@ -9,7 +9,6 @@ export type Memo = {
 };
 
 export type CreateMemoPayload = {
-  date: string; // YYYY-MM-DD
   content: string;
 };
 

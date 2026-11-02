@@ -344,11 +344,15 @@ export function DailyRecordPage() {
     if (!selectedRecipientId || !newMemoContent.trim()) return;
     setIsAddingMemo(true);
     try {
-      const created = await createMemo(selectedRecipientId, { date: selectedKey, content: newMemoContent.trim() });
-      setDayMemos(prev => [...prev, created]);
+      const created = await createMemo(selectedRecipientId, { content: newMemoContent.trim() });
+      if (created.date === selectedKey) setDayMemos(prev => [...prev, created]);
       setMemoMonthData(prev => prev?.recipientId === selectedRecipientId && prev.year === viewYear && prev.month === viewMonth + 1
         ? { ...prev, items: [...prev.items, created] }
         : { recipientId: selectedRecipientId, year: viewYear, month: viewMonth + 1, items: [created] });
+      if (created.date !== selectedKey) {
+        const [year, month, day] = created.date.split('-').map(Number);
+        setScheduleDate(new Date(year, month - 1, day));
+      }
       setNewMemoContent('');
       setMemoFormOpen(false);
     } catch (e) {

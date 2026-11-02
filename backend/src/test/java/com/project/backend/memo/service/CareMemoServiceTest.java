@@ -78,8 +78,20 @@ class CareMemoServiceTest {
                 .when(access).verifyCreate(1L, 42L);
 
         assertThatThrownBy(() ->
-                service.create(1L, 42L, new CreateMemoRequest(LocalDate.of(2026, 11, 2), "내용")))
+                service.create(1L, 42L, new CreateMemoRequest("내용")))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void create_요청한_날짜와_무관하게_서울_작성일로_저장한다() {
+        Instant now = Instant.parse("2026-11-03T00:30:00Z");
+        when(clock.instant()).thenReturn(now);
+        when(memos.save(any(CareMemo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.create(1L, 42L,
+                new CreateMemoRequest("내용"));
+
+        assertThat(result.date()).isEqualTo(LocalDate.of(2026, 11, 3));
     }
 
     @Test

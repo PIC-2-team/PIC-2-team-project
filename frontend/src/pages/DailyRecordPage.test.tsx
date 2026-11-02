@@ -216,7 +216,7 @@ it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉
   vi.spyOn(memosApi, 'getMemosByMonth').mockResolvedValue([]);
   vi.spyOn(memosApi, 'getMemosByDate').mockResolvedValue([]);
   const memo = { id: 2, careRecipientId: 42, createdById: 1, date: '2026-11-03', content: '외출 전에 사진으로 알려주기', createdAt: '2026-11-03T01:00:00Z', updatedAt: '2026-11-03T01:00:00Z' };
-  vi.spyOn(memosApi, 'createMemo').mockResolvedValue(memo);
+  const create = vi.spyOn(memosApi, 'createMemo').mockResolvedValue(memo);
   const remove = vi.spyOn(memosApi, 'deleteMemo').mockResolvedValue(undefined);
   render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
   vi.useRealTimers();
@@ -235,6 +235,7 @@ it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉
   const addMemoButton = screen.getByRole('button', { name: /^추가$/ });
   expect(addMemoButton).toHaveClass(/compactActionBtn/);
   fireEvent.click(addMemoButton);
+  await waitFor(() => expect(create).toHaveBeenCalledWith(42, { content: memo.content }));
   expect(await screen.findByRole('button', { name: /11월 3일.*메모 있음/ })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: '메모 수정' }));
