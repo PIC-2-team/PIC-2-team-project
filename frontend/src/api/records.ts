@@ -124,6 +124,10 @@ export function deleteRecordMedia(recipientId: number, mediaId: number): Promise
   return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}`, { method: 'DELETE' });
 }
 
+export function getRecordMediaDownloadUrl(recipientId: number, mediaId: number): Promise<{ url: string; expiresAt: string }> {
+  return apiRequest(`/api/care-recipients/${recipientId}/media/${mediaId}/download-url`);
+}
+
 export function getRecordRevisions(
   recipientId: number,
   recordId: number,

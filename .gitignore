@@ -1,2 +1,7 @@
 .superpowers/
 .worktrees/
+
+# Local environment variables and credentials
+/backend/.env.local
+/backend/.env.dev
+/backend/.env.prod

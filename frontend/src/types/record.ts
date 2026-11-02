@@ -17,6 +17,14 @@ export type DailyRecord = {
   category: RecordCategory;
   recordedAt: string; // ISO 8601
   pinned?: boolean;
+  media?: RecordMedia[];
+};
+
+export type RecordMedia = {
+  mediaId: number;
+  fileName: string;
+  mediaType: string;
+  sizeBytes: number;
 };
 
 export type DeletedRecord = Pick<DailyRecord, 'id' | 'content' | 'category' | 'recordedAt'> & {

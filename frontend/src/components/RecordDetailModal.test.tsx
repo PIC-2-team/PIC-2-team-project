@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RecordDetailModal } from './RecordDetailModal';
 import * as recordsApi from '../api/records';
@@ -31,6 +31,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 it('기록 상세를 모달로 표시하고 닫으면 변경 없이 돌아간다', async () => {
@@ -43,6 +44,81 @@ it('기록 상세를 모달로 표시하고 닫으면 변경 없이 돌아간다
   expect(screen.getByRole('button', { name: '기록 상세 닫기' })).toHaveFocus();
   fireEvent.click(screen.getByRole('button', { name: '기록 상세 닫기' }));
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('기록의 사진과 영상을 상세 및 수정 화면에 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    media: [
+      { mediaId: 12, fileName: 'photo.png', mediaType: 'image/png', sizeBytes: 100 },
+      { mediaId: 13, fileName: 'video.mp4', mediaType: 'video/mp4', sizeBytes: 200 },
+    ],
+  });
+  vi.spyOn(recordsApi, 'getRecordMediaDownloadUrl')
+    .mockImplementation(async (_recipientId, mediaId) => ({ url: `https://media.test/${mediaId}`, expiresAt: '' }));
+  render(<RecordDetailModal recordId={101} onClose={vi.fn()} />);
+
+  expect(await screen.findByRole('img', { name: 'photo.png' })).toHaveAttribute('src', 'https://media.test/12');
+  expect(screen.getByLabelText('video.mp4')).toHaveAttribute('src', 'https://media.test/13');
+  fireEvent.click(screen.getByRole('button', { name: '수정' }));
+  expect(await screen.findByRole('img', { name: 'photo.png' })).toBeInTheDocument();
+  expect(await screen.findByLabelText('video.mp4')).toBeInTheDocument();
+});
+
+it('첨부 하나의 URL 발급이 실패해도 나머지 미디어는 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    media: [
+      { mediaId: 12, fileName: 'photo.png', mediaType: 'image/png', sizeBytes: 100 },
+      { mediaId: 13, fileName: 'video.mp4', mediaType: 'video/mp4', sizeBytes: 200 },
+    ],
+  });
+  vi.spyOn(recordsApi, 'getRecordMediaDownloadUrl').mockImplementation(async (_recipientId, mediaId) => {
+    if (mediaId === 12) throw new Error('URL 발급 실패');
+    return { url: 'https://media.test/video', expiresAt: '' };
+  });
+  render(<RecordDetailModal recordId={101} onClose={vi.fn()} />);
+
+  expect(await screen.findByText('photo.png을(를) 불러오지 못했어요.')).toBeInTheDocument();
+  expect(screen.getByLabelText('video.mp4')).toHaveAttribute('src', 'https://media.test/video');
+});
+
+it('만료되거나 접근할 수 없는 미디어 URL은 새 URL을 요청한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    media: [{ mediaId: 12, fileName: 'photo.png', mediaType: 'image/png', sizeBytes: 100 }],
+  });
+  const getDownloadUrl = vi.spyOn(recordsApi, 'getRecordMediaDownloadUrl')
+    .mockResolvedValueOnce({ url: 'https://media.test/expired', expiresAt: '' })
+    .mockResolvedValueOnce({ url: 'https://media.test/refreshed', expiresAt: '' });
+  render(<RecordDetailModal recordId={101} onClose={vi.fn()} />);
+
+  const image = await screen.findByRole('img', { name: 'photo.png' });
+  fireEvent.error(image);
+  await waitFor(() => expect(getDownloadUrl).toHaveBeenCalledTimes(2));
+  expect(await screen.findByRole('img', { name: 'photo.png' })).toHaveAttribute('src', 'https://media.test/refreshed');
+});
+
+it('미디어 서명 URL 만료 전에 갱신한다', async () => {
+  vi.useFakeTimers();
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    media: [{ mediaId: 12, fileName: 'photo.png', mediaType: 'image/png', sizeBytes: 100 }],
+  });
+  let requestCount = 0;
+  const getDownloadUrl = vi.spyOn(recordsApi, 'getRecordMediaDownloadUrl').mockImplementation(async () => {
+    requestCount += 1;
+    return {
+      url: `https://media.test/${requestCount}`,
+      expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    };
+  });
+  render(<RecordDetailModal recordId={101} onClose={vi.fn()} />);
+
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+  expect(getDownloadUrl).toHaveBeenCalledTimes(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(4.5 * 60_000); });
+  expect(getDownloadUrl).toHaveBeenCalledTimes(2);
 });
 
 it('Escape 키로 모달을 닫고 Tab 이동을 모달 안에 유지한다', async () => {
