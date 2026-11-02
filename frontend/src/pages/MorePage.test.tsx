@@ -192,11 +192,11 @@ it('회원 탈퇴 버튼이 로그아웃 버튼 아래에 표시된다', () => {
   expect(withdrawBtn).toBeInTheDocument();
 });
 
-it('회원 탈퇴는 준비 중으로 안내하고 API 호출이나 로그아웃을 하지 않는다', () => {
+it('회원 탈퇴를 누르면 바로 탈퇴하지 않고 탈퇴 화면으로 이동한다', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   render(<MemoryRouter><MorePage /></MemoryRouter>);
   fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }));
-  expect(screen.getByRole('status')).toHaveTextContent('회원 탈퇴 기능은 준비 중입니다.');
+  expect(mockNavigate).toHaveBeenCalledWith('/withdraw');
   expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   expect(fetchSpy).not.toHaveBeenCalled();
   expect(mockLogout).not.toHaveBeenCalled();

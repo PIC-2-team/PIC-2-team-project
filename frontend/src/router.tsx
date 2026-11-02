@@ -12,6 +12,7 @@ import { RecordFormPage } from './pages/RecordFormPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
+import { WithdrawPage } from './pages/WithdrawPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
             ],
           },
           { path: '/more', element: <MorePage /> },
+          { path: '/withdraw', element: <WithdrawPage /> },
           { path: '/notifications', element: <NotificationInboxPage /> },
         ],
       },
