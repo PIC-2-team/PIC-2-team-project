@@ -833,3 +833,40 @@ it('루틴을 불러오지 못해도 당사자 프로필은 보여주고 오류�
   expect(within(dialog).getByText('이영희')).toBeInTheDocument();
   expect(await within(dialog).findByText('루틴을 불러오지 못했어요.')).toBeInTheDocument();
 });
+
+it('홈 대시보드에 처리할 연결 요청이 보이고 수락하면 대시보드 데이터를 다시 불러온다', async () => {
+  let accepted = false;
+  let guardianLoads = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? 'GET';
+    const ok = (data: unknown) => new Response(JSON.stringify({ success: true, data }), { status: 200 });
+    if (url.endsWith('/api/organizations/me')) return ok({ id: 1, name: '희망 복지관', organizationCode: 'KNU001', createdAt: '2026-10-01T00:00:00' });
+    if (url.endsWith('/api/organizations/me/guardians')) {
+      guardianLoads += 1;
+      return ok([]);
+    }
+    if (url.endsWith('/api/organizations/me/link-requests')) {
+      return ok(accepted ? [] : [{
+        id: 11, organizationId: 1, careRecipientId: 100, careRecipientName: '김하늘', careRecipientNumber: 'R-ABCD1234',
+        requestedById: 5, requestedByName: '박보호', requestedByPublicCode: 'P-AAAA1111',
+        status: 'PENDING', requestedAt: '2026-11-03T01:00:00', decidedAt: null,
+      }]);
+    }
+    if (url.endsWith('/organization-link-requests/11/accept') && method === 'POST') {
+      accepted = true;
+      return ok(null);
+    }
+    return ok([]);
+  });
+
+  renderWithProviders();
+
+  expect(await screen.findByRole('heading', { name: '연결 요청 (1건)' })).toBeInTheDocument();
+  const loadsBefore = guardianLoads;
+  const item = screen.getByText('김하늘').closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '수락' }));
+
+  await waitFor(() => expect(guardianLoads).toBeGreaterThan(loadsBefore));
+  expect(await screen.findByText('처리할 연결 요청이 없어요.')).toBeInTheDocument();
+});

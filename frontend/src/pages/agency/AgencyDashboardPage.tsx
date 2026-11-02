@@ -24,6 +24,7 @@ import {
 } from '../../api/organizations';
 import { ApiError } from '../../api/client';
 import { toSeoulDateKey } from '../../utils/date';
+import { ConnectionRequests } from './ConnectionRequests';
 import { RecipientProfileDialog } from './RecipientProfileDialog';
 import type {
   Organization,
@@ -596,6 +597,9 @@ export function AgencyDashboardPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* 보호자의 기관 연결 요청, 이관된 당사자 재연결 요청 */}
+                <ConnectionRequests onChanged={() => void fetchDashboardData()} />
 
                 {/* 돌봄 보호자 관리 섹션 */}
                 <section className="demo-card" style={{ padding: '16px 14px' }}>
