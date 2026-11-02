@@ -14,6 +14,7 @@ import com.project.backend.record.media.RecordMedia;
 import com.project.backend.record.media.RecordMediaService;
 import com.project.backend.record.repository.DailyRecordRepository;
 import com.project.backend.record.repository.RecordRevisionRepository;
+import com.project.backend.notification.service.NotificationService;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
@@ -47,6 +48,7 @@ class DailyRecordServiceTest {
     @Mock RecordMediaService media;
     @Mock Clock clock;
     @Mock AccessLogService accessLogService;
+    @Mock NotificationService notifications;
 
     @InjectMocks DailyRecordService recordService;
 
