@@ -548,7 +548,7 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.625rem;
 }
 
 .demo-page .scheduleEditForm textarea {
@@ -569,6 +569,10 @@
   width: 100%;
   min-height: 32px;
   height: 32px;
+}
+
+.demo-page .scheduleEditDateTime input::-webkit-datetime-edit {
+  font-size: 0.625rem;
 }
 
 .scheduleEditControls {
