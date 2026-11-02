@@ -302,7 +302,7 @@ export function HomePage() {
           <h2 className={styles.sectionTitle}>오늘의 메모</h2>
           <button
             className={styles.viewAll}
-            onClick={() => navigate('/records?tab=schedules')}
+            onClick={() => navigate('/records?tab=schedules&memo=write')}
             type="button"
           >
             메모 작성 ›

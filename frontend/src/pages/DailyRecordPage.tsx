@@ -112,7 +112,9 @@ export function DailyRecordPage() {
   const [category, setCategory] = useState<RecordCategory | ''>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>('records');
+  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>(() =>
+    searchParams.get('tab') === 'schedules' ? 'schedules' : 'records'
+  );
   const [today] = useState(() => {
     const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -136,11 +138,15 @@ export function DailyRecordPage() {
   const [dayMemos, setDayMemos] = useState<Memo[]>([]);
   const [isMemoLoading, setIsMemoLoading] = useState(false);
   const [memoError, setMemoError] = useState<string | null>(null);
-  const [memoFormOpen, setMemoFormOpen] = useState(false);
+  const [memoFormOpen, setMemoFormOpen] = useState(() => searchParams.get('memo') === 'write');
   const [newMemoContent, setNewMemoContent] = useState('');
   const [isAddingMemo, setIsAddingMemo] = useState(false);
   const [editingMemoId, setEditingMemoId] = useState<number | null>(null);
   const [editingMemoContent, setEditingMemoContent] = useState('');
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+  const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
+  const trailingDays = 42 - firstDayOfWeek - daysInMonth;
+  const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
@@ -197,11 +203,6 @@ export function DailyRecordPage() {
     params.set('record', String(recordId));
     return `/records?${params.toString()}`;
   };
-
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
-  const trailingDays = 42 - firstDayOfWeek - daysInMonth;
-  const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
 
   const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
   const visibleRecords = listOnly || showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
