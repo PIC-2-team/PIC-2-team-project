@@ -3,9 +3,11 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-rout
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
 import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
+import { getMemosByDate, createMemo, updateMemo, deleteMemo } from '../api/memos';
 import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
+import type { Memo } from '../types/memo';
 import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
 import { Skeleton } from '../components/Skeleton/Skeleton';
@@ -131,6 +133,14 @@ export function DailyRecordPage() {
   const [newScheduleTime, setNewScheduleTime] = useState('09:00');
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
+  const [dayMemos, setDayMemos] = useState<Memo[]>([]);
+  const [isMemoLoading, setIsMemoLoading] = useState(false);
+  const [memoError, setMemoError] = useState<string | null>(null);
+  const [memoFormOpen, setMemoFormOpen] = useState(false);
+  const [newMemoContent, setNewMemoContent] = useState('');
+  const [isAddingMemo, setIsAddingMemo] = useState(false);
+  const [editingMemoId, setEditingMemoId] = useState<number | null>(null);
+  const [editingMemoContent, setEditingMemoContent] = useState('');
 
   useEffect(() => {
     if (!selectedRecipientId) return;
@@ -169,6 +179,18 @@ export function DailyRecordPage() {
 
     return () => { isCurrent = false; };
   }, [selectedRecipientId, activeTab, viewYear, viewMonth, listOnly, category, page, recordVersion]);
+
+  useEffect(() => {
+    if (!selectedRecipientId || activeTab !== 'schedules') return;
+    let isCurrent = true;
+    setIsMemoLoading(true);
+    setMemoError(null);
+    getMemosByDate(selectedRecipientId, selectedKey)
+      .then(items => { if (isCurrent) setDayMemos(items); })
+      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); })
+      .finally(() => { if (isCurrent) setIsMemoLoading(false); });
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, activeTab, selectedKey]);
 
   const recordUrl = (recordId: number) => {
     const params = new URLSearchParams(searchParams);
@@ -230,6 +252,43 @@ export function DailyRecordPage() {
       setMonthSchedules(prev => prev.filter(s => s.id !== scheduleId));
     } catch (e) {
       setError(e instanceof Error ? e.message : '일정 삭제 실패');
+    }
+  };
+
+  const handleAddMemo = async () => {
+    if (!selectedRecipientId || !newMemoContent.trim()) return;
+    setIsAddingMemo(true);
+    try {
+      const created = await createMemo(selectedRecipientId, { date: selectedKey, content: newMemoContent.trim() });
+      setDayMemos(prev => [...prev, created]);
+      setNewMemoContent('');
+      setMemoFormOpen(false);
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 추가 실패');
+    } finally {
+      setIsAddingMemo(false);
+    }
+  };
+
+  const handleUpdateMemo = async (memoId: number) => {
+    if (!selectedRecipientId || !editingMemoContent.trim()) return;
+    try {
+      const updated = await updateMemo(selectedRecipientId, memoId, { content: editingMemoContent.trim() });
+      setDayMemos(prev => prev.map(m => m.id === memoId ? updated : m));
+      setEditingMemoId(null);
+      setEditingMemoContent('');
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 수정 실패');
+    }
+  };
+
+  const handleDeleteMemo = async (memoId: number) => {
+    if (!selectedRecipientId) return;
+    try {
+      await deleteMemo(selectedRecipientId, memoId);
+      setDayMemos(prev => prev.filter(m => m.id !== memoId));
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 삭제 실패');
     }
   };
 
@@ -424,6 +483,80 @@ export function DailyRecordPage() {
               ))}
             </div>
           )}
+
+          <hr className={styles.memoDivider} />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>메모</h3>
+            {canWrite && (
+              <button type="button" className={styles.viewAll} onClick={() => { setMemoFormOpen(v => !v); setEditingMemoId(null); }}>
+                {memoFormOpen ? '취소' : '+ 메모 추가'}
+              </button>
+            )}
+          </div>
+
+          {memoFormOpen && canWrite && (
+            <div className={styles.scheduleForm}>
+              <textarea
+                placeholder="메모 내용을 입력하세요"
+                value={newMemoContent}
+                onChange={e => setNewMemoContent(e.target.value)}
+                aria-label="메모 내용"
+                maxLength={500}
+                rows={3}
+                style={{ resize: 'none', font: 'inherit', fontSize: '0.875rem', padding: '8px', border: '1px solid #d1d5db', borderRadius: '8px' }}
+              />
+              <button
+                type="button"
+                className={`btn ${styles.scheduleAddBtn}`}
+                onClick={handleAddMemo}
+                disabled={isAddingMemo || !newMemoContent.trim()}
+              >
+                {isAddingMemo ? '추가 중…' : '추가'}
+              </button>
+            </div>
+          )}
+
+          {memoError && <p className="error" role="alert">{memoError}</p>}
+
+          {!isMemoLoading && dayMemos.length === 0 && !memoFormOpen && (
+            <p className="muted" style={{ textAlign: 'center', padding: '1rem 0' }}>이 날의 메모가 없어요.</p>
+          )}
+
+          <div className={styles.records}>
+            {dayMemos.map(memo => (
+              <div key={memo.id} className={styles.scheduleCard}>
+                <div className={styles.scheduleIcon} aria-hidden="true">📝</div>
+                <div className={styles.scheduleBody}>
+                  {editingMemoId === memo.id ? (
+                    <>
+                      <textarea
+                        value={editingMemoContent}
+                        onChange={e => setEditingMemoContent(e.target.value)}
+                        aria-label="메모 수정"
+                        maxLength={500}
+                        rows={2}
+                        style={{ resize: 'none', font: 'inherit', fontSize: '0.875rem', padding: '4px 6px', border: '1px solid #3CAB7E', borderRadius: '6px', width: '100%' }}
+                      />
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                        <button type="button" className={`btn ${styles.scheduleAddBtn}`} style={{ padding: '4px 12px', fontSize: '0.8125rem' }} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
+                        <button type="button" className={styles.viewAll} onClick={() => setEditingMemoId(null)}>취소</button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className={styles.scheduleTitle}>{memo.content}</p>
+                  )}
+                </div>
+                <span className={styles.recordTime}>{new Date(memo.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                {memo.createdById === user?.id && editingMemoId !== memo.id && (
+                  <>
+                    <button type="button" className={styles.deleteBtn} aria-label="메모 수정" onClick={() => { setEditingMemoId(memo.id); setEditingMemoContent(memo.content); setMemoFormOpen(false); }} style={{ fontSize: '0.75rem' }}>✏️</button>
+                    <button type="button" className={styles.deleteBtn} aria-label="메모 삭제" onClick={() => handleDeleteMemo(memo.id)}>✕</button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

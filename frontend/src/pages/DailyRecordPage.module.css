@@ -448,3 +448,10 @@
   border-radius: 8px;
   font-size: 0.875rem;
 }
+
+/* Memo divider */
+.memoDivider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0.5rem 0 1rem;
+}
