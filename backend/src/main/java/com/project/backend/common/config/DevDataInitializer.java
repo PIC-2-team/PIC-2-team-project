@@ -58,11 +58,12 @@ public class DevDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        boolean newGuardian = userRepository.findByEmail("guardian@test.com").isEmpty();
         User guardian = getOrCreateTestUser("guardian@test.com", "테스트 보호자", "010-0000-0001", UserRole.GUARDIAN);
         User worker = getOrCreateTestUser("worker@test.com", "테스트 요양사", "010-0000-0002", UserRole.SUPPORT_WORKER);
         User institution = getOrCreateTestUser("institution@test.com", "테스트 기관", "010-0000-0003", UserRole.INSTITUTION);
         getOrCreateTestUser("admin@test.com", "테스트 관리자", "010-0000-0004", UserRole.ADMIN);
-        seedUnreadNotifications(guardian);
+        if (newGuardian) seedUnreadNotifications(guardian);
         log.info("[Dev] 테스트 계정 4개 확인/생성 완료 (비밀번호: {})", TEST_PASSWORD);
 
         CareRecipient recipient = getOrCreateCareRecipient(SEED_RECIPIENT_NUMBER, "김삼결",
@@ -78,8 +79,6 @@ public class DevDataInitializer implements CommandLineRunner {
     }
 
     private void seedUnreadNotifications(User guardian) {
-        if (notificationRepository.countByUserIdAndRead(guardian.getId(), false) > 0) return;
-
         Instant now = Instant.now();
         notificationRepository.saveAll(List.of(
                 new Notification(guardian.getId(), NotificationType.RECORD_CREATED,
