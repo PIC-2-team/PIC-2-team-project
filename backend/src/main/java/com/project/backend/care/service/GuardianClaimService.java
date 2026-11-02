@@ -48,6 +48,10 @@ public class GuardianClaimService {
 
     public ClaimPendingResponse request(User claimant, CareRecipient recipient) {
         recipients.findForUpdate(recipient.getId());
+        // 호출 쪽 검사는 잠금 전이라, 승인과 겹쳤다면 이미 활성 보호자가 생겼을 수 있다
+        if (guardians.findByCareRecipientIdAndTypeAndStatus(recipient.getId(), GuardianType.PRIMARY, GuardianStatus.ACTIVE).isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_CLAIMED", "이미 보호자가 등록된 당사자입니다.");
+        }
         List<Organization> approvers = approvingOrganizations(recipient.getId());
         if (approvers.isEmpty()) {
             throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_UNAVAILABLE",
@@ -105,7 +109,7 @@ public class GuardianClaimService {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다.");
         }
         if (isExpired(claim, LocalDateTime.now())) {
-            claim.revoke();
+            // 예외로 롤백되므로 여기서 상태를 바꾸지 않는다. 만료 요청은 목록에서 빠지고 다음 요청 때 정리된다
             throw new ApiException(HttpStatus.CONFLICT, "CLAIM_EXPIRED", "만료된 요청입니다. 보호자가 다시 요청해야 합니다.");
         }
         CareRecipient recipient = recipients.findForUpdate(claim.getCareRecipientId())

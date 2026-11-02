@@ -220,8 +220,17 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public List<LinkRequestResponse> getLinkRequests(Long ownerId) {
         Organization org = findOrgByOwner(ownerId);
-        return organizationRecipientLinkRepository.findByOrganizationId(org.getId()).stream()
-                .map(LinkRequestResponse::from).toList();
+        List<OrganizationRecipientLink> found = organizationRecipientLinkRepository.findByOrganizationId(org.getId());
+        Map<Long, CareRecipient> recipientMap = careRecipientRepository
+                .findAllById(found.stream().map(OrganizationRecipientLink::getCareRecipientId).distinct().toList()).stream()
+                .collect(Collectors.toMap(CareRecipient::getId, Function.identity()));
+        Map<Long, User> requesterMap = userRepository
+                .findAllById(found.stream().map(OrganizationRecipientLink::getRequestedById).distinct().toList()).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return found.stream()
+                .map(link -> LinkRequestResponse.of(link, recipientMap.get(link.getCareRecipientId()),
+                        requesterMap.get(link.getRequestedById())))
+                .toList();
     }
 
     public MemberResponse addMember(Long ownerId, AddMemberRequest request) {

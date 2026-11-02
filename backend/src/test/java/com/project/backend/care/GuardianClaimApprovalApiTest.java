@@ -198,6 +198,31 @@ class GuardianClaimApprovalApiTest {
                 && n.getType() == NotificationType.ORGANIZATION_LINK_REQUESTED);
     }
 
+    @Test
+    void organizationLinkRequestListShowsWhoIsAsking() throws Exception {
+        CareRecipient own = recipients.save(CareRecipient.builder().name("요청 당사자").careRecipientNumber("R-ASKING")
+                .birthDate(LocalDate.of(2003, 1, 1)).gender(Gender.MALE).build());
+        links.save(OrganizationRecipientLink.builder().organizationId(org.getId())
+                .careRecipientId(own.getId()).requestedById(claimant.getId()).build());
+
+        mvc.perform(get("/api/organizations/me/link-requests").header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.careRecipientId==" + own.getId() + ")].careRecipientName").value("요청 당사자"))
+                .andExpect(jsonPath("$.data[?(@.careRecipientId==" + own.getId() + ")].careRecipientNumber").value("R-ASKING"))
+                .andExpect(jsonPath("$.data[?(@.careRecipientId==" + own.getId() + ")].requestedByName").value("claimant"))
+                .andExpect(jsonPath("$.data[?(@.careRecipientId==" + own.getId() + ")].requestedByPublicCode").value("P-claimant"));
+    }
+
+    @Test
+    void claimDoesNotCreateAPendingRowWhenAnActivePrimaryAppearedMeanwhile() throws Exception {
+        CareGuardian active = CareGuardian.builder().careRecipientId(transferred.getId()).guardianId(user("active", UserRole.GUARDIAN).getId())
+                .type(GuardianType.PRIMARY).status(GuardianStatus.ACTIVE).build();
+        guardians.save(active);
+
+        claim(claimant, "R-TRANSFER").andExpect(status().isConflict());
+        assertThat(guardians.findByCareRecipientIdAndStatus(transferred.getId(), GuardianStatus.PENDING)).isEmpty();
+    }
+
     private ResultActions claim(User u, String number) throws Exception {
         return mvc.perform(post("/api/care-recipients/claim").header("Authorization", bearer(u))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"careRecipientNumber\":\"" + number + "\"}"));
