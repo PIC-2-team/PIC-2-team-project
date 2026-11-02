@@ -103,13 +103,23 @@ it('요청이 없으면 빈 상태를 보여 준다', async () => {
   expect(await screen.findByText('처리할 연결 요청이 없어요.')).toBeInTheDocument();
 });
 
-it('목록을 불러오지 못하면 오류와 다시 불러오기 버튼을 보여 준다', async () => {
-  mockApi((url) => (url.endsWith('/link-requests') ? failure(500, 'INTERNAL') : undefined));
+it('두 목록 모두 불러오지 못하면 오류와 다시 불러오기 버튼을 보여 준다', async () => {
+  mockApi((url) => (url.endsWith('/link-requests') || url.endsWith('/guardian-claims') ? failure(500, 'INTERNAL') : undefined));
 
   render(<ConnectionRequests onChanged={vi.fn()} />);
 
   expect(await screen.findByRole('alert')).toHaveTextContent('연결 요청을 불러오지 못했어요');
   expect(screen.getByRole('button', { name: '다시 불러오기' })).toBeInTheDocument();
+});
+
+it('한쪽 목록만 실패하면 성공한 요청은 그대로 보여 주고 일부 실패를 안내한다', async () => {
+  mockApi((url) => (url.endsWith('/guardian-claims') ? failure(500, 'INTERNAL') : undefined));
+
+  render(<ConnectionRequests onChanged={vi.fn()} />);
+
+  expect(await screen.findByText('김하늘')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('일부 요청을 불러오지 못했어요');
+  expect(screen.queryByText('이바다')).not.toBeInTheDocument();
 });
 
 it('기관 연결 요청을 수락하면 해당 API를 호출하고 목록과 상위 화면을 갱신한다', async () => {
@@ -194,4 +204,78 @@ it('처리 중에는 같은 요청의 버튼을 비활성화해 중복 처리를
   await waitFor(() => expect(within(item).getByRole('button', { name: '처리 중…' })).toBeDisabled());
   expect(within(item).getByRole('button', { name: '거절' })).toBeDisabled();
   release(json(null));
+});
+
+it('처리가 성공하면 갱신이 끝나기 전에도 처리한 요청은 목록에서 사라지고 다른 요청만 남는다', async () => {
+  let reloading = false;
+  let releaseReload: (r: Response) => void = () => {};
+  mockApi((url, method) => {
+    if (method === 'POST') { reloading = true; return json(null); }
+    if (reloading && url.endsWith('/link-requests')) return new Promise<Response>((resolve) => { releaseReload = resolve; });
+    return undefined;
+  });
+
+  render(<ConnectionRequests onChanged={vi.fn()} />);
+  const item = (await screen.findByText('김하늘')).closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '수락' }));
+
+  await waitFor(() => expect(screen.queryByText('김하늘')).not.toBeInTheDocument());
+  const other = screen.getByText('이바다').closest('li') as HTMLElement;
+  expect(within(other).getByRole('button', { name: '수락' })).toBeDisabled();
+  releaseReload(json([]));
+  await waitFor(() => expect(within(other).getByRole('button', { name: '수락' })).toBeEnabled());
+});
+
+it('처리는 성공했는데 목록 갱신이 실패하면 남은 요청을 유지하고 안내만 보여 준다', async () => {
+  let done = false;
+  mockApi((url, method) => {
+    if (method === 'POST') { done = true; return json(null); }
+    if (done && (url.endsWith('/link-requests') || url.endsWith('/guardian-claims'))) return failure(500, 'INTERNAL');
+    return undefined;
+  });
+
+  render(<ConnectionRequests onChanged={vi.fn()} />);
+  const item = (await screen.findByText('김하늘')).closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '수락' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('목록을 새로 불러오지 못했어요');
+  expect(screen.getByText('이바다')).toBeInTheDocument();
+  expect(screen.queryByText('김하늘')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '다시 불러오기' })).not.toBeInTheDocument();
+});
+
+it('거절은 기관의 목록을 바꾸지 않으므로 상위 화면을 다시 불러오게 하지 않는다', async () => {
+  const onChanged = vi.fn();
+  const calls = mockApi((_url, method) => (method === 'POST' ? json(null) : undefined));
+
+  render(<ConnectionRequests onChanged={onChanged} />);
+  const item = (await screen.findByText('이바다')).closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '거절' }));
+  fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: '거절하기' }));
+
+  await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/guardian-claims/21/reject'))).toBe(true));
+  await waitFor(() => expect(screen.getAllByRole('button', { name: '수락' })[0]).toBeEnabled());
+  expect(onChanged).not.toHaveBeenCalled();
+});
+
+it('요청을 찾을 수 없으면(404) 처리된 요청이라고 단정하지 않고 찾을 수 없다고 안내한다', async () => {
+  mockApi((_url, method) => (method === 'POST' ? failure(404, 'CLAIM_NOT_FOUND') : undefined));
+
+  render(<ConnectionRequests onChanged={vi.fn()} />);
+  const item = (await screen.findByText('이바다')).closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '수락' }));
+
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('요청을 찾을 수 없어요');
+  expect(alert).not.toHaveTextContent('이미 처리되었거나 만료');
+});
+
+it('당사자 이름이 없으면 목록과 거절 확인에 같은 대체 이름을 쓴다', async () => {
+  mockApi(() => undefined, { links: [], claims: [{ ...claim, careRecipientName: null }] });
+
+  render(<ConnectionRequests onChanged={vi.fn()} />);
+  const item = (await screen.findByText('이름 없는 당사자')).closest('li') as HTMLElement;
+  fireEvent.click(within(item).getByRole('button', { name: '거절' }));
+
+  expect(within(await screen.findByRole('alertdialog')).getByText('이름 없는 당사자 요청을 거절할까요?')).toBeInTheDocument();
 });

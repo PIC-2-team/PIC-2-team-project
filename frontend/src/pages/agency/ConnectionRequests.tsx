@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import {
   decideGuardianClaim,
@@ -33,9 +33,15 @@ function toItems(links: LinkRequest[], claims: GuardianClaim[]): RequestItem[] {
   return items.sort((a, b) => requestedAtOf(b).localeCompare(requestedAtOf(a)));
 }
 
-async function fetchItems(): Promise<RequestItem[]> {
-  const [links, claims] = await Promise.all([getLinkRequests(), getGuardianClaims()]);
-  return toItems(Array.isArray(links) ? links : [], Array.isArray(claims) ? claims : []);
+type Fetched = { items: RequestItem[]; partial: boolean };
+
+// 한쪽 목록이 실패해도 다른 쪽 요청은 처리할 수 있어야 하므로 둘 다 실패할 때만 오류로 본다
+async function fetchItems(): Promise<Fetched> {
+  const [links, claims] = await Promise.allSettled([getLinkRequests(), getGuardianClaims()]);
+  if (links.status === 'rejected' && claims.status === 'rejected') throw links.reason;
+  const linkList = links.status === 'fulfilled' && Array.isArray(links.value) ? links.value : [];
+  const claimList = claims.status === 'fulfilled' && Array.isArray(claims.value) ? claims.value : [];
+  return { items: toItems(linkList, claimList), partial: links.status === 'rejected' || claims.status === 'rejected' };
 }
 
 function dateOf(localDateTime: string): string {
@@ -44,11 +50,16 @@ function dateOf(localDateTime: string): string {
 
 function errorMessageOf(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 409 || error.status === 404) return '이미 처리되었거나 만료된 요청이에요. 목록을 새로 불러왔어요.';
+    if (error.status === 409) return '이미 처리되었거나 만료된 요청이에요. 목록을 새로 불러왔어요.';
+    if (error.status === 404) return '요청을 찾을 수 없어요. 목록을 새로 불러왔어요.';
     if (error.status === 403) return '이 요청을 처리할 권한이 없어요.';
   }
   return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 }
+
+const PARTIAL_NOTICE = '일부 요청을 불러오지 못했어요. 잠시 후 다시 불러와 주세요.';
+const RELOAD_FAILED_NOTICE = '처리는 완료됐지만 목록을 새로 불러오지 못했어요. 다시 불러와 주세요.';
+const UNNAMED_RECIPIENT = '이름 없는 당사자';
 
 type Props = {
   /** 수락으로 기관의 당사자·보호자 목록이 바뀌므로 상위 화면이 다시 불러오게 알린다 */
@@ -60,40 +71,63 @@ export function ConnectionRequests({ onChanged }: Props) {
   const [busy, setBusy] = useState<{ key: string; decision: ConnectionDecision } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<RequestItem | null>(null);
+  // 늦게 도착한 옛 응답이 최신 목록을 덮어쓰지 않도록 가장 마지막 요청의 응답만 반영한다
+  const latest = useRef(0);
+  const loaded = useRef(false);
 
-  const reload = useCallback(async () => {
+  const apply = (result: Fetched) => {
+    loaded.current = true;
+    setState({ status: 'ok', items: result.items });
+    if (result.partial) setNotice(PARTIAL_NOTICE);
+  };
+
+  const reload = async () => {
+    const id = ++latest.current;
     try {
-      setState({ status: 'ok', items: await fetchItems() });
+      const result = await fetchItems();
+      if (id === latest.current) apply(result);
     } catch {
-      setState({ status: 'error' });
+      if (id !== latest.current) return;
+      // 이미 목록을 보여 주고 있다면 처리 결과를 지우지 않고 안내만 한다
+      if (loaded.current) setNotice(RELOAD_FAILED_NOTICE);
+      else setState({ status: 'error' });
     }
-  }, []);
+  };
 
   useEffect(() => {
     let active = true;
+    const id = ++latest.current;
     fetchItems()
-      .then((items) => { if (active) setState({ status: 'ok', items }); })
-      .catch(() => { if (active) setState({ status: 'error' }); });
+      .then((result) => { if (active && id === latest.current) apply(result); })
+      .catch(() => { if (active && id === latest.current) setState({ status: 'error' }); });
     return () => { active = false; };
+    // apply는 상태 설정만 하므로 마운트 때 한 번만 실행한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const decide = async (item: RequestItem, decision: ConnectionDecision) => {
     if (busy) return;
     setBusy({ key: item.key, decision });
     setNotice(null);
+    let succeeded = false;
     try {
       if (item.kind === 'link') {
         await decideOrganizationLinkRequest(item.data.careRecipientId, item.data.id, decision);
       } else {
         await decideGuardianClaim(item.data.id, decision);
       }
-      onChanged();
+      succeeded = true;
     } catch (e) {
       setNotice(errorMessageOf(e));
-    } finally {
-      setBusy(null);
-      await reload();
     }
+    if (succeeded) {
+      // 갱신이 끝나기 전에도 처리한 요청이 다시 눌리지 않도록 바로 뺀다
+      setState((prev) => (prev.status === 'ok' ? { status: 'ok', items: prev.items.filter((i) => i.key !== item.key) } : prev));
+      // 수락만 기관의 당사자·보호자 목록을 바꾼다
+      if (decision === 'accept') onChanged();
+    }
+    await reload();
+    setBusy(null);
   };
 
   const count = state.status === 'ok' ? state.items.length : 0;
@@ -134,7 +168,7 @@ export function ConnectionRequests({ onChanged }: Props) {
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {state.items.map((item) => {
             const rowBusy = busy?.key === item.key;
-            const name = item.data.careRecipientName ?? '이름 없는 당사자';
+            const name = item.data.careRecipientName ?? UNNAMED_RECIPIENT;
             return (
               <li key={item.key} style={{ padding: '12px 12px', borderRadius: 10, border: '1px solid var(--line, #e2ece6)', background: '#fff' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 600, color: item.kind === 'claim' ? '#e67e22' : '#1976d2' }}>
@@ -181,7 +215,7 @@ export function ConnectionRequests({ onChanged }: Props) {
 
       <ConfirmDialog
         open={rejecting !== null}
-        title={`${rejecting?.data.careRecipientName ?? '이 당사자'} 님의 연결 요청을 거절할까요?`}
+        title={`${rejecting?.data.careRecipientName ?? UNNAMED_RECIPIENT} 요청을 거절할까요?`}
         description={rejecting?.kind === 'claim'
           ? '거절하면 이 보호자는 당사자에 연결되지 않아요. 보호자가 다시 요청할 수 있어요.'
           : '거절하면 이 당사자는 기관에 연결되지 않아요. 보호자가 다시 요청할 수 있어요.'}
