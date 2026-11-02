@@ -58,4 +58,11 @@ public class UserController {
                                 @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(userId, request);
     }
+
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(@AuthenticationPrincipal Long userId) {
+        userService.withdraw(userId);
+    }
 }
