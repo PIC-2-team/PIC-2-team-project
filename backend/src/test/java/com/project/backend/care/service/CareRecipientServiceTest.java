@@ -44,6 +44,7 @@ class CareRecipientServiceTest {
     @Mock com.project.backend.organization.repository.OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock com.project.backend.organization.repository.OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     @Mock com.project.backend.organization.repository.OrganizationRepository organizationRepository;
+    @Mock GuardianClaimService guardianClaimService;
 
     @InjectMocks CareRecipientService careRecipientService;
 
@@ -238,7 +239,7 @@ class CareRecipientServiceTest {
         given(careGuardianRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
         given(disabilityRepository.findByCareRecipientId(100L)).willReturn(List.of());
 
-        CareRecipientResponse response = careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123"));
+        CareRecipientResponse response = careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123")).recipient();
 
         assertThat(response.id()).isEqualTo(100L);
         assertThat(response.careRecipientNumber()).isEqualTo("R-CLAIM123");

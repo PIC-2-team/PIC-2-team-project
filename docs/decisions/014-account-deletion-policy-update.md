@@ -130,6 +130,7 @@ ADR-012(2026-10-22) 작성 뒤 다음이 바뀌었다.
 - **기관 승인 방식**으로 막는다. 이관된 당사자에 표시(`care_recipient.transferred_at`)를 두고, 표시가 있는 당사자를 `claim`하면 즉시 연결하지 않고 `PENDING`(주 보호자)으로 만든다. 연결된(`ACCEPTED`) 기관 중 한 곳의 담당자가 승인하면 `ACTIVE`가 된다.
 - `PENDING` 상태에서는 접근할 수 없다. 대기 요청은 30일 뒤 만료한다. 기관 담당자가 없으면 새 담당자가 인수할 때까지 대기한다.
 - 표시가 없는 당사자(어드민이 사전 발급한 코드, ADR-011)는 지금처럼 바로 연결된다.
+- 구현 세부(이슈 #240): `claim` 응답은 대기이면 202(`status=PENDING`, 만료 시각), 즉시 연결이면 기존 응답이다. 만료는 조회·승인·`claim` 시점에 판단하며 별도 배치는 없다. 연결된(`ACCEPTED`) 기관이 하나도 없으면 승인할 곳이 없으므로 409 `APPROVAL_UNAVAILABLE`로 거부한다. 승인하면 `transferred_at`을 비운다. 기관은 `GET /api/organizations/me/guardian-claims`로 목록을 보고 `POST .../guardian-claims/{claimId}/{accept|reject}`로 처리한다.
 - 이관은 `ACCEPTED` 기관이 있을 때만 가능하므로 승인 주체가 항상 존재한다.
 - 현재 `PENDING`은 세컨드 보호자 초대에만 쓰인다. 구현 시 `claim`의 중복 검사, 접근 차단, 승인·거절 처리, 기관 홈의 "보호자 연결 요청" 화면을 함께 고친다.
 - 이관의 대상이 되는 "연결된 기관"은 `ACCEPTED` 상태만이다. 승인 대기(`PENDING`) 요청은 이관 알림과 계속 접근의 대상이 아니다.

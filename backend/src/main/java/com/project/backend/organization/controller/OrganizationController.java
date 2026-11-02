@@ -2,8 +2,11 @@ package com.project.backend.organization.controller;
 
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
+import com.project.backend.care.dto.GuardianClaimResponse;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.service.CareRecipientService;
+import com.project.backend.care.service.GuardianClaimService;
+import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.organization.dto.*;
 import com.project.backend.organization.service.CareAssignmentService;
@@ -29,6 +32,7 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final CareAssignmentService careAssignmentService;
     private final CareRecipientService careRecipientService;
+    private final GuardianClaimService guardianClaimService;
 
     @Operation(summary = "활동지원사 소속 기관 QR 코드 확인")
     @PostMapping("/worker/verify")
@@ -159,6 +163,24 @@ public class OrganizationController {
     @GetMapping("/me/link-requests")
     public ApiResponse<List<LinkRequestResponse>> getLinkRequests(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(organizationService.getLinkRequests(userId));
+    }
+
+    @Operation(summary = "이관된 당사자 재연결 요청 목록 조회")
+    @GetMapping("/me/guardian-claims")
+    public ApiResponse<List<GuardianClaimResponse>> getGuardianClaims(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(guardianClaimService.list(userId));
+    }
+
+    @Operation(summary = "이관된 당사자 재연결 요청 수락/거절")
+    @PostMapping("/me/guardian-claims/{claimId}/{decision}")
+    public ApiResponse<Void> decideGuardianClaim(@AuthenticationPrincipal Long userId,
+                                                 @PathVariable Long claimId,
+                                                 @PathVariable String decision) {
+        if (!"accept".equalsIgnoreCase(decision) && !"reject".equalsIgnoreCase(decision)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DECISION", "accept 또는 reject만 사용할 수 있습니다.");
+        }
+        guardianClaimService.decide(userId, claimId, "accept".equalsIgnoreCase(decision));
+        return ApiResponse.ok(null);
     }
 
     @Operation(summary = "지원사 배정")

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,9 +44,13 @@ public class CareRecipientController {
 
     @Operation(summary = "고유 코드로 당사자 등록 (연결)")
     @PostMapping("/claim")
-    public ApiResponse<CareRecipientResponse> claim(@AuthenticationPrincipal Long userId,
-                                                    @Valid @RequestBody ClaimCareRecipientRequest request) {
-        return ApiResponse.ok(careRecipientService.claim(userId, request));
+    public ResponseEntity<ApiResponse<?>> claim(@AuthenticationPrincipal Long userId,
+                                                @Valid @RequestBody ClaimCareRecipientRequest request) {
+        ClaimOutcome outcome = careRecipientService.claim(userId, request);
+        if (outcome.pending() != null) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(outcome.pending()));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(outcome.recipient()));
     }
 
     @Operation(summary = "당사자 조회")

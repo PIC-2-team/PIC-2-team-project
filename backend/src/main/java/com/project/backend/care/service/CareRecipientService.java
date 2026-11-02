@@ -1,6 +1,7 @@
 package com.project.backend.care.service;
 
 import com.project.backend.care.dto.CareRecipientResponse;
+import com.project.backend.care.dto.ClaimOutcome;
 import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
@@ -46,6 +47,7 @@ public class CareRecipientService {
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     private final OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     private final OrganizationRepository organizationRepository;
+    private final GuardianClaimService guardianClaimService;
 
     @Transactional(readOnly = true)
     public List<CareRecipientResponse> getAll(Long userId) {
@@ -136,7 +138,7 @@ public class CareRecipientService {
         return CareRecipientResponse.of(recipient, disabilities);
     }
 
-    public CareRecipientResponse claim(Long guardianUserId, ClaimCareRecipientRequest request) {
+    public ClaimOutcome claim(Long guardianUserId, ClaimCareRecipientRequest request) {
         User user = findUser(guardianUserId);
         if (user.getRole() != UserRole.GUARDIAN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 당사자를 등록할 수 있습니다.");
@@ -145,17 +147,17 @@ public class CareRecipientService {
         CareRecipient recipient = careRecipientRepository.findByCareRecipientNumber(request.careRecipientNumber().trim())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CARE_RECIPIENT_NOT_FOUND", "해당 고유 코드의 당사자를 찾을 수 없습니다."));
 
-        // 이관된 당사자는 기관 승인 방식(ADR-014 항목 4)이 구현될 때까지 번호만으로 연결하지 못하게 막는다
-        if (recipient.isTransferred()) {
-            throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_REQUIRED", "기관의 승인이 필요한 당사자입니다.");
-        }
-
         boolean alreadyClaimed = careGuardianRepository.findByCareRecipientIdAndTypeAndStatus(
                 recipient.getId(), GuardianType.PRIMARY, GuardianStatus.ACTIVE
         ).isPresent();
 
         if (alreadyClaimed) {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_CLAIMED", "이미 보호자가 등록된 당사자입니다.");
+        }
+
+        // 이관된 당사자는 코드만으로 연결하지 않고 기관의 승인을 받는다 (ADR-014 항목 4)
+        if (recipient.isTransferred()) {
+            return ClaimOutcome.waiting(guardianClaimService.request(user, recipient));
         }
 
         careGuardianRepository.save(CareGuardian.builder()
@@ -169,7 +171,7 @@ public class CareRecipientService {
                 .findByCareRecipientId(recipient.getId()).stream()
                 .map(CareRecipientDisability::getDisabilityType).toList();
 
-        return CareRecipientResponse.of(recipient, disabilities);
+        return ClaimOutcome.connected(CareRecipientResponse.of(recipient, disabilities));
     }
 
     @Transactional(readOnly = true)

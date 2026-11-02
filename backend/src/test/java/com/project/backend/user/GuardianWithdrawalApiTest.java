@@ -200,16 +200,16 @@ class GuardianWithdrawalApiTest {
     }
 
     @Test
-    void transferredRecipientCannotBeClaimedByNumberUntilApprovalExists() throws Exception {
+    void transferredRecipientIsNotConnectedByNumberAloneAfterWithdrawal() throws Exception {
         CareRecipient r = recipient("R-1");
         primary(r, guardian);
         link(r);
         withdraw(guardian, decision(r, "TRANSFER")).andExpect(status().isNoContent());
         User newcomer = user("newcomer", UserRole.GUARDIAN);
 
-        assertThatThrownBy(() -> careRecipientService.claim(newcomer.getId(), new ClaimCareRecipientRequest("R-1")))
-                .isInstanceOf(ApiException.class)
-                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
+        var outcome = careRecipientService.claim(newcomer.getId(), new ClaimCareRecipientRequest("R-1"));
+
+        assertThat(outcome.pending()).as("기관 승인 전에는 연결되지 않는다").isNotNull();
         assertThat(guardians.findByCareRecipientIdAndStatus(r.getId(), GuardianStatus.ACTIVE)).isEmpty();
     }
 
