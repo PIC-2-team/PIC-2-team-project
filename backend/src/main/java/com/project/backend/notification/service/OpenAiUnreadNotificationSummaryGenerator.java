@@ -76,7 +76,7 @@ public class OpenAiUnreadNotificationSummaryGenerator implements UnreadNotificat
     private String formatNotifications(List<Notification> notifications) {
         return notifications.stream()
                 .map(notification -> "[" + CREATED_AT_FORMAT.format(notification.getCreatedAt().atZone(SEOUL)) + "] "
-                        + notification.getType() + ": " + notification.getMessage())
+                        + notification.getType().getLabel() + ": " + notification.getMessage())
                 .collect(Collectors.joining("\n"));
     }
 }
