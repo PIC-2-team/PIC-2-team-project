@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { DailyRecordPage } from './DailyRecordPage';
 import * as recordsApi from '../api/records';
 import * as schedulesApi from '../api/schedules';
@@ -35,6 +35,24 @@ function mockEmpty() {
   vi.spyOn(memosApi, 'getMemosByMonth').mockResolvedValue([]);
   vi.spyOn(memosApi, 'getMemosByDate').mockResolvedValue([]);
 }
+
+function SearchParamsProbe() {
+  const [searchParams] = useSearchParams();
+  return <output data-testid="search-params">{searchParams.toString()}</output>;
+}
+
+it('메모 작성 링크는 폼을 열고 새로고침용 표시를 주소에서 지운다', async () => {
+  mockEmpty();
+  render(
+    <MemoryRouter initialEntries={['/records?tab=schedules&memo=write']}>
+      <DailyRecordPage />
+      <SearchParamsProbe />
+    </MemoryRouter>,
+  );
+
+  expect(await screen.findByRole('textbox', { name: '메모 내용' })).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId('search-params')).toHaveTextContent(/^tab=schedules$/));
+});
 
 it('더보기를 누르면 달력 없이 전체 기록을 조회하고 카테고리로 필터링한다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
@@ -177,6 +195,9 @@ it('일정 달력에서 메모 작성일은 종이 마커로, 일정일은 둥�
   const dateCell = await screen.findByRole('button', { name: /11월 2일.*일정 있음.*메모 있음/ });
   expect(dateCell.querySelector('[class*="scheduleMarker"]')).toBeInTheDocument();
   expect(dateCell.querySelector('[class*="memoMarker"]')).toBeInTheDocument();
+  const legend = within(screen.getByLabelText('달력 표시 기준'));
+  expect(legend.getByText('메모', { exact: true })).toBeInTheDocument();
+  expect(legend.queryByText('메모 작성일')).not.toBeInTheDocument();
 });
 
 it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉시 갱신된다', async () => {
@@ -194,6 +215,7 @@ it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉
 
   fireEvent.click(screen.getByRole('tab', { name: '일정' }));
   await screen.findByText('이 날의 일정이 없어요.');
+  expect(screen.queryByText('이 날의 메모가 없어요.')).not.toBeInTheDocument();
   const todayCell = screen.getByRole('button', { name: '11월 3일' });
   expect(todayCell).not.toHaveAttribute('aria-label', expect.stringContaining('메모 있음'));
 
@@ -201,6 +223,14 @@ it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉
   fireEvent.change(screen.getByRole('textbox', { name: '메모 내용' }), { target: { value: memo.content } });
   fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
   expect(await screen.findByRole('button', { name: /11월 3일.*메모 있음/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '메모 수정' }));
+  expect(screen.getByRole('textbox', { name: '메모 수정' })).toHaveClass(/memoEditTextarea/);
+  const editFooter = screen.getByLabelText('메모 수정 동작');
+  expect(editFooter.querySelector('[class*="recordTime"]')).not.toBeInTheDocument();
+  expect(within(editFooter).getByRole('button', { name: '저장' })).toHaveClass(/memoEditSaveBtn/);
+  expect(within(editFooter).getByRole('button', { name: '취소' })).toBeInTheDocument();
+  fireEvent.click(within(editFooter).getByRole('button', { name: '취소' }));
 
   fireEvent.click(screen.getByRole('button', { name: '메모 삭제' }));
   await waitFor(() => expect(remove).toHaveBeenCalledWith(42, memo.id));
@@ -317,5 +347,42 @@ it('일정 삭제 버튼은 작성자 본인의 일정에만 표시한다', asyn
   fireEvent.click(screen.getByRole('tab', { name: '일정' }));
   await screen.findByText('다른 보호자 일정');
   expect(screen.getByRole('button', { name: '내 일정 삭제' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '내 일정 수정' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '다른 보호자 일정 삭제' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '다른 보호자 일정 수정' })).not.toBeInTheDocument();
+});
+
+it('일정 작성자는 제목과 날짜·시간을 수정하고 달력 마커를 이동한다', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-03T03:00:00Z'));
+  mockUserId = 1;
+  mockEmpty();
+  const original = {
+    id: 1, careRecipientId: 42, createdById: 1, title: '병원 예약',
+    scheduledAt: '2026-11-03T01:00:00Z', description: '정기 진료',
+    createdAt: '2026-11-03T01:00:00Z', updatedAt: '2026-11-03T01:00:00Z',
+  };
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([original]);
+  const update = vi.spyOn(schedulesApi, 'updateSchedule').mockImplementation(async (_, id, payload) => ({
+    ...original, id, ...payload, scheduledAt: payload.scheduledAt ?? original.scheduledAt,
+  }));
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  vi.useRealTimers();
+
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('병원 예약');
+  fireEvent.click(screen.getByRole('button', { name: '병원 예약 수정' }));
+  fireEvent.change(screen.getByRole('textbox', { name: '일정 제목 수정' }), { target: { value: '병원 방문' } });
+  fireEvent.change(screen.getByLabelText('일정 설명 수정'), { target: { value: '오전 진료' } });
+  fireEvent.change(screen.getByLabelText('일정 날짜 수정'), { target: { value: '2026-11-04' } });
+  fireEvent.change(screen.getByLabelText('일정 시간 수정'), { target: { value: '08:45' } });
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
+
+  await waitFor(() => expect(update).toHaveBeenCalledWith(42, 1, {
+    title: '병원 방문', description: '오전 진료', scheduledAt: '2026-11-03T23:45:00.000Z',
+  }));
+  expect(screen.queryByRole('button', { name: /11월 3일.*일정 있음/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /11월 4일.*일정 있음/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /11월 4일.*일정 있음/ }));
+  expect(await screen.findByText('병원 방문')).toBeInTheDocument();
 });

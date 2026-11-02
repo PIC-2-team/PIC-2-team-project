@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
-import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
+import { getSchedulesByMonth, createSchedule, updateSchedule, deleteSchedule } from '../api/schedules';
 import { getMemosByDate, getMemosByMonth, createMemo, updateMemo, deleteMemo } from '../api/memos';
 import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
@@ -103,6 +103,14 @@ function toSeoulTimeLabel(instant: string): string {
   return parts.map(p => p.value).join('').trim();
 }
 
+function toSeoulTimeInput(instant: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(instant));
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
+}
+
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
@@ -135,9 +143,14 @@ export function DailyRecordPage() {
   const [newScheduleTime, setNewScheduleTime] = useState('09:00');
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [editingScheduleTitle, setEditingScheduleTitle] = useState('');
+  const [editingScheduleDescription, setEditingScheduleDescription] = useState('');
+  const [editingScheduleDate, setEditingScheduleDate] = useState('');
+  const [editingScheduleTime, setEditingScheduleTime] = useState('09:00');
+  const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
   const [dayMemos, setDayMemos] = useState<Memo[]>([]);
   const [memoMonthData, setMemoMonthData] = useState<{ recipientId: number; year: number; month: number; items: Memo[] } | null>(null);
-  const [isMemoLoading, setIsMemoLoading] = useState(false);
   const [memoError, setMemoError] = useState<string | null>(null);
   const [memoFormOpen, setMemoFormOpen] = useState(() => searchParams.get('memo') === 'write');
   const [newMemoContent, setNewMemoContent] = useState('');
@@ -148,6 +161,13 @@ export function DailyRecordPage() {
   const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
   const trailingDays = 42 - firstDayOfWeek - daysInMonth;
   const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
+
+  useEffect(() => {
+    if (searchParams.get('memo') !== 'write') return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('memo');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
@@ -190,12 +210,10 @@ export function DailyRecordPage() {
   useEffect(() => {
     if (!selectedRecipientId || activeTab !== 'schedules') return;
     let isCurrent = true;
-    setIsMemoLoading(true);
     setMemoError(null);
     getMemosByDate(selectedRecipientId, selectedKey)
       .then(items => { if (isCurrent) setDayMemos(items); })
-      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); })
-      .finally(() => { if (isCurrent) setIsMemoLoading(false); });
+      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); });
     return () => { isCurrent = false; };
   }, [selectedRecipientId, activeTab, selectedKey]);
 
@@ -232,6 +250,7 @@ export function DailyRecordPage() {
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
   const canDeleteSchedule = (schedule: Schedule) => canWrite && schedule.createdById === user?.id;
+  const canEditSchedule = canDeleteSchedule;
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -271,6 +290,48 @@ export function DailyRecordPage() {
       setMonthSchedules(prev => prev.filter(s => s.id !== scheduleId));
     } catch (e) {
       setError(e instanceof Error ? e.message : '일정 삭제 실패');
+    }
+  };
+
+  const beginScheduleEdit = (schedule: Schedule) => {
+    setEditingScheduleId(schedule.id);
+    setEditingScheduleTitle(schedule.title);
+    setEditingScheduleDescription(schedule.description ?? '');
+    setEditingScheduleDate(toSeoulDateKey(schedule.scheduledAt));
+    setEditingScheduleTime(toSeoulTimeInput(schedule.scheduledAt));
+    setError(null);
+  };
+
+  const cancelScheduleEdit = () => {
+    setEditingScheduleId(null);
+    setEditingScheduleTitle('');
+    setEditingScheduleDescription('');
+    setEditingScheduleDate('');
+    setEditingScheduleTime('09:00');
+  };
+
+  const handleUpdateSchedule = async (scheduleId: number) => {
+    if (!selectedRecipientId || !editingScheduleTitle.trim() || !editingScheduleDate || !editingScheduleTime) return;
+    setIsUpdatingSchedule(true);
+    try {
+      const updated = await updateSchedule(selectedRecipientId, scheduleId, {
+        title: editingScheduleTitle.trim(),
+        description: editingScheduleDescription.trim(),
+        scheduledAt: new Date(`${editingScheduleDate}T${editingScheduleTime}:00+09:00`).toISOString(),
+      });
+      setMonthSchedules(prev => {
+        const updatedKey = toSeoulDateKey(updated.scheduledAt);
+        const isInCurrentMonth = updatedKey.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`);
+        return (isInCurrentMonth
+          ? prev.map(schedule => schedule.id === scheduleId ? updated : schedule)
+          : prev.filter(schedule => schedule.id !== scheduleId)
+        ).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+      });
+      cancelScheduleEdit();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '일정 수정 실패');
+    } finally {
+      setIsUpdatingSchedule(false);
     }
   };
 
@@ -378,7 +439,7 @@ export function DailyRecordPage() {
         {activeTab === 'schedules' && (
           <div className={styles.calendarLegend} aria-label="달력 표시 기준">
             <span><i className={styles.scheduleMarker} aria-hidden="true" />일정</span>
-            <span><i className={styles.memoMarker} aria-hidden="true" />메모 작성일</span>
+            <span><i className={styles.memoMarker} aria-hidden="true" />메모</span>
           </div>
         )}
       </section>}
@@ -501,21 +562,32 @@ export function DailyRecordPage() {
                 <div key={schedule.id} className={styles.scheduleCard}>
                   <div className={styles.scheduleIcon} aria-hidden="true">📅</div>
                   <div className={styles.scheduleBody}>
-                    <p className={styles.scheduleTitle}>{schedule.title}</p>
-                    {schedule.description && (
-                      <p className={styles.scheduleDesc}>{schedule.description}</p>
+                    {editingScheduleId === schedule.id ? (
+                      <div className={styles.scheduleEditForm} aria-label="일정 수정">
+                        <input type="text" aria-label="일정 제목 수정" value={editingScheduleTitle} maxLength={200} onChange={event => setEditingScheduleTitle(event.target.value)} />
+                        <textarea aria-label="일정 설명 수정" value={editingScheduleDescription} maxLength={500} rows={2} onChange={event => setEditingScheduleDescription(event.target.value)} />
+                        <div className={styles.scheduleEditDateTime}>
+                          <input type="date" aria-label="일정 날짜 수정" value={editingScheduleDate} onChange={event => setEditingScheduleDate(event.target.value)} />
+                          <input type="time" aria-label="일정 시간 수정" value={editingScheduleTime} onChange={event => setEditingScheduleTime(event.target.value)} />
+                        </div>
+                        <div className={styles.memoEditControls}>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.memoEditSaveBtn}`} onClick={() => handleUpdateSchedule(schedule.id)} disabled={isUpdatingSchedule || !editingScheduleTitle.trim()}>저장</button>
+                          <button type="button" className={styles.viewAll} onClick={cancelScheduleEdit} disabled={isUpdatingSchedule}>취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className={styles.scheduleTitle}>{schedule.title}</p>
+                        {schedule.description && <p className={styles.scheduleDesc}>{schedule.description}</p>}
+                      </>
                     )}
                   </div>
-                  <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canDeleteSchedule(schedule) && (
-                    <button
-                      type="button"
-                      className={styles.deleteBtn}
-                      aria-label={`${schedule.title} 삭제`}
-                      onClick={() => handleDeleteSchedule(schedule.id)}
-                    >
-                      ✕
-                    </button>
+                  {editingScheduleId !== schedule.id && <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>}
+                  {canDeleteSchedule(schedule) && editingScheduleId !== schedule.id && (
+                    <div className={styles.memoActions}>
+                      {canEditSchedule(schedule) && <button type="button" className={`${styles.deleteBtn} ${styles.scheduleEditBtn}`} aria-label={`${schedule.title} 수정`} onClick={() => beginScheduleEdit(schedule)}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>}
+                      <button type="button" className={styles.deleteBtn} aria-label={`${schedule.title} 삭제`} onClick={() => handleDeleteSchedule(schedule.id)}>✕</button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -557,10 +629,6 @@ export function DailyRecordPage() {
 
           {memoError && <p className="error" role="alert">{memoError}</p>}
 
-          {!isMemoLoading && dayMemos.length === 0 && !memoFormOpen && (
-            <p className="muted" style={{ textAlign: 'center', padding: '1rem 0' }}>이 날의 메모가 없어요.</p>
-          )}
-
           <div className={styles.records}>
             {dayMemos.map(memo => (
               <div key={memo.id} className={styles.scheduleCard}>
@@ -574,23 +642,24 @@ export function DailyRecordPage() {
                         aria-label="메모 수정"
                         maxLength={500}
                         rows={2}
-                        style={{ resize: 'none', font: 'inherit', fontSize: '0.875rem', padding: '4px 6px', border: '1px solid #3CAB7E', borderRadius: '6px', width: '100%' }}
+                        className={styles.memoEditTextarea}
                       />
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                        <button type="button" className={`btn ${styles.scheduleAddBtn}`} style={{ padding: '4px 12px', fontSize: '0.8125rem' }} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
-                        <button type="button" className={styles.viewAll} onClick={() => setEditingMemoId(null)}>취소</button>
+                      <div className={styles.memoEditFooter} aria-label="메모 수정 동작">
+                        <div className={styles.memoEditControls}>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.memoEditSaveBtn}`} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
+                          <button type="button" className={styles.viewAll} onClick={() => setEditingMemoId(null)}>취소</button>
+                        </div>
                       </div>
                     </>
                   ) : (
                     <p className={styles.scheduleTitle}>{memo.content}</p>
                   )}
                 </div>
-                <span className={styles.recordTime}>{new Date(memo.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                 {memo.createdById === user?.id && editingMemoId !== memo.id && (
-                  <>
-                    <button type="button" className={styles.deleteBtn} aria-label="메모 수정" onClick={() => { setEditingMemoId(memo.id); setEditingMemoContent(memo.content); setMemoFormOpen(false); }} style={{ fontSize: '0.75rem' }}>✏️</button>
+                  <div className={styles.memoActions}>
+                    <button type="button" className={`${styles.deleteBtn} ${styles.memoEditBtn}`} aria-label="메모 수정" onClick={() => { setEditingMemoId(memo.id); setEditingMemoContent(memo.content); setMemoFormOpen(false); }} style={{ fontSize: '0.75rem' }}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>
                     <button type="button" className={styles.deleteBtn} aria-label="메모 삭제" onClick={() => handleDeleteMemo(memo.id)}>✕</button>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
