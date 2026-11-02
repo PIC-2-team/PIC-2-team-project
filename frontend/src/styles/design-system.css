@@ -607,7 +607,17 @@
 .app-shell .app-header { flex-shrink: 0; }
 .app-shell .role-badge { cursor: default; }
 .app-shell .app-main > main { min-height: 100%; }
-.app-shell .app-main:has(.calendar-grid) { scrollbar-gutter: stable; }
+.app-shell .app-main {
+  scrollbar-width: thin;
+  scrollbar-color: #c8dfd4 transparent;
+}
+.app-shell .app-main::-webkit-scrollbar { width: 6px; }
+.app-shell .app-main::-webkit-scrollbar-track { background: transparent; }
+.app-shell .app-main::-webkit-scrollbar-thumb {
+  background: #c8dfd4;
+  border-radius: 999px;
+}
+.app-shell .app-main::-webkit-scrollbar-thumb:hover { background: var(--green); }
 .app-shell .demo-page:has(.calendar-grid) { min-height: 100%; }
 .app-shell .status-page { min-height: 100%; }
 .app-shell .status-page > .empty-state { margin-block: auto; }
