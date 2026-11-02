@@ -69,8 +69,8 @@ class StaffWithdrawalApiTest {
         otherWorker = user("other", UserRole.SUPPORT_WORKER);
         owner = user("owner", UserRole.INSTITUTION);
         otherOwner = user("owner2", UserRole.INSTITUTION);
-        org = organizations.save(Organization.builder().name("기관").ownerId(owner.getId()).organizationCode("AA-001").build());
-        otherOrg = organizations.save(Organization.builder().name("기관2").ownerId(otherOwner.getId()).organizationCode("AA-002").build());
+        org = organizations.save(Organization.builder().name("기관").ownerId(owner.getId()).organizationCode("AAA001").build());
+        otherOrg = organizations.save(Organization.builder().name("기관2").ownerId(otherOwner.getId()).organizationCode("AAA002").build());
         members.save(OrganizationMember.builder().organizationId(org.getId()).userId(worker.getId()).build());
         members.save(OrganizationMember.builder().organizationId(org.getId()).userId(otherWorker.getId()).build());
         recipient = recipients.save(CareRecipient.builder().name("당사자").careRecipientNumber("R-1")
@@ -115,6 +115,27 @@ class StaffWithdrawalApiTest {
         assertThat(members.findByOrganizationIdAndStatus(org.getId(), OrganizationMemberStatus.ACTIVE)).hasSize(2);
         assertThat(links.findByOrganizationId(org.getId())).singleElement()
                 .extracting(OrganizationRecipientLink::getStatus).isEqualTo(LinkStatus.ACCEPTED);
+    }
+
+    @Test
+    void institutionWithdrawalRotatesCodeSoTheOldSharedCodeCannotTakeOverTheOrganization() throws Exception {
+        String oldCode = org.getOrganizationCode();
+        User successor = user("successor", UserRole.INSTITUTION);
+
+        mvc.perform(delete("/api/users/me").header("Authorization", bearer(owner))).andExpect(status().isNoContent());
+
+        em.flush();
+        em.clear();
+        String newCode = organizations.findById(org.getId()).orElseThrow().getOrganizationCode();
+        assertThat(newCode).isNotEqualTo(oldCode).matches("[A-Z0-9]{6}");
+        assertThat(organizations.findById(otherOrg.getId()).orElseThrow().getOrganizationCode()).isEqualTo("AAA002");
+        mvc.perform(post("/api/organizations").header("Authorization", bearer(successor))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"organizationCode\":\"" + oldCode + "\"}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/organizations").header("Authorization", bearer(successor))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"organizationCode\":\"" + newCode + "\"}"))
+                .andExpect(status().isCreated());
+        assertThat(organizations.findById(org.getId()).orElseThrow().getOwnerId()).isEqualTo(successor.getId());
     }
 
     @Test
