@@ -145,6 +145,11 @@ public class CareRecipientService {
         CareRecipient recipient = careRecipientRepository.findByCareRecipientNumber(request.careRecipientNumber().trim())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CARE_RECIPIENT_NOT_FOUND", "해당 고유 코드의 당사자를 찾을 수 없습니다."));
 
+        // 이관된 당사자는 기관 승인 방식(ADR-014 항목 4)이 구현될 때까지 번호만으로 연결하지 못하게 막는다
+        if (recipient.isTransferred()) {
+            throw new ApiException(HttpStatus.CONFLICT, "APPROVAL_REQUIRED", "기관의 승인이 필요한 당사자입니다.");
+        }
+
         boolean alreadyClaimed = careGuardianRepository.findByCareRecipientIdAndTypeAndStatus(
                 recipient.getId(), GuardianType.PRIMARY, GuardianStatus.ACTIVE
         ).isPresent();

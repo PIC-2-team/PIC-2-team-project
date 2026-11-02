@@ -121,6 +121,10 @@ public class CareRecipient {
         this.transferredAt = now;
     }
 
+    public boolean isTransferred() {
+        return transferredAt != null;
+    }
+
     public void softDelete(LocalDateTime now) {
         this.deletedAt = now;
     }

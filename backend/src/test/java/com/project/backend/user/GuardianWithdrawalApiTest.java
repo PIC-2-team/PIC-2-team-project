@@ -1,9 +1,12 @@
 package com.project.backend.user;
 
 import com.project.backend.care.entity.*;
+import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
+import com.project.backend.care.service.CareRecipientService;
+import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.security.JwtProvider;
 import com.project.backend.notification.repository.NotificationRepository;
 import com.project.backend.organization.entity.LinkStatus;
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,6 +59,7 @@ class GuardianWithdrawalApiTest {
     @Autowired OrganizationMemberRepository members;
     @Autowired OrganizationRecipientLinkRepository links;
     @Autowired NotificationRepository notifications;
+    @Autowired CareRecipientService careRecipientService;
     MockMvc mvc;
     User guardian, secondary, worker, owner;
     Organization org;
@@ -191,6 +197,20 @@ class GuardianWithdrawalApiTest {
                 + "{\"careRecipientId\":" + others.getId() + ",\"action\":\"DELETE\"}]}")
                 .andExpect(status().isUnprocessableEntity());
         assertThat(recipients.findById(others.getId())).isPresent();
+    }
+
+    @Test
+    void transferredRecipientCannotBeClaimedByNumberUntilApprovalExists() throws Exception {
+        CareRecipient r = recipient("R-1");
+        primary(r, guardian);
+        link(r);
+        withdraw(guardian, decision(r, "TRANSFER")).andExpect(status().isNoContent());
+        User newcomer = user("newcomer", UserRole.GUARDIAN);
+
+        assertThatThrownBy(() -> careRecipientService.claim(newcomer.getId(), new ClaimCareRecipientRequest("R-1")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.CONFLICT);
+        assertThat(guardians.findByCareRecipientIdAndStatus(r.getId(), GuardianStatus.ACTIVE)).isEmpty();
     }
 
     @Test
