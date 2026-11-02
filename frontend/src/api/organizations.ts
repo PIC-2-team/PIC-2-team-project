@@ -46,6 +46,13 @@ export function updateMember(memberId: number, payload: { active: boolean }): Pr
   });
 }
 
+export function updateMemberCharacteristics(memberId: number, characteristics: string): Promise<OrganizationMember> {
+  return apiRequest(`/api/organizations/me/members/${memberId}/characteristics`, {
+    method: 'PATCH',
+    body: { characteristics },
+  });
+}
+
 export function updateMemberStatus(memberId: number, active: boolean): Promise<OrganizationMember> {
   return updateMember(memberId, { active });
 }

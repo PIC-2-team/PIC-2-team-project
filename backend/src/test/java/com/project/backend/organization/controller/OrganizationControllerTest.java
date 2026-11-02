@@ -129,7 +129,7 @@ class OrganizationControllerTest {
     void addMember_endpoint() {
         AddMemberRequest request = new AddMemberRequest("S-ABCDEFGH");
         MemberResponse mockMember = new MemberResponse(
-                5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now());
+                5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now(), null);
         given(organizationService.addMember(10L, request)).willReturn(mockMember);
 
         ApiResponse<MemberResponse> response = controller.addMember(10L, request);

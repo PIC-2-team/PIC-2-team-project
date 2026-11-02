@@ -29,3 +29,6 @@ logging:
 
 app:
   seed-test-accounts: true
+
+server:
+  port: 8082
