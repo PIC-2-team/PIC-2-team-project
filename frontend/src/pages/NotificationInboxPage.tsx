@@ -120,6 +120,18 @@ export function NotificationInboxPage() {
     navigate(target);
   };
 
+  const handleMarkUnread = async (id: number) => {
+    setActionError(null);
+    try {
+      await markNotificationRead(id, false);
+      setNotifications(prev => prev.map(item => (item.id === id ? { ...item, read: false } : item)));
+      setFeedback('알림을 읽지 않음으로 표시했습니다.');
+      setTimeout(() => setFeedback(null), 3000);
+    } catch {
+      setActionError('알림을 읽지 않음으로 표시하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
   const handleDeleteItem = async (id: number) => {
     setActionError(null);
     try {
@@ -242,6 +254,16 @@ export function NotificationInboxPage() {
                 >
                   ×
                 </button>
+                {item.read && (
+                  <button
+                    type="button"
+                    className={styles.markUnreadBtn}
+                    aria-label={`읽지 않음으로 표시: ${item.message}`}
+                    onClick={() => void handleMarkUnread(item.id)}
+                  >
+                    읽지 않음
+                  </button>
+                )}
               </div>
             ))}
           </div>
