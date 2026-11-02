@@ -145,7 +145,6 @@ export function AgencyDashboardPage() {
   const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
   const [profileMember, setProfileMember] = useState<OrganizationMember | null>(null);
   const [characteristicsDraft, setCharacteristicsDraft] = useState('');
-  const [characteristicsError, setCharacteristicsError] = useState<string | null>(null);
   const [isSavingCharacteristics, setIsSavingCharacteristics] = useState(false);
   const [profileRecipient, setProfileRecipient] = useState<OrganizationCareRecipient | null>(null);
   const todayKey = toSeoulDateKey(new Date().toISOString());
@@ -432,7 +431,7 @@ export function AgencyDashboardPage() {
   const handleSaveCharacteristics = async () => {
     if (!profileMember || characteristicsDraft.length > 2000) return;
     setIsSavingCharacteristics(true);
-    setCharacteristicsError(null);
+    setActionError(null);
     try {
       const updated = await updateMemberCharacteristics(profileMember.id, characteristicsDraft);
       setProfileMember(updated);
@@ -440,16 +439,10 @@ export function AgencyDashboardPage() {
         ? { ...current, members: current.members.map((member) => member.id === updated.id ? updated : member) }
         : current);
     } catch (err) {
-      setCharacteristicsError(err instanceof Error ? err.message : '특성 저장에 실패했습니다.');
+      setActionError(err instanceof Error ? err.message : '특성 저장에 실패했습니다.');
     } finally {
       setIsSavingCharacteristics(false);
     }
-  };
-
-  const handleOpenMemberProfile = (member: OrganizationMember) => {
-    setProfileMember(member);
-    setCharacteristicsDraft(member.characteristics ?? '');
-    setCharacteristicsError(null);
   };
 
   // 필터링된 돌봄 대상자 목록 (배정 모달용)
@@ -841,7 +834,7 @@ export function AgencyDashboardPage() {
                           <CardActionButton
                             label="프로필 보기"
                             ariaLabel={`${m.name} 프로필 보기`}
-                            onClick={() => handleOpenMemberProfile(m)}
+                            onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
                           />
                           <CardActionButton
                             label={m.status === 'ACTIVE' ? '비활성화' : '활성화'}
@@ -1290,7 +1283,7 @@ export function AgencyDashboardPage() {
                             <button
                               type="button"
                               aria-label={`${m.name} 프로필 보기`}
-                              onClick={() => handleOpenMemberProfile(m)}
+                              onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
                               style={{
                                 minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
                                 background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
@@ -1400,7 +1393,6 @@ export function AgencyDashboardPage() {
                 <label htmlFor="worker-characteristics" className="muted" style={{ display: 'block', marginBottom: 6 }}>
                   기관 내 인수인계에 필요한 업무 특성을 기록해 주세요.
                 </label>
-                {characteristicsError && <p role="alert" className="error">{characteristicsError}</p>}
                 <textarea
                   id="worker-characteristics"
                   value={characteristicsDraft}
@@ -1410,20 +1402,21 @@ export function AgencyDashboardPage() {
                   placeholder="예: 선호하는 소통 방식, 업무 시 참고사항"
                   style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: 10, border: '1px solid #cbd5e1', borderRadius: 8 }}
                 />
+                {actionError && <p role="alert" className="error">{actionError}</p>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <span className="muted" style={{ fontSize: '0.78rem' }}>{characteristicsDraft.length}/2000자</span>
                   <button type="button" className="btn" disabled={isSavingCharacteristics || characteristicsDraft.length > 2000} onClick={() => void handleSaveCharacteristics()}>
                     {isSavingCharacteristics ? '저장 중…' : '특성 저장'}
                   </button>
                 </div>
-                <button type="button" className="btn" disabled={isSavingCharacteristics} style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
+                <button type="button" className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
                   닫기
                 </button>
               </div>
             </div>
           );
         })()}
-        {actionError && <p role="alert" className="error">{actionError}</p>}
+        {actionError && !profileMember && <p role="alert" className="error">{actionError}</p>}
         <ConfirmDialog open={confirmation !== null} title={confirmation?.title ?? ''}
           confirmLabel={confirmation?.confirmLabel} variant="danger"
           onConfirm={() => { const action = confirmation?.action; setConfirmation(null); void action?.(); }}

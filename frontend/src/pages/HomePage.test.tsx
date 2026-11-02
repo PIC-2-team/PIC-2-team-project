@@ -7,6 +7,7 @@ import * as careRecipientsApi from '../api/careRecipients';
 import * as recordsApi from '../api/records';
 import * as schedulesApi from '../api/schedules';
 import * as careInfoApi from '../api/careInfo';
+import * as memosApi from '../api/memos';
 import type { User } from '../types/user';
 import { toSeoulDateKey } from '../utils/date';
 
@@ -115,12 +116,54 @@ it('오늘 일정 조회 실패를 일정 없음 상태와 구분해 안내한�
   ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
   vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
   vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([]);
   vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockRejectedValue(new Error('offline'));
 
   render(<MemoryRouter><HomePage /></MemoryRouter>);
 
   expect(await screen.findByRole('alert')).toHaveTextContent('오늘 일정을 불러오지 못했어요.');
   expect(screen.queryByText('오늘 예정된 일정이 없어요.')).not.toBeInTheDocument();
+});
+
+it('오늘의 메모에는 작성 시간을 표시하지 않는다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([
+    { id: 1, careRecipientId: 2, createdById: 1, date: '2026-11-03', content: '사진으로 안내하기', createdAt: '2026-11-03T01:30:00Z', updatedAt: '2026-11-03T01:30:00Z' },
+  ]);
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  const memo = await screen.findByText('사진으로 안내하기');
+  expect(memo.parentElement?.querySelector('[class*="recordTime"]')).toBeNull();
+});
+
+it('오늘의 메모 조회 실패를 메모 없음 상태와 구분해 안내한다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockRejectedValue(new Error('메모 조회 실패'));
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('오늘 메모를 불러오지 못했어요.');
+  expect(screen.queryByText('오늘 메모가 없어요.')).not.toBeInTheDocument();
+});
+
+it('오늘의 메모가 없으면 빈 영역으로 둔다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([]);
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  await screen.findByRole('heading', { name: '오늘의 메모' });
+  expect(screen.queryByText('오늘 메모가 없어요.')).not.toBeInTheDocument();
 });
 
 
