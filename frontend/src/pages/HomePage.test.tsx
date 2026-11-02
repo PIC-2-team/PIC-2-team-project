@@ -5,8 +5,10 @@ import { HomePage } from './HomePage';
 import * as AuthContext from '../contexts/AuthContext';
 import * as careRecipientsApi from '../api/careRecipients';
 import * as recordsApi from '../api/records';
+import * as schedulesApi from '../api/schedules';
 import * as careInfoApi from '../api/careInfo';
 import type { User } from '../types/user';
+import { toSeoulDateKey } from '../utils/date';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -71,6 +73,35 @@ it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표�
   expect(today).toHaveBeenCalledWith(2);
   expect(setSelectedRecipient).not.toHaveBeenCalledWith(1);
   expect(screen.queryByRole('combobox', { name: '당사자 선택' })).not.toBeInTheDocument();
+});
+
+it('선택한 당사자의 오늘 일정만 홈에서 조회한다', async () => {
+  const today = toSeoulDateKey(new Date().toISOString());
+  const nextDay = toSeoulDateKey(
+    new Date(new Date(`${today}T10:00:00+09:00`).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+  );
+  const [year, month] = today.split('-').map(Number);
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '활동지원사', role: 'SUPPORT_WORKER' } as User,
+    token: 'tok', selectedRecipientId: 2, setSelectedRecipient: vi.fn(),
+    login: vi.fn(), loginWithGoogle: vi.fn(), setAuth: vi.fn(), logout: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '첫 당사자' }, { id: 2, name: '선택한 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 10, careRecipientId: 2, createdById: 1, title: '오늘 병원 방문', scheduledAt: `${today}T10:00:00+09:00`, createdAt: '', updatedAt: '' },
+    { id: 11, careRecipientId: 2, createdById: 1, title: '다른 날 일정', scheduledAt: `${nextDay}T10:00:00+09:00`, createdAt: '', updatedAt: '' },
+  ]);
+
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+  await screen.findByRole('heading', { name: '오늘의 기록' });
+  expect(screen.getByText('오늘 병원 방문')).toBeInTheDocument();
+  expect(screen.queryByText('다른 날 일정')).not.toBeInTheDocument();
+  expect(schedulesApi.getSchedulesByMonth).toHaveBeenCalledWith(2, year, month);
 });
 
 

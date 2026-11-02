@@ -3,9 +3,11 @@ import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
+import { getSchedulesByMonth } from '../api/schedules';
 import { getCareInfoOverview } from '../api/careInfo';
 import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import type { Schedule } from '../types/schedule';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
@@ -49,7 +51,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todaySchedules: Schedule[]; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
@@ -82,15 +84,21 @@ export function HomePage() {
           return;
         }
         if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
-        const [records, overview] = await Promise.all([
+        const todayKey = toSeoulDateKey(new Date().toISOString());
+        const [year, month] = todayKey.split('-').map(Number);
+        const [records, overview, schedules] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+          getSchedulesByMonth(first.id, year, month).catch(() => []),
         ]);
         if (requestId !== requestRef.current) return;
         setPage({
           status: 'ok',
           recipient: first,
           todayRecords: records,
+          todaySchedules: schedules
+            .filter(schedule => toSeoulDateKey(schedule.scheduledAt) === todayKey)
+            .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
           pinnedRecords: overview.pinnedRecords ?? [],
         });
       } catch (e) {
@@ -154,7 +162,7 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords, pinnedRecords } = page;
+  const { recipient, todayRecords, todaySchedules, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   return (
@@ -288,6 +296,38 @@ export function HomePage() {
                   })}
                 </span>
               </Link>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>오늘의 일정</h2>
+          <button
+            className={styles.viewAll}
+            onClick={() => navigate('/records?tab=schedules')}
+            type="button"
+          >
+            전체보기 ›
+          </button>
+        </div>
+
+        <div className={styles.records}>
+          {todaySchedules.length === 0 ? (
+            <p>오늘 예정된 일정이 없어요.</p>
+          ) : (
+            todaySchedules.map(schedule => (
+              <div key={schedule.id} className={styles.recordCard}>
+                <p className={styles.recordContent}>{schedule.title}</p>
+                <span className={styles.recordTime}>
+                  {new Intl.DateTimeFormat('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).format(new Date(schedule.scheduledAt))}
+                </span>
+              </div>
             ))
           )}
         </div>
