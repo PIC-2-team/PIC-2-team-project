@@ -20,7 +20,12 @@ jwt:
   secret: ${JWT_SECRET:dev-secret-key-must-be-at-least-32-characters-long}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177}
+
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:BJsrbiG-X0FIkVco6keQHss34wLC6fbmmhqJKr2plyxeBssmMts7D_GLRGqV79ipJAznnW4O1cMKz4QqP-wHTfc}
+  private-key: ${VAPID_PRIVATE_KEY:l6qfozmRdRq9z8Qi0ErmEv0JHQYXbL3a12g8l1f2ZfM}
+  subject: ${VAPID_SUBJECT:mailto:admin@samgyeol.com}
 
 logging:
   level:
