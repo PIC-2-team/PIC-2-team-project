@@ -61,6 +61,10 @@ public class AuthService {
     public SessionResult<AuthResponse> register(RegisterRequest request) {
         Claims consentClaims = jwtProvider.parseConsentTicket(request.consentTicket());
 
+        // 탈퇴 익명화 이메일(deleted-{id}@deleted.invalid)을 선점해 탈퇴를 막지 못하게 한다
+        if (request.email().trim().toLowerCase().endsWith("@deleted.invalid")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL", "사용할 수 없는 이메일입니다.");
+        }
         if (userRepository.existsByEmail(request.email())) {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 사용 중인 이메일입니다.");
         }
