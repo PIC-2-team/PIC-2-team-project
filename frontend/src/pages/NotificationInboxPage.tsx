@@ -68,7 +68,7 @@ function formatRelativeTime(dateString: string): string {
 export function NotificationInboxPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'all' | 'unread'>('all');
+  const [tab, setTab] = useState<'all' | 'unread' | 'read'>('all');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,12 +79,12 @@ export function NotificationInboxPage() {
     || user?.role === 'SUPPORT_WORKER'
     || user?.role === 'INSTITUTION';
 
-  const fetchList = useCallback(async (currentFilter: 'all' | 'unread') => {
+  const fetchList = useCallback(async (currentFilter: 'all' | 'unread' | 'read') => {
     setLoading(true);
     setError(null);
     try {
       const res = await getNotifications(
-        currentFilter === 'unread' ? { read: false } : undefined
+        currentFilter === 'unread' ? { read: false } : currentFilter === 'read' ? { read: true } : undefined
       );
       setNotifications(res.items);
     } catch (err) {
@@ -212,6 +212,18 @@ export function NotificationInboxPage() {
           >
             읽지 않음
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'read'}
+            className={`${styles.tab} ${tab === 'read' ? styles.tabActive : ''}`}
+            onClick={() => {
+              setSummaryVisible(false);
+              setTab('read');
+            }}
+          >
+            읽음
+          </button>
         </div>
 
         {tab === 'unread' && canSummarize && (
@@ -234,7 +246,7 @@ export function NotificationInboxPage() {
           <>
             {notifications.length === 0 && !summaryVisible ? (
               <div className={styles.emptyState}>
-                <p style={{ margin: 0 }}>{tab === 'unread' ? '읽지 않은 알림이 없습니다.' : '도착한 알림이 없습니다.'}</p>
+                <p style={{ margin: 0 }}>{tab === 'unread' ? '읽지 않은 알림이 없습니다.' : tab === 'read' ? '읽은 알림이 없습니다.' : '도착한 알림이 없습니다.'}</p>
               </div>
             ) : (
               <div className={styles.list}>

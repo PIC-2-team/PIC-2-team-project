@@ -99,6 +99,28 @@ describe('NotificationInboxPage', () => {
     expect(screen.queryByRole('tab', { name: '요약 리포트' })).not.toBeInTheDocument();
   });
 
+  it('읽음 탭을 누르면 읽은 알림만 필터링하여 요청한다', async () => {
+    const spy = vi.spyOn(notificationApi, 'getNotifications').mockResolvedValue({
+      items: [mockNotifications[1]],
+      pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('새 활동지원사가 배정되었습니다.')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: '읽음', exact: true }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ read: true });
+    });
+
+    // 읽음 탭에는 요약 카드를 노출하지 않는다
+    expect(screen.queryByRole('button', { name: '요약하기' })).not.toBeInTheDocument();
+  });
+
   it('모두 읽음 처리 버튼을 누르면 markAllNotificationsRead를 호출하고 목록을 갱신한다', async () => {
     vi.spyOn(notificationApi, 'getNotifications').mockResolvedValue({
       items: mockNotifications,
