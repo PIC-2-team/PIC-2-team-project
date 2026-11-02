@@ -54,6 +54,14 @@ it('메모 작성 링크는 폼을 열고 새로고침용 표시를 주소에서
   await waitFor(() => expect(screen.getByTestId('search-params')).toHaveTextContent(/^tab=schedules$/));
 });
 
+it('일정 탭 쿼리로 진입하면 일정 탭을 선택한다', async () => {
+  mockEmpty();
+  render(<MemoryRouter initialEntries={['/records?tab=schedules']}><DailyRecordPage /></MemoryRouter>);
+
+  expect(screen.getByRole('tab', { name: '일정' })).toHaveAttribute('aria-selected', 'true');
+  await waitFor(() => expect(schedulesApi.getSchedulesByMonth).toHaveBeenCalled());
+});
+
 it('더보기를 누르면 달력 없이 전체 기록을 조회하고 카테고리로 필터링한다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
   const list = vi.spyOn(recordsApi, 'getRecords').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } });

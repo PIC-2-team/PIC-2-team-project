@@ -39,6 +39,8 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
             ? []
           : url.endsWith('/records/today')
           ? []
+          : url.includes('/schedules?')
+            ? []
           : url.endsWith('/records/7')
             ? { id: 7, category: 'OTHER', content: '테스트 기록', recordedAt: '2026-10-14' }
             : { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } };

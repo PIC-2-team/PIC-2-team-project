@@ -49,6 +49,7 @@ type PageState =
 // 지원사 카드 전용 액션 버튼 컴포넌트 (상단 "+ 지원사 추가" 버튼과 차별화된 디자인)
 interface CardActionButtonProps {
   label: string;
+  ariaLabel?: string;
   onClick: () => void;
   variant?: 'default' | 'danger' | 'success';
 }
@@ -61,7 +62,7 @@ function isCurrentAssignment(
   return !a.endedAt && a.startDate <= today && (!a.endDate || a.endDate >= today);
 }
 
-function CardActionButton({ label, onClick, variant = 'default' }: CardActionButtonProps) {
+function CardActionButton({ label, ariaLabel, onClick, variant = 'default' }: CardActionButtonProps) {
   let background = '#f8fafc';
   let color = '#475569';
   let border = '1px solid #e2e8f0';
@@ -79,6 +80,7 @@ function CardActionButton({ label, onClick, variant = 'default' }: CardActionBut
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       onClick={onClick}
       style={{
         display: 'inline-flex',
@@ -821,7 +823,7 @@ export function AgencyDashboardPage() {
                         <div
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
                             gap: 6,
                             borderTop: '1px solid #f0f0f0',
                             paddingTop: 8,
@@ -829,6 +831,11 @@ export function AgencyDashboardPage() {
                             boxSizing: 'border-box',
                           }}
                         >
+                          <CardActionButton
+                            label="프로필 보기"
+                            ariaLabel={`${m.name} 프로필 보기`}
+                            onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
+                          />
                           <CardActionButton
                             label={m.status === 'ACTIVE' ? '비활성화' : '활성화'}
                             variant={m.status === 'ACTIVE' ? 'default' : 'success'}
@@ -1344,7 +1351,7 @@ export function AgencyDashboardPage() {
           return (
             <div
               role="presentation"
-              onClick={() => setProfileMember(null)}
+              onClick={() => { if (!isSavingCharacteristics) setProfileMember(null); }}
               style={{
                 position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 12, boxSizing: 'border-box',
@@ -1395,6 +1402,7 @@ export function AgencyDashboardPage() {
                   placeholder="예: 선호하는 소통 방식, 업무 시 참고사항"
                   style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: 10, border: '1px solid #cbd5e1', borderRadius: 8 }}
                 />
+                {actionError && <p role="alert" className="error">{actionError}</p>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <span className="muted" style={{ fontSize: '0.78rem' }}>{characteristicsDraft.length}/2000자</span>
                   <button type="button" className="btn" disabled={isSavingCharacteristics || characteristicsDraft.length > 2000} onClick={() => void handleSaveCharacteristics()}>
@@ -1408,7 +1416,7 @@ export function AgencyDashboardPage() {
             </div>
           );
         })()}
-        {actionError && <p role="alert" className="error">{actionError}</p>}
+        {actionError && !profileMember && <p role="alert" className="error">{actionError}</p>}
         <ConfirmDialog open={confirmation !== null} title={confirmation?.title ?? ''}
           confirmLabel={confirmation?.confirmLabel} variant="danger"
           onConfirm={() => { const action = confirmation?.action; setConfirmation(null); void action?.(); }}

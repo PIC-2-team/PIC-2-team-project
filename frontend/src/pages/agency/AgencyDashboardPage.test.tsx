@@ -592,6 +592,47 @@ it('기관은 고유 코드로 연결한 지원사 계정의 이름과 전화번
   expect(screen.getByRole('button', { name: '비활성화' })).toBeInTheDocument();
 });
 
+it('지원사 관리 목록에서 프로필을 열어 특성을 저장한다', async () => {
+  vi.spyOn(organizationsApi, 'getMyOrganization').mockResolvedValue({ id: 1, name: '예시 기관', organizationCode: 'ABC123' } as any);
+  vi.spyOn(organizationsApi, 'getMembers').mockResolvedValue([
+    { id: 2, userId: 2, name: '기존 지원사', publicCode: 'S-ABCDEFGH', status: 'ACTIVE', joinedAt: '2026-09-01T09:00:00' },
+  ] as any);
+  vi.spyOn(organizationsApi, 'getAssignments').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationRecipients').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationGuardians').mockResolvedValue([]);
+  const saveCharacteristics = vi.spyOn(organizationsApi, 'updateMemberCharacteristics')
+    .mockResolvedValue({ id: 2, userId: 2, name: '기존 지원사', publicCode: 'S-ABCDEFGH', status: 'ACTIVE', joinedAt: '2026-09-01T09:00:00', characteristics: '간결한 안내를 선호합니다.' } as any);
+
+  renderWithProviders(['/agency?tab=workers']);
+  await screen.findByText('기존 지원사');
+  fireEvent.click(screen.getByRole('button', { name: '기존 지원사 프로필 보기' }));
+
+  const dialog = screen.getByRole('dialog', { name: '돌봄 지원사 프로필' });
+  fireEvent.change(within(dialog).getByLabelText(/기관 내 인수인계/), { target: { value: '간결한 안내를 선호합니다.' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: '특성 저장' }));
+
+  await waitFor(() => expect(saveCharacteristics).toHaveBeenCalledWith(2, '간결한 안내를 선호합니다.'));
+});
+
+it('특성 저장 실패 메시지를 지원사 프로필 다이얼로그 안에 표시한다', async () => {
+  vi.spyOn(organizationsApi, 'getMyOrganization').mockResolvedValue({ id: 1, name: '예시 기관', organizationCode: 'ABC123' } as any);
+  vi.spyOn(organizationsApi, 'getMembers').mockResolvedValue([
+    { id: 2, userId: 2, name: '기존 지원사', publicCode: 'S-ABCDEFGH', status: 'ACTIVE', joinedAt: '2026-09-01T09:00:00' },
+  ] as any);
+  vi.spyOn(organizationsApi, 'getAssignments').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationRecipients').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getOrganizationGuardians').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'updateMemberCharacteristics').mockRejectedValue(new Error('특성 저장 실패'));
+
+  renderWithProviders(['/agency?tab=workers']);
+  await screen.findByText('기존 지원사');
+  fireEvent.click(screen.getByRole('button', { name: '기존 지원사 프로필 보기' }));
+  const dialog = screen.getByRole('dialog', { name: '돌봄 지원사 프로필' });
+  fireEvent.click(within(dialog).getByRole('button', { name: '특성 저장' }));
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('특성 저장 실패');
+});
+
 function seoulDate(offsetDays: number) {
   const d = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
   return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
