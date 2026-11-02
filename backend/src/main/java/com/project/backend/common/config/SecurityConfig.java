@@ -69,6 +69,7 @@ public class SecurityConfig {
             "/api/auth/google",
             "/api/auth/google/register",
             "/api/auth/refresh",
+            "/api/push/vapid-public-key",
             "/actuator/health",
             "/api-docs/**",
             "/swagger-ui/**",
