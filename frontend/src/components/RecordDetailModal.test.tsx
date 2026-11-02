@@ -45,6 +45,25 @@ it('기록 상세를 모달로 표시하고 닫으면 변경 없이 돌아간다
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
+it('기록의 사진과 영상을 상세 및 수정 화면에 표시한다', async () => {
+  vi.spyOn(recordsApi, 'getRecord').mockResolvedValue({
+    ...sampleRecord,
+    media: [
+      { mediaId: 12, fileName: 'photo.png', mediaType: 'image/png', sizeBytes: 100 },
+      { mediaId: 13, fileName: 'video.mp4', mediaType: 'video/mp4', sizeBytes: 200 },
+    ],
+  });
+  vi.spyOn(recordsApi, 'getRecordMediaDownloadUrl')
+    .mockImplementation(async (_recipientId, mediaId) => ({ url: `https://media.test/${mediaId}`, expiresAt: '' }));
+  render(<RecordDetailModal recordId={101} onClose={vi.fn()} />);
+
+  expect(await screen.findByRole('img', { name: 'photo.png' })).toHaveAttribute('src', 'https://media.test/12');
+  expect(screen.getByLabelText('video.mp4')).toHaveAttribute('src', 'https://media.test/13');
+  fireEvent.click(screen.getByRole('button', { name: '수정' }));
+  expect(screen.getByRole('img', { name: 'photo.png' })).toBeInTheDocument();
+  expect(screen.getByLabelText('video.mp4')).toBeInTheDocument();
+});
+
 it('Escape 키로 모달을 닫고 Tab 이동을 모달 안에 유지한다', async () => {
   const onClose = vi.fn();
   render(<RecordDetailModal recordId={101} onClose={onClose} />);
