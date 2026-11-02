@@ -130,6 +130,10 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
 
+        if (user.getDeletedAt() != null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
+        }
+
         rt.revoke();
         refreshTokenRepository.save(rt);
         String newRaw = saveRefreshToken(user.getId());

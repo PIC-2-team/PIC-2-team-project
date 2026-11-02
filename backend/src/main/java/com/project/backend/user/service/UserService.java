@@ -1,6 +1,7 @@
 package com.project.backend.user.service;
 
 import com.project.backend.auth.dto.UserInfo;
+import com.project.backend.auth.repository.RefreshTokenRepository;
 import com.project.backend.common.exception.ApiException;
 import com.project.backend.user.dto.ChangePasswordRequest;
 import com.project.backend.user.dto.NotificationSettingsResponse;
@@ -14,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -21,6 +24,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional(readOnly = true)
     public UserInfo getMe(Long userId) {
@@ -53,6 +57,11 @@ public class UserService {
         }
 
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
+    }
+
+    public void withdraw(Long userId) {
+        findUser(userId).anonymize(LocalDateTime.now());
+        refreshTokenRepository.deleteByUserId(userId);
     }
 
     private User findUser(Long userId) {
