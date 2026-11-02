@@ -404,6 +404,11 @@
   overflow-wrap: anywhere;
 }
 
+.memoIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

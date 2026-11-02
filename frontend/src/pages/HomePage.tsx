@@ -5,8 +5,10 @@ import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
 import { getSchedulesByMonth } from '../api/schedules';
 import { getCareInfoOverview } from '../api/careInfo';
+import { getTodayMemos } from '../api/memos';
 import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import type { Memo } from '../types/memo';
 import type { Schedule } from '../types/schedule';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
@@ -51,7 +53,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todaySchedules: Schedule[]; todayScheduleError: string | null; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todayMemos: Memo[]; todayMemoError: string | null; todaySchedules: Schedule[]; todayScheduleError: string | null; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
@@ -86,9 +88,12 @@ export function HomePage() {
         if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
         const todayKey = toSeoulDateKey(new Date().toISOString());
         const [year, month] = todayKey.split('-').map(Number);
-        const [records, overview, scheduleResult] = await Promise.all([
+        const [records, overview, memoResult, scheduleResult] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+          getTodayMemos(first.id)
+            .then(memos => ({ memos, error: null as string | null }))
+            .catch(() => ({ memos: [], error: '오늘 메모를 불러오지 못했어요.' })),
           getSchedulesByMonth(first.id, year, month)
             .then(schedules => ({ schedules, error: null as string | null }))
             .catch(() => ({ schedules: [], error: '오늘 일정을 불러오지 못했어요.' })),
@@ -98,6 +103,8 @@ export function HomePage() {
           status: 'ok',
           recipient: first,
           todayRecords: records,
+          todayMemos: memoResult.memos,
+          todayMemoError: memoResult.error,
           todaySchedules: scheduleResult.schedules
             .filter(schedule => toSeoulDateKey(schedule.scheduledAt) === todayKey)
             .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
@@ -165,7 +172,7 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords, todaySchedules, todayScheduleError, pinnedRecords } = page;
+  const { recipient, todayRecords, todayMemos, todayMemoError, todaySchedules, todayScheduleError, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   return (
@@ -299,6 +306,32 @@ export function HomePage() {
                   })}
                 </span>
               </Link>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>오늘의 메모</h2>
+          <button
+            className={styles.viewAll}
+            onClick={() => navigate('/records?tab=schedules&memo=write')}
+            type="button"
+          >
+            메모 작성 ›
+          </button>
+        </div>
+
+        <div className={styles.records}>
+          {todayMemoError ? (
+            <p className="error" role="alert">{todayMemoError}</p>
+          ) : (
+            todayMemos.map(memo => (
+              <div key={memo.id} className={styles.recordCard}>
+                <span className={styles.memoIcon} aria-hidden="true">📝</span>
+                <p className={styles.recordContent}>{memo.content}</p>
+              </div>
             ))
           )}
         </div>
