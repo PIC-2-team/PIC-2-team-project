@@ -80,6 +80,14 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.updateMember(userId, memberId, request));
     }
 
+    @Operation(summary = "기관 지원사의 특성 메모 수정")
+    @PatchMapping("/me/members/{memberId}/characteristics")
+    public ApiResponse<MemberResponse> updateMemberCharacteristics(@AuthenticationPrincipal Long userId,
+                                                                    @PathVariable Long memberId,
+                                                                    @Valid @RequestBody UpdateMemberCharacteristicsRequest request) {
+        return ApiResponse.ok(organizationService.updateMemberCharacteristics(userId, memberId, request));
+    }
+
     @Operation(summary = "지원사 삭제 (소속 해제)")
     @DeleteMapping("/me/members/{memberId}")
     public ApiResponse<Void> removeMember(@AuthenticationPrincipal Long userId,
