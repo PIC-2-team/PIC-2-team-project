@@ -11,6 +11,7 @@ import type { Memo } from '../types/memo';
 import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
 import { Skeleton } from '../components/Skeleton/Skeleton';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -140,9 +141,11 @@ export function DailyRecordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newScheduleTitle, setNewScheduleTitle] = useState('');
+  const [newScheduleDescription, setNewScheduleDescription] = useState('');
   const [newScheduleTime, setNewScheduleTime] = useState('09:00');
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ type: 'schedule' | 'memo'; id: number } | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
   const [editingScheduleTitle, setEditingScheduleTitle] = useState('');
   const [editingScheduleDescription, setEditingScheduleDescription] = useState('');
@@ -267,12 +270,14 @@ export function DailyRecordPage() {
       const scheduledAt = new Date(`${selectedKey}T${newScheduleTime}:00+09:00`).toISOString();
       const created = await createSchedule(selectedRecipientId, {
         title: newScheduleTitle.trim(),
+        ...(newScheduleDescription.trim() ? { description: newScheduleDescription.trim() } : {}),
         scheduledAt,
       });
       setMonthSchedules(prev => [...prev, created].sort(
         (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
       ));
       setNewScheduleTitle('');
+      setNewScheduleDescription('');
       setNewScheduleTime('09:00');
       setScheduleFormOpen(false);
     } catch (e) {
@@ -528,7 +533,7 @@ export function DailyRecordPage() {
           </div>
 
           {scheduleFormOpen && canWrite && (
-            <div className={styles.scheduleForm}>
+            <div className={`${styles.scheduleForm} ${styles.scheduleAddForm}`}>
               <input
                 type="text"
                 placeholder="일정 제목"
@@ -536,6 +541,14 @@ export function DailyRecordPage() {
                 onChange={e => setNewScheduleTitle(e.target.value)}
                 aria-label="일정 제목"
                 maxLength={200}
+              />
+              <textarea
+                placeholder="일정 설명 (선택)"
+                value={newScheduleDescription}
+                onChange={e => setNewScheduleDescription(e.target.value)}
+                aria-label="일정 설명"
+                maxLength={500}
+                rows={2}
               />
               <input
                 type="time"
@@ -545,7 +558,7 @@ export function DailyRecordPage() {
               />
               <button
                 type="button"
-                className={`btn ${styles.scheduleAddBtn}`}
+                className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`}
                 onClick={handleAddSchedule}
                 disabled={isAddingSchedule || !newScheduleTitle.trim()}
               >
@@ -571,7 +584,7 @@ export function DailyRecordPage() {
                           <input type="time" aria-label="일정 시간 수정" value={editingScheduleTime} onChange={event => setEditingScheduleTime(event.target.value)} />
                         </div>
                         <div className={`${styles.memoEditControls} ${styles.scheduleEditControls}`}>
-                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.memoEditSaveBtn}`} onClick={() => handleUpdateSchedule(schedule.id)} disabled={isUpdatingSchedule || !editingScheduleTitle.trim()}>저장</button>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`} onClick={() => handleUpdateSchedule(schedule.id)} disabled={isUpdatingSchedule || !editingScheduleTitle.trim()}>저장</button>
                           <button type="button" className={styles.viewAll} onClick={cancelScheduleEdit} disabled={isUpdatingSchedule}>취소</button>
                         </div>
                       </div>
@@ -586,7 +599,7 @@ export function DailyRecordPage() {
                   {canDeleteSchedule(schedule) && editingScheduleId !== schedule.id && (
                     <div className={styles.memoActions}>
                       {canEditSchedule(schedule) && <button type="button" className={`${styles.deleteBtn} ${styles.scheduleEditBtn}`} aria-label={`${schedule.title} 수정`} onClick={() => beginScheduleEdit(schedule)}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>}
-                      <button type="button" className={styles.deleteBtn} aria-label={`${schedule.title} 삭제`} onClick={() => handleDeleteSchedule(schedule.id)}>✕</button>
+                      <button type="button" className={styles.deleteBtn} aria-label={`${schedule.title} 삭제`} onClick={() => setDeleteConfirmation({ type: 'schedule', id: schedule.id })}>✕</button>
                     </div>
                   )}
                 </div>
@@ -606,19 +619,19 @@ export function DailyRecordPage() {
           </div>
 
           {memoFormOpen && canWrite && (
-            <div className={styles.scheduleForm}>
+            <div className={`${styles.scheduleForm} ${styles.memoAddForm}`}>
               <textarea
                 placeholder="메모 내용을 입력하세요"
                 value={newMemoContent}
                 onChange={e => setNewMemoContent(e.target.value)}
                 aria-label="메모 내용"
                 maxLength={500}
-                rows={3}
-                style={{ resize: 'none', font: 'inherit', fontSize: '0.875rem', padding: '8px', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                rows={2}
+                className={`${styles.memoTextarea} ${styles.memoAddTextarea}`}
               />
               <button
                 type="button"
-                className={`btn ${styles.scheduleAddBtn}`}
+                className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`}
                 onClick={handleAddMemo}
                 disabled={isAddingMemo || !newMemoContent.trim()}
               >
@@ -642,11 +655,11 @@ export function DailyRecordPage() {
                         aria-label="메모 수정"
                         maxLength={500}
                         rows={2}
-                        className={styles.memoEditTextarea}
+                        className={`${styles.memoTextarea} ${styles.memoEditTextarea}`}
                       />
                       <div className={styles.memoEditFooter} aria-label="메모 수정 동작">
                         <div className={styles.memoEditControls}>
-                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.memoEditSaveBtn}`} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
                           <button type="button" className={styles.viewAll} onClick={() => setEditingMemoId(null)}>취소</button>
                         </div>
                       </div>
@@ -658,7 +671,7 @@ export function DailyRecordPage() {
                 {memo.createdById === user?.id && editingMemoId !== memo.id && (
                   <div className={styles.memoActions}>
                     <button type="button" className={`${styles.deleteBtn} ${styles.memoEditBtn}`} aria-label="메모 수정" onClick={() => { setEditingMemoId(memo.id); setEditingMemoContent(memo.content); setMemoFormOpen(false); }} style={{ fontSize: '0.75rem' }}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>
-                    <button type="button" className={styles.deleteBtn} aria-label="메모 삭제" onClick={() => handleDeleteMemo(memo.id)}>✕</button>
+                    <button type="button" className={styles.deleteBtn} aria-label="메모 삭제" onClick={() => setDeleteConfirmation({ type: 'memo', id: memo.id })}>✕</button>
                   </div>
                 )}
               </div>
@@ -679,6 +692,20 @@ export function DailyRecordPage() {
         </button>
         </>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmation !== null}
+        title={deleteConfirmation?.type === 'memo' ? '메모를 삭제하시겠습니까?' : '일정을 삭제하시겠습니까?'}
+        confirmLabel="삭제"
+        variant="danger"
+        onCancel={() => setDeleteConfirmation(null)}
+        onConfirm={() => {
+          const confirmation = deleteConfirmation;
+          setDeleteConfirmation(null);
+          if (confirmation?.type === 'memo') void handleDeleteMemo(confirmation.id);
+          if (confirmation?.type === 'schedule') void handleDeleteSchedule(confirmation.id);
+        }}
+      />
     </div>
   );
 }

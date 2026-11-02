@@ -220,19 +220,32 @@ it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉
   expect(todayCell).not.toHaveAttribute('aria-label', expect.stringContaining('메모 있음'));
 
   fireEvent.click(screen.getByRole('button', { name: '+ 메모 추가' }));
-  fireEvent.change(screen.getByRole('textbox', { name: '메모 내용' }), { target: { value: memo.content } });
-  fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
+  const memoInput = screen.getByRole('textbox', { name: '메모 내용' });
+  expect(memoInput).toHaveClass(/memoTextarea/, /memoAddTextarea/);
+  expect(memoInput).toHaveAttribute('rows', '2');
+  fireEvent.change(memoInput, { target: { value: memo.content } });
+  const addMemoButton = screen.getByRole('button', { name: /^추가$/ });
+  expect(addMemoButton).toHaveClass(/compactActionBtn/);
+  fireEvent.click(addMemoButton);
   expect(await screen.findByRole('button', { name: /11월 3일.*메모 있음/ })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: '메모 수정' }));
   expect(screen.getByRole('textbox', { name: '메모 수정' })).toHaveClass(/memoEditTextarea/);
   const editFooter = screen.getByLabelText('메모 수정 동작');
   expect(editFooter.querySelector('[class*="recordTime"]')).not.toBeInTheDocument();
-  expect(within(editFooter).getByRole('button', { name: '저장' })).toHaveClass(/memoEditSaveBtn/);
+  expect(within(editFooter).getByRole('button', { name: '저장' })).toHaveClass(/compactActionBtn/);
   expect(within(editFooter).getByRole('button', { name: '취소' })).toBeInTheDocument();
   fireEvent.click(within(editFooter).getByRole('button', { name: '취소' }));
 
   fireEvent.click(screen.getByRole('button', { name: '메모 삭제' }));
+  const memoDialog = screen.getByRole('alertdialog', { name: '메모를 삭제하시겠습니까?' });
+  expect(remove).not.toHaveBeenCalled();
+  expect(screen.getByText(memo.content)).toBeInTheDocument();
+  fireEvent.click(within(memoDialog).getByRole('button', { name: '취소' }));
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '메모 삭제' }));
+  fireEvent.click(within(screen.getByRole('alertdialog', { name: '메모를 삭제하시겠습니까?' })).getByRole('button', { name: '삭제' }));
   await waitFor(() => expect(remove).toHaveBeenCalledWith(42, memo.id));
   await waitFor(() => expect(screen.getByRole('button', { name: '11월 3일' })).not.toHaveAttribute('aria-label', expect.stringContaining('메모 있음')));
 });
@@ -310,10 +323,15 @@ it('일정 입력의 오전 9시는 서울 시간 기준으로 저장한다', as
   fireEvent.click(screen.getByRole('tab', { name: '일정' }));
   await screen.findByText('이 날의 일정이 없어요.');
   fireEvent.click(screen.getByRole('button', { name: '+ 일정 추가' }));
+  expect(screen.getByRole('textbox', { name: '일정 제목' }).closest('[class*="scheduleAddForm"]')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: '일정 설명' })).toBeInTheDocument();
+  expect(screen.getByLabelText('일정 시간')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^추가$/ })).toHaveClass(/compactActionBtn/);
   fireEvent.change(screen.getByRole('textbox', { name: '일정 제목' }), { target: { value: '병원 방문' } });
+  fireEvent.change(screen.getByRole('textbox', { name: '일정 설명' }), { target: { value: '정기 진료' } });
   fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
   await waitFor(() => expect(create).toHaveBeenCalledWith(42, expect.objectContaining({
-    title: '병원 방문', scheduledAt: expect.stringMatching(/T00:00:00\.000Z$/),
+    title: '병원 방문', description: '정기 진료', scheduledAt: expect.stringMatching(/T00:00:00\.000Z$/),
   })));
 });
 
@@ -350,6 +368,30 @@ it('일정 삭제 버튼은 작성자 본인의 일정에만 표시한다', asyn
   expect(screen.getByRole('button', { name: '내 일정 수정' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '다른 보호자 일정 삭제' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '다른 보호자 일정 수정' })).not.toBeInTheDocument();
+});
+
+it('일정 삭제는 확인 후 진행하고 취소하면 일정을 유지한다', async () => {
+  mockEmpty();
+  const now = new Date().toISOString();
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 1, careRecipientId: 42, createdById: 1, title: '병원 예약', scheduledAt: now, createdAt: now, updatedAt: now },
+  ]);
+  const remove = vi.spyOn(schedulesApi, 'deleteSchedule').mockResolvedValue(undefined);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('병원 예약');
+
+  fireEvent.click(screen.getByRole('button', { name: '병원 예약 삭제' }));
+  const scheduleDialog = screen.getByRole('alertdialog', { name: '일정을 삭제하시겠습니까?' });
+  expect(remove).not.toHaveBeenCalled();
+  expect(screen.getByText('병원 예약')).toBeInTheDocument();
+  fireEvent.click(within(scheduleDialog).getByRole('button', { name: '취소' }));
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '병원 예약 삭제' }));
+  fireEvent.click(within(screen.getByRole('alertdialog', { name: '일정을 삭제하시겠습니까?' })).getByRole('button', { name: '삭제' }));
+  await waitFor(() => expect(remove).toHaveBeenCalledWith(42, 1));
+  await waitFor(() => expect(screen.queryByText('병원 예약')).not.toBeInTheDocument());
 });
 
 it('일정 작성자는 제목과 날짜·시간을 수정하고 달력 마커를 이동한다', async () => {
