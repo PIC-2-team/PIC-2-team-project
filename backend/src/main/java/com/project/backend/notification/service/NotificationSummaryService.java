@@ -23,8 +23,10 @@ public class NotificationSummaryService {
     public NotificationSummaryResponse summarize(Long userId) {
         var user = users.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
-        if (user.getRole() != UserRole.GUARDIAN) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 미확인 알림을 요약할 수 있습니다.");
+        if (user.getRole() != UserRole.GUARDIAN
+                && user.getRole() != UserRole.SUPPORT_WORKER
+                && user.getRole() != UserRole.INSTITUTION) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "미확인 알림 요약을 사용할 수 없는 사용자입니다.");
         }
 
         List<Notification> unread = notifications.findByUserIdAndReadOrderByCreatedAtDescIdDesc(userId, false);

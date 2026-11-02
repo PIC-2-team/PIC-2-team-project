@@ -79,14 +79,14 @@ class NotificationSummaryServiceTest {
     }
 
     @Test
-    void rejectsNonGuardianUsers() {
-        User worker = User.builder().name("지원사").email("worker@example.com")
-                .publicCode("W-1").role(UserRole.SUPPORT_WORKER).build();
-        given(users.findById(2L)).willReturn(Optional.of(worker));
+    void rejectsUnsupportedUserRoles() {
+        User admin = User.builder().name("관리자").email("admin@example.com")
+                .publicCode("A-1").role(UserRole.ADMIN).build();
+        given(users.findById(2L)).willReturn(Optional.of(admin));
 
         assertThatThrownBy(() -> service.summarize(2L))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("보호자만 미확인 알림을 요약할 수 있습니다.");
+                .hasMessage("미확인 알림 요약을 사용할 수 없는 사용자입니다.");
         verifyNoInteractions(notifications, generator);
     }
 }

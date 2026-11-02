@@ -73,6 +73,9 @@ export function NotificationInboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const canSummarize = user?.role === 'GUARDIAN'
+    || user?.role === 'SUPPORT_WORKER'
+    || user?.role === 'INSTITUTION';
 
   const fetchList = useCallback(async (currentFilter: 'all' | 'unread') => {
     setLoading(true);
@@ -188,7 +191,7 @@ export function NotificationInboxPage() {
           >
             전체
           </button>
-          {user?.role === 'GUARDIAN' && (
+          {canSummarize && (
             <button
               type="button"
               role="tab"
