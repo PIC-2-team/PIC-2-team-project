@@ -22,10 +22,11 @@ it('요청 시 미확인 알림 요약과 개수를 보여준다', async () => {
   fireEvent.click(screen.getByRole('button', { name: '요약하기' }));
 
   expect(await screen.findByText('새 기록 2건과 돌봄 관계 변경 1건이 있습니다.')).toBeInTheDocument();
-  const summaryCount = screen.getByText('방금 요약한 알림 3건');
-  const summaryButton = screen.getByRole('button', { name: '다시 요약' });
+  expect(screen.getByText('방금 요약한 알림 3건')).toBeInTheDocument();
 
-  expect(summaryButton.compareDocumentPosition(summaryCount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // 요약 완료 후에는 재요약 버튼을 노출하지 않는다(요약 시 읽음 처리되어 재요약 대상이 없음)
+  expect(screen.queryByRole('button', { name: '다시 요약' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '요약하기' })).not.toBeInTheDocument();
   expect(summarize).toHaveBeenCalledOnce();
 });
 

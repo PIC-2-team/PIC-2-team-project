@@ -199,10 +199,10 @@ describe('NotificationInboxPage', () => {
     });
     expect(screen.getByText('수정 제안 1건이 도착했습니다.')).toBeInTheDocument();
 
-    // 재조회 완료 후에도 리포트와 '다시 요약' 버튼이 유지된다.
+    // 재조회 완료 후에도 요약 리포트가 유지된다.
     resolveRefetch?.();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '다시 요약' })).toBeInTheDocument();
+      expect(screen.getByText('방금 요약한 알림 1건')).toBeInTheDocument();
     });
     expect(screen.getByText('수정 제안 1건이 도착했습니다.')).toBeInTheDocument();
   });

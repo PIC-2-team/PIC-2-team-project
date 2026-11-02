@@ -24,9 +24,9 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
 
   return (
     <section className={summary || loading || error ? styles.card : styles.action} aria-label="알림 요약">
-      {summary?.unreadCount !== 0 && (
+      {summary?.unreadCount !== 0 && !summary?.summary && (
         <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
-          {loading ? '요약하는 중…' : summary?.summary ? '다시 요약' : '요약하기'}
+          {loading ? '요약하는 중…' : '요약하기'}
         </button>
       )}
       {summary && summary.summary && (
