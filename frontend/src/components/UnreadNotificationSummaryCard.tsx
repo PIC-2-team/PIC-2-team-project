@@ -23,19 +23,15 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
   };
 
   return (
-    <section className={styles.card} aria-labelledby="unread-summary-title">
-      <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>알림 요약 · 2분</p>
-          <h2 id="unread-summary-title" className={styles.title}>미확인 알림을 요약해요.</h2>
-        </div>
-      </div>
-      <p className={styles.description}>
-        <span className={styles.note}>요약 후 읽음 처리됩니다.</span>
-      </p>
+    <section className={summary || loading || error ? styles.card : styles.action} aria-label="알림 요약">
+      {summary?.unreadCount !== 0 && (
+        <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
+          {loading ? '요약하는 중…' : summary?.summary ? '다시 요약' : '요약하기'}
+        </button>
+      )}
       {summary && summary.summary && (
         <div className={styles.result}>
-          <p className={styles.count}>미확인 알림 {summary.unreadCount}건</p>
+          <p className={styles.count}>방금 요약한 알림 {summary.unreadCount}건</p>
           <p className={styles.summary}>{summary.summary}</p>
         </div>
       )}
@@ -44,11 +40,6 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
       )}
       {loading && <p className={styles.status} role="status">알림 내용을 모아 요약하고 있어요. 잠시만 기다려 주세요.</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {summary?.unreadCount !== 0 && (
-        <button className={styles.button} type="button" onClick={() => void generateSummary()} disabled={loading}>
-          {loading ? '요약하는 중…' : summary?.summary ? '다시 요약' : '요약 시작'}
-        </button>
-      )}
     </section>
   );
 }

@@ -88,12 +88,15 @@ describe('NotificationInboxPage', () => {
       expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
     });
 
-    const unreadTab = screen.getByRole('tab', { name: /읽지 않음/ });
+    const unreadTab = screen.getByRole('tab', { name: '읽지 않음', exact: true });
     fireEvent.click(unreadTab);
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith({ read: false });
     });
+
+    expect(screen.getByRole('button', { name: '요약하기' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: '요약 리포트' })).not.toBeInTheDocument();
   });
 
   it('모두 읽음 처리 버튼을 누르면 markAllNotificationsRead를 호출하고 목록을 갱신한다', async () => {
@@ -152,5 +155,55 @@ describe('NotificationInboxPage', () => {
     await waitFor(() => {
       expect(screen.getByText('도착한 알림이 없습니다.')).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByRole('tab', { name: '읽지 않음' }));
+
+    expect(await screen.findByRole('button', { name: '요약하기' })).toBeInTheDocument();
+    expect(screen.getByText('읽지 않은 알림이 없습니다.')).toBeInTheDocument();
+  });
+
+  it('요약하기 성공 후 목록 재조회 중에도 요약 리포트가 사라지지 않는다', async () => {
+    const pagination = { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 };
+    let resolveRefetch: (() => void) | undefined;
+    vi.spyOn(notificationApi, 'getNotifications')
+      .mockResolvedValueOnce({ items: [mockNotifications[0]], pagination })
+      .mockResolvedValueOnce({ items: [mockNotifications[0]], pagination })
+      .mockImplementationOnce(
+        () =>
+          new Promise(res => {
+            resolveRefetch = () =>
+              res({ items: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } });
+          })
+      );
+    vi.spyOn(notificationApi, 'summarizeUnreadNotifications').mockResolvedValue({
+      unreadCount: 1,
+      summary: '수정 제안 1건이 도착했습니다.',
+      generatedAt: '2026-11-03T00:00:00Z',
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: '읽지 않음', exact: true }));
+
+    fireEvent.click(await screen.findByRole('button', { name: '요약하기' }));
+
+    // 요약 성공 → onSummaryGenerated가 목록 재조회(loading=true)를 유발한다.
+    // 재조회가 진행 중이어도 요약 리포트는 화면에 남아 있어야 한다.
+    expect(await screen.findByText('수정 제안 1건이 도착했습니다.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/알림을 불러오는 중입니다/)).toBeInTheDocument();
+    });
+    expect(screen.getByText('수정 제안 1건이 도착했습니다.')).toBeInTheDocument();
+
+    // 재조회 완료 후에도 리포트와 '다시 요약' 버튼이 유지된다.
+    resolveRefetch?.();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '다시 요약' })).toBeInTheDocument();
+    });
+    expect(screen.getByText('수정 제안 1건이 도착했습니다.')).toBeInTheDocument();
   });
 });

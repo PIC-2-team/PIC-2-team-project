@@ -8,29 +8,6 @@
   background: #f9fafb;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: #3d9a6b;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.title {
-  margin: 0;
-  color: #1a2633;
-  font-size: 1rem;
-  font-weight: 750;
-}
-
-.description,
-.note,
 .status,
 .error,
 .count,
@@ -39,8 +16,6 @@
   line-height: 1.55;
 }
 
-.description,
-.note,
 .status {
   color: #4a5568;
   font-size: 0.8125rem;
@@ -92,6 +67,6 @@
   opacity: 0.65;
 }
 
-.note {
-  display: block;
+.action .button {
+  width: 100%;
 }
