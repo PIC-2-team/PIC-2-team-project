@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
 import { getCareInfoOverview } from '../api/careInfo';
+import { getTodayMemos } from '../api/memos';
 import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import type { Memo } from '../types/memo';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
@@ -49,7 +51,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[]; todayMemos: Memo[] };
 
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
@@ -82,9 +84,10 @@ export function HomePage() {
           return;
         }
         if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
-        const [records, overview] = await Promise.all([
+        const [records, overview, memos] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+          getTodayMemos(first.id).catch(() => []),
         ]);
         if (requestId !== requestRef.current) return;
         setPage({
@@ -92,6 +95,7 @@ export function HomePage() {
           recipient: first,
           todayRecords: records,
           pinnedRecords: overview.pinnedRecords ?? [],
+          todayMemos: memos,
         });
       } catch (e) {
         if (requestId !== requestRef.current) return;
@@ -154,7 +158,7 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords, pinnedRecords } = page;
+  const { recipient, todayRecords, pinnedRecords, todayMemos } = page;
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   return (
@@ -288,6 +292,38 @@ export function HomePage() {
                   })}
                 </span>
               </Link>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>오늘의 메모</h2>
+          <button
+            className={styles.viewAll}
+            onClick={() => navigate('/records?tab=schedules')}
+            type="button"
+          >
+            메모 작성 ›
+          </button>
+        </div>
+
+        <div className={styles.records}>
+          {todayMemos.length === 0 ? (
+            <p>오늘 메모가 없어요.</p>
+          ) : (
+            todayMemos.map(memo => (
+              <div key={memo.id} className={styles.recordCard}>
+                <span className={styles.memoIcon} aria-hidden="true">📝</span>
+                <p className={styles.recordContent}>{memo.content}</p>
+                <span className={styles.recordTime}>
+                  {new Date(memo.createdAt).toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
             ))
           )}
         </div>
