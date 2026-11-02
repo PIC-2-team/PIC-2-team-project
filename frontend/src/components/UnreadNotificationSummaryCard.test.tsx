@@ -31,7 +31,7 @@ it('미확인 알림이 없으면 빈 상태를 안내한다', async () => {
   render(<UnreadNotificationSummaryCard />);
   fireEvent.click(screen.getByRole('button', { name: '요약 시작' }));
 
-  expect(await screen.findByText('지금은 확인하지 않은 알림이 없어요.')).toBeInTheDocument();
+  expect(await screen.findByText('요약할 알람이 없어요.')).toBeInTheDocument();
 });
 
 it('요약 생성 실패 시 알림을 표시한다', async () => {

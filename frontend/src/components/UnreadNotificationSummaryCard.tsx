@@ -41,7 +41,7 @@ export function UnreadNotificationSummaryCard({ onSummaryGenerated }: { onSummar
         </div>
       )}
       {summary && !summary.summary && (
-        <p className={styles.status} role="status">지금은 확인하지 않은 알림이 없어요.</p>
+        <p className={styles.status} role="status">요약할 알람이 없어요.</p>
       )}
       {loading && <p className={styles.status} role="status">알림 내용을 모아 요약하고 있어요. 잠시만 기다려 주세요.</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
