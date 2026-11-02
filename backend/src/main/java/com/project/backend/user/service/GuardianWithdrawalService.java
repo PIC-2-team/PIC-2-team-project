@@ -45,7 +45,7 @@ public class GuardianWithdrawalService {
         List<WithdrawalPreviewResponse.Item> items = plan.entrySet().stream()
                 .map(e -> new WithdrawalPreviewResponse.Item(e.getKey(), names.get(e.getKey()), e.getValue()))
                 .toList();
-        return new WithdrawalPreviewResponse(items);
+        return new WithdrawalPreviewResponse(items, 0);
     }
 
     public void process(Long userId, WithdrawRequest request, LocalDateTime now) {

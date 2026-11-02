@@ -28,6 +28,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
     private final GuardianWithdrawalService guardianWithdrawal;
+    private final StaffWithdrawalService staffWithdrawal;
 
     @Transactional(readOnly = true)
     public UserInfo getMe(Long userId) {
@@ -64,8 +65,10 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public WithdrawalPreviewResponse withdrawalPreview(Long userId) {
-        findUser(userId);
-        return guardianWithdrawal.preview(userId);
+        User user = findUser(userId);
+        WithdrawalPreviewResponse preview = guardianWithdrawal.preview(userId);
+        return new WithdrawalPreviewResponse(preview.recipients(),
+                staffWithdrawal.endedAssignmentCount(userId, user.getRole()));
     }
 
     public void withdraw(Long userId, WithdrawRequest request) {
@@ -73,6 +76,7 @@ public class UserService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
         LocalDateTime now = LocalDateTime.now();
         guardianWithdrawal.process(userId, request, now);
+        staffWithdrawal.process(userId, user.getRole());
         user.anonymize(now);
         refreshTokenRepository.deleteByUserId(userId);
     }
