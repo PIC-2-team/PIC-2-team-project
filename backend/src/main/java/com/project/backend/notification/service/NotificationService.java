@@ -78,6 +78,11 @@ public class NotificationService {
         }
     }
 
+    public void notifyOrganizationLinkRequested(Long userId, String message) {
+        notifications.save(new Notification(userId, NotificationType.ORGANIZATION_LINK_REQUESTED,
+                message, clock.instant()));
+    }
+
     public void notifyAssignmentChangedGuardians(Long careRecipientId, String message) {
         var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
                 .map(guardian -> guardian.getGuardianId()).distinct().toList();

@@ -37,7 +37,8 @@ class OrganizationControllerTest {
         organizationService = mock(OrganizationService.class);
         careAssignmentService = mock(CareAssignmentService.class);
         careRecipientService = mock(CareRecipientService.class);
-        controller = new OrganizationController(organizationService, careAssignmentService, careRecipientService);
+        controller = new OrganizationController(organizationService, careAssignmentService, careRecipientService,
+                mock(com.project.backend.care.service.GuardianClaimService.class));
     }
 
     @Test

@@ -121,6 +121,11 @@ public class CareRecipient {
         this.transferredAt = now;
     }
 
+    // 새 주 보호자가 기관의 승인으로 연결되면 이관 상태가 끝난다
+    public void clearTransferred() {
+        this.transferredAt = null;
+    }
+
     public boolean isTransferred() {
         return transferredAt != null;
     }
