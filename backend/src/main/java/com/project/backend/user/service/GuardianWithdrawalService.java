@@ -49,6 +49,11 @@ public class GuardianWithdrawalService {
     }
 
     public void process(Long userId, WithdrawRequest request, LocalDateTime now) {
+        // 주 보호자와 세컨드가 동시에 탈퇴해도 계획이 서로 어긋나지 않도록 관련 당사자를 id 순서로 잠근다
+        guardians.findByGuardianId(userId).stream()
+                .filter(g -> g.getStatus() != GuardianStatus.REVOKED)
+                .map(CareGuardian::getCareRecipientId).distinct().sorted()
+                .forEach(recipients::findForUpdate);
         Map<Long, Resolution> plan = plan(userId);
         Map<Long, WithdrawRequest.Action> decisions = decisions(request, plan);
 
@@ -111,6 +116,8 @@ public class GuardianWithdrawalService {
     private void transfer(Long recipientId, LocalDateTime now) {
         CareRecipient recipient = recipients.findById(recipientId).orElseThrow();
         recipient.transfer(now);
+        // 이관된 당사자에는 보호자가 없어야 하므로 초대 대기 중인 세컨드도 철회한다
+        revokeGuardians(recipientId);
         List<Long> orgIds = linkedOrganizations(recipientId).stream()
                 .map(OrganizationRecipientLink::getOrganizationId).toList();
         for (Organization org : organizations.findAllById(orgIds)) {
@@ -125,7 +132,12 @@ public class GuardianWithdrawalService {
         recipients.findById(recipientId).orElseThrow().softDelete(now);
         assignments.findByCareRecipientIdAndEndedAtIsNull(recipientId).forEach(CareAssignment::end);
         // 기관 접근 확인은 연결 상태만 보므로, 유예 중에는 연결을 거절 상태로 돌려 접근을 막는다 (복원은 운영자가 연결을 되살린다)
-        links.findByCareRecipientId(recipientId).forEach(OrganizationRecipientLink::reject);
+        links.findByCareRecipientId(recipientId).stream()
+                .filter(link -> link.getStatus() != LinkStatus.REJECTED).forEach(OrganizationRecipientLink::reject);
+        revokeGuardians(recipientId);
+    }
+
+    private void revokeGuardians(Long recipientId) {
         for (GuardianStatus status : List.of(GuardianStatus.ACTIVE, GuardianStatus.PENDING)) {
             guardians.findByCareRecipientIdAndStatus(recipientId, status).forEach(CareGuardian::revoke);
         }

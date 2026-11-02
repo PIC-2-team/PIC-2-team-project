@@ -6,6 +6,7 @@ import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
 import com.project.backend.common.security.JwtProvider;
 import com.project.backend.notification.repository.NotificationRepository;
+import com.project.backend.organization.entity.LinkStatus;
 import com.project.backend.organization.entity.Organization;
 import com.project.backend.organization.entity.OrganizationMember;
 import com.project.backend.organization.entity.OrganizationRecipientLink;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -188,6 +191,45 @@ class GuardianWithdrawalApiTest {
                 + "{\"careRecipientId\":" + others.getId() + ",\"action\":\"DELETE\"}]}")
                 .andExpect(status().isUnprocessableEntity());
         assertThat(recipients.findById(others.getId())).isPresent();
+    }
+
+    @Test
+    void transferRevokesPendingSecondaryInvitation() throws Exception {
+        CareRecipient r = recipient("R-1");
+        primary(r, guardian);
+        secondary(r, secondary, GuardianStatus.PENDING);
+        link(r);
+
+        withdraw(guardian, decision(r, "TRANSFER")).andExpect(status().isNoContent());
+
+        assertThat(guardians.findByCareRecipientIdAndStatus(r.getId(), GuardianStatus.PENDING)).isEmpty();
+        assertThat(guardians.findByCareRecipientIdAndStatus(r.getId(), GuardianStatus.ACTIVE)).isEmpty();
+    }
+
+    @Test
+    void deleteRejectsPendingLinksButKeepsAlreadyRejectedOnes() throws Exception {
+        CareRecipient r = recipient("R-1");
+        primary(r, guardian);
+        link(r);
+        Organization other = organizations.save(Organization.builder().name("기관2").ownerId(owner.getId())
+                .organizationCode("AA-002").build());
+        OrganizationRecipientLink pending = links.save(OrganizationRecipientLink.builder()
+                .organizationId(other.getId()).careRecipientId(r.getId()).requestedById(guardian.getId()).build());
+        Organization third = organizations.save(Organization.builder().name("기관3").ownerId(owner.getId())
+                .organizationCode("AA-003").build());
+        OrganizationRecipientLink rejected = OrganizationRecipientLink.builder()
+                .organizationId(third.getId()).careRecipientId(r.getId()).requestedById(guardian.getId()).build();
+        rejected.reject();
+        ReflectionTestUtils.setField(rejected, "decidedAt", LocalDateTime.of(2026, 1, 1, 0, 0));
+        links.save(rejected);
+
+        withdraw(guardian, decision(r, "DELETE")).andExpect(status().isNoContent());
+
+        em.flush();
+        em.clear();
+        assertThat(links.findById(pending.getId()).orElseThrow().getStatus()).isEqualTo(LinkStatus.REJECTED);
+        assertThat(links.findById(rejected.getId()).orElseThrow().getDecidedAt())
+                .isEqualTo(LocalDateTime.of(2026, 1, 1, 0, 0));
     }
 
     @Test
