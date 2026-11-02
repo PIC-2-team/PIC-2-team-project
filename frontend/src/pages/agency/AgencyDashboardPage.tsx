@@ -49,6 +49,7 @@ type PageState =
 // 지원사 카드 전용 액션 버튼 컴포넌트 (상단 "+ 지원사 추가" 버튼과 차별화된 디자인)
 interface CardActionButtonProps {
   label: string;
+  ariaLabel?: string;
   onClick: () => void;
   variant?: 'default' | 'danger' | 'success';
 }
@@ -61,7 +62,7 @@ function isCurrentAssignment(
   return !a.endedAt && a.startDate <= today && (!a.endDate || a.endDate >= today);
 }
 
-function CardActionButton({ label, onClick, variant = 'default' }: CardActionButtonProps) {
+function CardActionButton({ label, ariaLabel, onClick, variant = 'default' }: CardActionButtonProps) {
   let background = '#f8fafc';
   let color = '#475569';
   let border = '1px solid #e2e8f0';
@@ -79,6 +80,7 @@ function CardActionButton({ label, onClick, variant = 'default' }: CardActionBut
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       onClick={onClick}
       style={{
         display: 'inline-flex',
@@ -143,6 +145,7 @@ export function AgencyDashboardPage() {
   const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
   const [profileMember, setProfileMember] = useState<OrganizationMember | null>(null);
   const [characteristicsDraft, setCharacteristicsDraft] = useState('');
+  const [characteristicsError, setCharacteristicsError] = useState<string | null>(null);
   const [isSavingCharacteristics, setIsSavingCharacteristics] = useState(false);
   const [profileRecipient, setProfileRecipient] = useState<OrganizationCareRecipient | null>(null);
   const todayKey = toSeoulDateKey(new Date().toISOString());
@@ -429,7 +432,7 @@ export function AgencyDashboardPage() {
   const handleSaveCharacteristics = async () => {
     if (!profileMember || characteristicsDraft.length > 2000) return;
     setIsSavingCharacteristics(true);
-    setActionError(null);
+    setCharacteristicsError(null);
     try {
       const updated = await updateMemberCharacteristics(profileMember.id, characteristicsDraft);
       setProfileMember(updated);
@@ -437,10 +440,16 @@ export function AgencyDashboardPage() {
         ? { ...current, members: current.members.map((member) => member.id === updated.id ? updated : member) }
         : current);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '특성 저장에 실패했습니다.');
+      setCharacteristicsError(err instanceof Error ? err.message : '특성 저장에 실패했습니다.');
     } finally {
       setIsSavingCharacteristics(false);
     }
+  };
+
+  const handleOpenMemberProfile = (member: OrganizationMember) => {
+    setProfileMember(member);
+    setCharacteristicsDraft(member.characteristics ?? '');
+    setCharacteristicsError(null);
   };
 
   // 필터링된 돌봄 대상자 목록 (배정 모달용)
@@ -821,7 +830,7 @@ export function AgencyDashboardPage() {
                         <div
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
                             gap: 6,
                             borderTop: '1px solid #f0f0f0',
                             paddingTop: 8,
@@ -829,6 +838,11 @@ export function AgencyDashboardPage() {
                             boxSizing: 'border-box',
                           }}
                         >
+                          <CardActionButton
+                            label="프로필 보기"
+                            ariaLabel={`${m.name} 프로필 보기`}
+                            onClick={() => handleOpenMemberProfile(m)}
+                          />
                           <CardActionButton
                             label={m.status === 'ACTIVE' ? '비활성화' : '활성화'}
                             variant={m.status === 'ACTIVE' ? 'default' : 'success'}
@@ -1276,7 +1290,7 @@ export function AgencyDashboardPage() {
                             <button
                               type="button"
                               aria-label={`${m.name} 프로필 보기`}
-                              onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
+                              onClick={() => handleOpenMemberProfile(m)}
                               style={{
                                 minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
                                 background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
@@ -1344,7 +1358,7 @@ export function AgencyDashboardPage() {
           return (
             <div
               role="presentation"
-              onClick={() => setProfileMember(null)}
+              onClick={() => { if (!isSavingCharacteristics) setProfileMember(null); }}
               style={{
                 position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 12, boxSizing: 'border-box',
@@ -1386,6 +1400,7 @@ export function AgencyDashboardPage() {
                 <label htmlFor="worker-characteristics" className="muted" style={{ display: 'block', marginBottom: 6 }}>
                   기관 내 인수인계에 필요한 업무 특성을 기록해 주세요.
                 </label>
+                {characteristicsError && <p role="alert" className="error">{characteristicsError}</p>}
                 <textarea
                   id="worker-characteristics"
                   value={characteristicsDraft}
@@ -1401,7 +1416,7 @@ export function AgencyDashboardPage() {
                     {isSavingCharacteristics ? '저장 중…' : '특성 저장'}
                   </button>
                 </div>
-                <button type="button" className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
+                <button type="button" className="btn" disabled={isSavingCharacteristics} style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
                   닫기
                 </button>
               </div>

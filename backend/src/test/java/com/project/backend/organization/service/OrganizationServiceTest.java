@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
+import jakarta.validation.Validation;
 
 import java.util.List;
 import java.util.Optional;
@@ -89,6 +90,15 @@ class OrganizationServiceTest {
                 new UpdateMemberCharacteristicsRequest("메모")))
                 .isInstanceOf(ApiException.class)
                 .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void updateMemberCharacteristics_요청에_특성이_누락되면_검증에_실패한다() {
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            var violations = validatorFactory.getValidator().validate(new UpdateMemberCharacteristicsRequest(null));
+            assertThat(violations).extracting(v -> v.getPropertyPath().toString())
+                    .contains("characteristics");
+        }
     }
 
     @Test
