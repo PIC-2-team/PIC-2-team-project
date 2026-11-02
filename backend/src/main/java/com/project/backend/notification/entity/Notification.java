@@ -17,7 +17,7 @@ public class Notification {
     private Long userId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 40)
     private NotificationType type;
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = 1000)
     private String message;
     @Column(name = "is_read", nullable = false)
     private boolean read;

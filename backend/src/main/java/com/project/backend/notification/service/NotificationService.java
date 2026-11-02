@@ -62,11 +62,11 @@ public class NotificationService {
         }
     }
 
-    public void notifyInformationRequestGuardians(Long careRecipientId) {
+    public void notifyInformationRequestGuardians(Long careRecipientId, String message) {
         var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
                 .map(guardian -> guardian.getGuardianId()).distinct().toList();
         for (Long guardianId : guardianIds) {
-            notifyInformationRequest(guardianId, "새 정보 요청이 도착했습니다.");
+            notifyInformationRequest(guardianId, message);
         }
     }
 

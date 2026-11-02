@@ -100,7 +100,7 @@ public class InformationRequestService {
         if (!request.getOrganizationId().equals(organization.getId())) throw requestNotFound();
         requireStatus(request, InformationRequestStatus.SUBMITTED);
         request.forward(clock.instant());
-        notifications.notifyInformationRequestGuardians(request.getCareRecipientId());
+        notifications.notifyInformationRequestGuardians(request.getCareRecipientId(), request.getMessage());
         return response(request);
     }
 
