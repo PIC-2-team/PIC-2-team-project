@@ -51,7 +51,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todaySchedules: Schedule[]; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todaySchedules: Schedule[]; todayScheduleError: string | null; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
@@ -86,19 +86,22 @@ export function HomePage() {
         if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
         const todayKey = toSeoulDateKey(new Date().toISOString());
         const [year, month] = todayKey.split('-').map(Number);
-        const [records, overview, schedules] = await Promise.all([
+        const [records, overview, scheduleResult] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
-          getSchedulesByMonth(first.id, year, month).catch(() => []),
+          getSchedulesByMonth(first.id, year, month)
+            .then(schedules => ({ schedules, error: null as string | null }))
+            .catch(() => ({ schedules: [], error: '오늘 일정을 불러오지 못했어요.' })),
         ]);
         if (requestId !== requestRef.current) return;
         setPage({
           status: 'ok',
           recipient: first,
           todayRecords: records,
-          todaySchedules: schedules
+          todaySchedules: scheduleResult.schedules
             .filter(schedule => toSeoulDateKey(schedule.scheduledAt) === todayKey)
             .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
+          todayScheduleError: scheduleResult.error,
           pinnedRecords: overview.pinnedRecords ?? [],
         });
       } catch (e) {
@@ -162,7 +165,7 @@ export function HomePage() {
     );
   }
 
-  const { recipient, todayRecords, todaySchedules, pinnedRecords } = page;
+  const { recipient, todayRecords, todaySchedules, todayScheduleError, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   return (
@@ -314,7 +317,9 @@ export function HomePage() {
         </div>
 
         <div className={styles.records}>
-          {todaySchedules.length === 0 ? (
+          {todayScheduleError ? (
+            <p className="error" role="alert">{todayScheduleError}</p>
+          ) : todaySchedules.length === 0 ? (
             <p>오늘 예정된 일정이 없어요.</p>
           ) : (
             todaySchedules.map(schedule => (

@@ -104,6 +104,25 @@ it('선택한 당사자의 오늘 일정만 홈에서 조회한다', async () =>
   expect(schedulesApi.getSchedulesByMonth).toHaveBeenCalledWith(2, year, month);
 });
 
+it('오늘 일정 조회 실패를 일정 없음 상태와 구분해 안내한다', async () => {
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '활동지원사', role: 'SUPPORT_WORKER' } as User,
+    token: 'tok', selectedRecipientId: 2, setSelectedRecipient: vi.fn(),
+    login: vi.fn(), loginWithGoogle: vi.fn(), setAuth: vi.fn(), logout: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 2, name: '선택한 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockRejectedValue(new Error('offline'));
+
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('오늘 일정을 불러오지 못했어요.');
+  expect(screen.queryByText('오늘 예정된 일정이 없어요.')).not.toBeInTheDocument();
+});
+
 
 it('보호자 사용자는 중요 돌봄 정보를 중복 없이 오늘의 기록과 함께 확인한다', async () => {
   vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
