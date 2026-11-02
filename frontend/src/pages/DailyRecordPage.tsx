@@ -110,7 +110,9 @@ export function DailyRecordPage() {
   const [category, setCategory] = useState<RecordCategory | ''>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>('records');
+  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>(() =>
+    searchParams.get('tab') === 'schedules' ? 'schedules' : 'records'
+  );
   const [today] = useState(() => {
     const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
     return new Date(year, month - 1, day);
