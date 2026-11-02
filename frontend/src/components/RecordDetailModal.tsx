@@ -53,8 +53,6 @@ export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [record, setRecord] = useState<DailyRecord | null>(null);
-  const [mediaUrls, setMediaUrls] = useState<Record<number, string>>({});
-  const [mediaLoadFailed, setMediaLoadFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
@@ -115,24 +113,6 @@ export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
 
     return () => { isCurrent = false; };
   }, [recordId, selectedRecipientId]);
-
-  useEffect(() => {
-    if (!selectedRecipientId || !record?.media?.length) {
-      setMediaUrls({});
-      setMediaLoadFailed(false);
-      return;
-    }
-    let isCurrent = true;
-    setMediaUrls({});
-    setMediaLoadFailed(false);
-    Promise.all(record.media.map(async media => {
-      const result = await getRecordMediaDownloadUrl(selectedRecipientId, media.mediaId);
-      return [media.mediaId, result.url] as const;
-    }))
-      .then(entries => { if (isCurrent) setMediaUrls(Object.fromEntries(entries)); })
-      .catch(() => { if (isCurrent) setMediaLoadFailed(true); });
-    return () => { isCurrent = false; };
-  }, [record?.media, selectedRecipientId]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (showDeleteDialog) return;
@@ -234,7 +214,7 @@ export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
           <>
             {isEditing ? (
               <>
-                <RecordMediaGallery media={record.media ?? []} urls={mediaUrls} failed={mediaLoadFailed} />
+                <RecordMediaGallery media={record.media ?? []} recipientId={selectedRecipientId} />
                 <article className="demo-card">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <label htmlFor="edit-category" style={{ fontSize: '0.875rem', fontWeight: 600 }}>기록 분류</label>
@@ -317,7 +297,7 @@ export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
                   <span className="tag">{CATEGORY_LABEL[record.category] ?? record.category}</span>
                   <p className="record-content">{parseRecordContent(record.content)}</p>
                 </article>
-                <RecordMediaGallery media={record.media ?? []} urls={mediaUrls} failed={mediaLoadFailed} />
+                <RecordMediaGallery media={record.media ?? []} recipientId={selectedRecipientId} />
                 {actionMsg && <p role="status" className="hint">{actionMsg}</p>}
                 {canEdit && (
                   <div className="actions">
@@ -449,34 +429,100 @@ export function RecordDetailModal({ recordId, onClose, onChanged, onError }: {
   );
 }
 
-function RecordMediaGallery({ media, urls, failed }: {
+function RecordMediaGallery({ media, recipientId }: {
   media: NonNullable<DailyRecord['media']>;
-  urls: Record<number, string>;
-  failed: boolean;
+  recipientId: number | null;
 }) {
-  if (media.length === 0) return null;
+  if (media.length === 0 || !recipientId) return null;
   return (
     <section aria-label="기록 첨부 미디어" style={{ marginTop: '1rem' }}>
       <h3 style={{ margin: '0 0 0.625rem', fontSize: '0.95rem' }}>사진·영상 ({media.length})</h3>
-      {failed ? <p role="status" className="hint">첨부 미디어를 불러오지 못했어요.</p> : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.625rem' }}>
-          {media.map(item => {
-            const url = urls[item.mediaId];
-            if (!url) return <div key={item.mediaId} className="hint" role="status">미디어 불러오는 중…</div>;
-            return (
-              <div key={item.mediaId}>
-                {item.mediaType.startsWith('image/') ? (
-                  <a href={url} target="_blank" rel="noreferrer" aria-label={`${item.fileName} 열기`}>
-                    <img src={url} alt={item.fileName} loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
-                  </a>
-                ) : item.mediaType.startsWith('video/') ? (
-                  <video src={url} controls preload="metadata" aria-label={item.fileName} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
-                ) : <a href={url} target="_blank" rel="noreferrer">{item.fileName} 다운로드</a>}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.625rem' }}>
+        {media.map(item => <RecordMediaItem key={item.mediaId} media={item} recipientId={recipientId} />)}
+      </div>
     </section>
+  );
+}
+
+function RecordMediaItem({ media, recipientId }: {
+  media: NonNullable<DailyRecord['media']>[number];
+  recipientId: number;
+}) {
+  const [download, setDownload] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const failedUrlRetries = useRef(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackRef = useRef({ currentTime: 0, shouldPlay: false });
+
+  useEffect(() => {
+    let isCurrent = true;
+    let refreshTimer: number | undefined;
+    const refreshDownloadUrl = async () => {
+      try {
+        const result = await getRecordMediaDownloadUrl(recipientId, media.mediaId);
+        if (!isCurrent) return;
+        setDownload(result);
+        setLoadFailed(false);
+        const expiresAt = Date.parse(result.expiresAt);
+        if (Number.isFinite(expiresAt)) {
+          const delay = Math.max(1_000, expiresAt - Date.now() - 30_000);
+          refreshTimer = window.setTimeout(() => {
+            const video = videoRef.current;
+            if (video && !video.paused && !video.ended) {
+              refreshTimer = window.setTimeout(() => { void refreshDownloadUrl(); }, 10_000);
+              return;
+            }
+            if (video) playbackRef.current.currentTime = video.currentTime;
+            void refreshDownloadUrl();
+          }, delay);
+        }
+      } catch {
+        if (isCurrent) setLoadFailed(true);
+      }
+    };
+    void refreshDownloadUrl();
+    return () => {
+      isCurrent = false;
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+    };
+  }, [media.mediaId, recipientId, refreshKey]);
+
+  const retryDownload = () => {
+    if (failedUrlRetries.current > 0) {
+      setLoadFailed(true);
+      return;
+    }
+    failedUrlRetries.current += 1;
+    const video = videoRef.current;
+    if (video) {
+      playbackRef.current = { currentTime: video.currentTime, shouldPlay: !video.paused && !video.ended };
+    }
+    setDownload(null);
+    setRefreshKey(key => key + 1);
+  };
+
+  const restoreVideoPlayback = (video: HTMLVideoElement) => {
+    const playback = playbackRef.current;
+    if (playback.currentTime > 0) video.currentTime = playback.currentTime;
+    if (playback.shouldPlay) void video.play().catch(() => {});
+    playbackRef.current = { currentTime: 0, shouldPlay: false };
+    failedUrlRetries.current = 0;
+    setLoadFailed(false);
+  };
+
+  if (loadFailed) return <p className="hint" role="status">{media.fileName}을(를) 불러오지 못했어요.</p>;
+  if (!download) return <p className="hint" role="status">미디어 불러오는 중…</p>;
+
+  return (
+    <div>
+      {media.mediaType.startsWith('image/') ? (
+        <a href={download.url} target="_blank" rel="noreferrer" aria-label={`${media.fileName} 열기`}>
+          <img src={download.url} alt={media.fileName} loading="lazy" onLoad={() => { failedUrlRetries.current = 0; }} onError={retryDownload} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
+        </a>
+      ) : media.mediaType.startsWith('video/') ? (
+        <video ref={videoRef} src={download.url} controls preload="metadata" aria-label={media.fileName} onLoadedMetadata={event => restoreVideoPlayback(event.currentTarget)} onError={retryDownload} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
+      ) : <a href={download.url} target="_blank" rel="noreferrer">{media.fileName} 다운로드</a>}
+    </div>
   );
 }
