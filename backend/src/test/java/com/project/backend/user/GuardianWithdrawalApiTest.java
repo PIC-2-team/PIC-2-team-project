@@ -194,6 +194,21 @@ class GuardianWithdrawalApiTest {
     }
 
     @Test
+    void decisionForSuccessionRecipientIsRejectedAndNothingChanges() throws Exception {
+        CareRecipient r = recipient("R-1");
+        primary(r, guardian);
+        secondary(r, secondary, GuardianStatus.ACTIVE);
+
+        withdraw(guardian, decision(r, "DELETE")).andExpect(status().isUnprocessableEntity());
+
+        em.flush();
+        em.clear();
+        assertThat(recipients.findById(r.getId())).isPresent();
+        assertThat(guardians.findByCareRecipientIdAndTypeAndStatus(r.getId(), GuardianType.PRIMARY, GuardianStatus.ACTIVE))
+                .get().extracting(CareGuardian::getGuardianId).isEqualTo(guardian.getId());
+    }
+
+    @Test
     void transferRevokesPendingSecondaryInvitation() throws Exception {
         CareRecipient r = recipient("R-1");
         primary(r, guardian);

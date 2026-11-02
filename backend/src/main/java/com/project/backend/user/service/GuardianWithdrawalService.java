@@ -50,8 +50,7 @@ public class GuardianWithdrawalService {
 
     public void process(Long userId, WithdrawRequest request, LocalDateTime now) {
         // 주 보호자와 세컨드가 동시에 탈퇴해도 계획이 서로 어긋나지 않도록 관련 당사자를 id 순서로 잠근다
-        guardians.findByGuardianId(userId).stream()
-                .filter(g -> g.getStatus() != GuardianStatus.REVOKED)
+        guardians.findLiveByGuardianIdForUpdate(userId).stream()
                 .map(CareGuardian::getCareRecipientId).distinct().sorted()
                 .forEach(recipients::findForUpdate);
         Map<Long, Resolution> plan = plan(userId);
@@ -60,6 +59,8 @@ public class GuardianWithdrawalService {
         // 일부만 반영되지 않도록 모든 선택을 먼저 검증한다
         for (Map.Entry<Long, Resolution> entry : plan.entrySet()) {
             WithdrawRequest.Action action = decisions.get(entry.getKey());
+            // 자동 승계되는 당사자에 보낸 삭제 의사를 조용히 버리지 않는다
+            if (entry.getValue() == Resolution.SUCCESSION && action != null) throw invalid(DECISION_MESSAGE);
             if (entry.getValue() == Resolution.CHOICE && action == null) throw invalid(DECISION_MESSAGE);
             if (entry.getValue() == Resolution.DELETE_ONLY && action != WithdrawRequest.Action.DELETE) {
                 throw invalid(DECISION_MESSAGE);
