@@ -140,6 +140,45 @@ class RecipientPurgeServiceTest {
         assertThat(count("care_recipient", ok.getId())).isZero();
     }
 
+    @Test
+    void doesNotPurgeRecipientThatIsNoLongerDeletedOrStillInsideGracePeriod() {
+        CareRecipient live = recipients.save(CareRecipient.builder().name("당사자").careRecipientNumber("R-RESTORED")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build());
+        CareRecipient recent = deletedRecipient("R-RECENT2", NOW.minusDays(5));
+        media.save(new RecordMedia(live.getId(), 1L, "a.png", "image/png", 10, "records/live/a.png", INSTANT));
+
+        assertThat(purge.purge(live.getId(), NOW.minusDays(30))).isFalse();
+        assertThat(purge.purge(recent.getId(), NOW.minusDays(30))).isFalse();
+
+        em.flush();
+        em.clear();
+        assertThat(count("care_recipient", live.getId())).isEqualTo(1);
+        assertThat(count("record_media", live.getId())).isEqualTo(1);
+        verify(s3, times(0)).deleteObject(any(DeleteObjectRequest.class));
+    }
+
+    @Test
+    void everyEntityHoldingACareRecipientIdIsPurgedOrExplicitlyRetained() {
+        List<String> handled = new java.util.ArrayList<>(RecipientPurgeService.PURGED_ENTITIES);
+        handled.addAll(RecipientPurgeService.RETAINED_ENTITIES);
+        List<String> holders = em.getMetamodel().getEntities().stream()
+                .filter(e -> e.getAttributes().stream().anyMatch(a -> a.getName().equals("careRecipientId")))
+                .map(jakarta.persistence.metamodel.EntityType::getName).toList();
+
+        assertThat(handled).containsAll(holders);
+    }
+
+    @Test
+    void rejectsPurgeDaysBelowOne() {
+        ReflectionTestUtils.setField(purge, "purgeDays", 0);
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(purge::validateConfiguration)
+                    .isInstanceOf(IllegalStateException.class);
+        } finally {
+            ReflectionTestUtils.setField(purge, "purgeDays", 30);
+        }
+    }
+
     private CareRecipient deletedRecipient(String number, LocalDateTime deletedAt) {
         CareRecipient r = recipients.save(CareRecipient.builder().name("당사자").careRecipientNumber(number)
                 .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE).build());
