@@ -42,6 +42,37 @@ class CareMemoServiceTest {
     }
 
     @Test
+    void listByMonth_작성일_기준으로_해당_월의_메모를_조회한다() {
+        LocalDate firstDay = LocalDate.of(2026, 11, 1);
+        LocalDate firstDayOfNextMonth = LocalDate.of(2026, 12, 1);
+        CareMemo memo = CareMemo.builder()
+                .careRecipientId(42L)
+                .createdById(1L)
+                .date(LocalDate.of(2026, 11, 2))
+                .content("메모")
+                .now(Instant.parse("2026-11-02T01:00:00Z"))
+                .build();
+        when(memos.findByCareRecipientIdAndDateGreaterThanEqualAndDateLessThanOrderByDateAscCreatedAtAsc(
+                42L, firstDay, firstDayOfNextMonth)).thenReturn(List.of(memo));
+
+        var result = service.listByMonth(1L, 42L, 2026, 11);
+
+        assertThat(result).extracting("date").containsExactly(LocalDate.of(2026, 11, 2));
+        verify(access).verifyRead(1L, 42L);
+        verify(memos).findByCareRecipientIdAndDateGreaterThanEqualAndDateLessThanOrderByDateAscCreatedAtAsc(
+                42L, firstDay, firstDayOfNextMonth);
+    }
+
+    @Test
+    void listByMonth_잘못된_월은_거부한다() {
+        assertThatThrownBy(() -> service.listByMonth(1L, 42L, 2026, 13))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException) e).getCode()).isEqualTo("VALIDATION_ERROR"));
+
+        verifyNoInteractions(memos);
+    }
+
+    @Test
     void create_접근권한없으면_예외를던진다() {
         doThrow(new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."))
                 .when(access).verifyCreate(1L, 42L);

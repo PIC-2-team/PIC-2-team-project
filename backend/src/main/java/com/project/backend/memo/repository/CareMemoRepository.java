@@ -8,5 +8,7 @@ import java.util.Optional;
 
 public interface CareMemoRepository extends JpaRepository<CareMemo, Long> {
     List<CareMemo> findByCareRecipientIdAndDateOrderByCreatedAtAsc(Long careRecipientId, LocalDate date);
+    List<CareMemo> findByCareRecipientIdAndDateGreaterThanEqualAndDateLessThanOrderByDateAscCreatedAtAsc(
+            Long careRecipientId, LocalDate from, LocalDate to);
     Optional<CareMemo> findByIdAndCareRecipientId(Long id, Long careRecipientId);
 }

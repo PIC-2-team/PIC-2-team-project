@@ -33,6 +33,16 @@ public class CareMemoController {
         return ApiResponse.ok(service.listByDate(userId, careRecipientId, date));
     }
 
+    @Operation(summary = "월별 메모 목록")
+    @GetMapping("/month")
+    public ApiResponse<List<MemoResponse>> listByMonth(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long careRecipientId,
+            @RequestParam int year,
+            @RequestParam int month) {
+        return ApiResponse.ok(service.listByMonth(userId, careRecipientId, year, month));
+    }
+
     @Operation(summary = "오늘의 메모 목록")
     @GetMapping("/today")
     public ApiResponse<List<MemoResponse>> listToday(
