@@ -17,6 +17,7 @@ export type OrganizationMember = {
   publicCode: string;
   status: MemberStatus;
   joinedAt: string;
+  characteristics?: string | null;
 };
 
 export type CareAssignment = {

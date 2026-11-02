@@ -196,6 +196,13 @@ public class OrganizationService {
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
+    public MemberResponse updateMemberCharacteristics(Long ownerId, Long memberId, UpdateMemberCharacteristicsRequest request) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        member.updateCharacteristics(request.characteristics());
+        return MemberResponse.of(member, findUser(member.getUserId()));
+    }
+
     @Transactional(readOnly = true)
     public List<CareAssignmentResponse> getAssignments(Long ownerId, Long careRecipientId) {
         Organization org = findOrgByOwner(ownerId);

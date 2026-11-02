@@ -12,13 +12,14 @@ public record MemberResponse(
         String name,
         String publicCode,
         OrganizationMemberStatus status,
-        LocalDateTime joinedAt
+        LocalDateTime joinedAt,
+        String characteristics
 ) {
     public static MemberResponse of(OrganizationMember member, User user) {
         return new MemberResponse(
                 member.getId(), member.getUserId(),
                 user.getName(), user.getPublicCode(),
-                member.getStatus(), member.getJoinedAt()
+                member.getStatus(), member.getJoinedAt(), member.getCharacteristics()
         );
     }
 }

@@ -29,6 +29,9 @@ public class OrganizationMember {
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 
+    @Column(length = 2000)
+    private String characteristics;
+
     @Builder
     public OrganizationMember(Long organizationId, Long userId) {
         this.organizationId = organizationId;
@@ -43,5 +46,9 @@ public class OrganizationMember {
 
     public void deactivate() {
         this.status = OrganizationMemberStatus.INACTIVE;
+    }
+
+    public void updateCharacteristics(String characteristics) {
+        this.characteristics = characteristics == null || characteristics.isBlank() ? null : characteristics.trim();
     }
 }
