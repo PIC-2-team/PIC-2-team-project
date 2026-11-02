@@ -24,8 +24,8 @@ vi.mock('../contexts/AuthContext', () => ({
 const mockNotifications: NotificationItem[] = [
   {
     id: 1,
-    type: 'SUGGESTION_RECEIVED',
-    message: '새 생활기록 수정 제안이 도착했습니다.',
+    type: 'RECORD_CREATED',
+    message: '새 돌봄 기록이 등록됐어요.',
     read: false,
     createdAt: '2026-10-22T09:00:00Z',
   },
@@ -67,11 +67,11 @@ describe('NotificationInboxPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('알림을 불러오는 중입니다');
 
     await waitFor(() => {
-      expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('새 돌봄 기록이 등록됐어요.')).toBeInTheDocument();
       expect(screen.getByText('새 활동지원사가 배정되었습니다.')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('수정 제안')).toBeInTheDocument();
+    expect(screen.getByText('새 기록')).toBeInTheDocument();
     expect(screen.getByText('배정')).toBeInTheDocument();
     expect(screen.getByText('새 알림')).toBeInTheDocument();
   });
@@ -85,10 +85,10 @@ describe('NotificationInboxPage', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('새 돌봄 기록이 등록됐어요.')).toBeInTheDocument();
     });
 
-    const unreadTab = screen.getByRole('tab', { name: '읽지 않음', exact: true });
+    const unreadTab = screen.getByRole('tab', { name: '읽지 않음' });
     fireEvent.click(unreadTab);
 
     await waitFor(() => {
@@ -111,7 +111,7 @@ describe('NotificationInboxPage', () => {
       expect(screen.getByText('새 활동지원사가 배정되었습니다.')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: '읽음', exact: true }));
+    fireEvent.click(screen.getByRole('tab', { name: '읽음' }));
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith({ read: true });
@@ -155,10 +155,10 @@ describe('NotificationInboxPage', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('새 돌봄 기록이 등록됐어요.')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('새 생활기록 수정 제안이 도착했습니다.'));
+    fireEvent.click(screen.getByText('새 돌봄 기록이 등록됐어요.'));
 
     await waitFor(() => {
       expect(markReadSpy).toHaveBeenCalledWith(1, true);
@@ -206,10 +206,10 @@ describe('NotificationInboxPage', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText('새 생활기록 수정 제안이 도착했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('새 돌봄 기록이 등록됐어요.')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: '읽지 않음', exact: true }));
+    fireEvent.click(screen.getByRole('tab', { name: '읽지 않음' }));
 
     fireEvent.click(await screen.findByRole('button', { name: '요약하기' }));
 

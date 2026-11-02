@@ -84,10 +84,8 @@ public class DevDataInitializer implements CommandLineRunner {
                 new Notification(guardian.getId(), NotificationType.RECORD_CREATED,
                         "오전 산책 활동 기록이 등록됐어요.", now.minusSeconds(3600)),
                 new Notification(guardian.getId(), NotificationType.ASSIGNMENT_CHANGED,
-                        "새 활동지원사가 배정됐어요.", now.minusSeconds(1800)),
-                new Notification(guardian.getId(), NotificationType.INFORMATION_REQUEST_RECEIVED,
-                        "기관에서 돌봄 정보 요청이 도착했어요.", now.minusSeconds(600))));
-        log.info("[Dev] 요약 확인용 미확인 알림 3건 시딩 완료");
+                        "새 활동지원사가 배정됐어요.", now.minusSeconds(1800))));
+        log.info("[Dev] 요약 확인용 미확인 알림 2건 시딩 완료");
     }
 
     private User getOrCreateTestUser(String email, String name, String phone, UserRole role) {

@@ -18,7 +18,7 @@ describe('notifications API', () => {
       items: [
         {
           id: 1,
-          type: 'SUGGESTION_RECEIVED',
+          type: 'RECORD_CREATED',
           message: '새 생활기록 수정 제안이 도착했습니다.',
           read: false,
           createdAt: '2026-10-22T10:00:00Z',
@@ -43,7 +43,7 @@ describe('notifications API', () => {
   it('markNotificationRead sends PATCH with read boolean', async () => {
     const spy = vi.spyOn(client, 'apiRequest').mockResolvedValue({
       id: 1,
-      type: 'SUGGESTION_RECEIVED',
+      type: 'RECORD_CREATED',
       message: '새 제안',
       read: true,
       createdAt: '2026-10-22T10:00:00Z',

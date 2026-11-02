@@ -83,11 +83,9 @@ public class User {
         this.password = encodedPassword;
     }
 
-    public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged,
-                                           boolean informationRequestReceived) {
+    public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged) {
         this.recordCreated = recordCreated;
         this.recordUpdated = recordUpdated;
         this.assignmentChanged = assignmentChanged;
-        this.informationRequestReceived = informationRequestReceived;
     }
 }

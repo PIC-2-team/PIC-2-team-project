@@ -16,29 +16,18 @@ const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   RECORD_CREATED: '새 기록',
   RECORD_UPDATED: '기록 수정',
   ASSIGNMENT_CHANGED: '배정',
-  SUGGESTION_RECEIVED: '수정 제안',
-  SUGGESTION_DECIDED: '제안 결과',
-  INFORMATION_REQUEST_RECEIVED: '정보 요청',
-  RECORD_REQUEST_RECEIVED: '기록 요청',
   RECORD_FORWARDED: '기록 전달',
   ORGANIZATION_LINK_REQUESTED: '기관 연계',
 };
 
 function getDestination(type: NotificationType, role?: string): string {
   switch (type) {
-    case 'SUGGESTION_RECEIVED':
-    case 'SUGGESTION_DECIDED':
     case 'RECORD_CREATED':
     case 'RECORD_UPDATED':
       return '/records';
     case 'ASSIGNMENT_CHANGED':
       if (role === 'INSTITUTION') return '/agency';
       if (role === 'GUARDIAN') return '/care-relations';
-      return '/home';
-    case 'RECORD_REQUEST_RECEIVED':
-      return '/records';
-    case 'INFORMATION_REQUEST_RECEIVED':
-      if (role === 'INSTITUTION') return '/agency';
       return '/home';
     case 'ORGANIZATION_LINK_REQUESTED':
       return role === 'INSTITUTION' ? '/agency' : '/care-relations';

@@ -253,13 +253,14 @@ class RecordApiTest {
     void removedRequestNotificationSettingsAreNotExposed() throws Exception {
         perform(get("/api/users/me/notification-settings"), guardian)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.informationRequestReceived").value(true))
+                .andExpect(jsonPath("$.data.informationRequestReceived").doesNotExist())
                 .andExpect(jsonPath("$.data.suggestionReceived").doesNotExist())
                 .andExpect(jsonPath("$.data.recordRequestReceived").doesNotExist());
         perform(put("/api/users/me/notification-settings")
-                        .content("{\"recordCreated\":true,\"recordUpdated\":true,\"assignmentChanged\":true,\"informationRequestReceived\":false}"), guardian)
+                        .content("{\"recordCreated\":true,\"recordUpdated\":true,\"assignmentChanged\":false}"), guardian)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.informationRequestReceived").value(false));
+                .andExpect(jsonPath("$.data.assignmentChanged").value(false))
+                .andExpect(jsonPath("$.data.informationRequestReceived").doesNotExist());
     }
 
     @Test

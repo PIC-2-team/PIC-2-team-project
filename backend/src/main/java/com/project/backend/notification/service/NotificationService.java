@@ -60,22 +60,6 @@ public class NotificationService {
         return notifications.countByUserIdAndRead(userId, false);
     }
 
-    public void notifyInformationRequest(Long userId, String message) {
-        User user = users.findById(userId).orElse(null);
-        if (user != null && user.isInformationRequestReceived()) {
-            notifications.save(new Notification(userId, NotificationType.INFORMATION_REQUEST_RECEIVED,
-                    message, clock.instant()));
-        }
-    }
-
-    public void notifyInformationRequestGuardians(Long careRecipientId, String message) {
-        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
-                .map(guardian -> guardian.getGuardianId()).distinct().toList();
-        for (Long guardianId : guardianIds) {
-            notifyInformationRequest(guardianId, message);
-        }
-    }
-
     public void notifyAssignmentChanged(Long userId, String message) {
         User user = users.findById(userId).orElse(null);
         if (user != null && user.isAssignmentChanged()) {

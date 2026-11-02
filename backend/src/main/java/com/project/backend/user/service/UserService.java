@@ -40,8 +40,7 @@ public class UserService {
 
     public NotificationSettingsResponse updateNotificationSettings(Long userId, UpdateNotificationSettingsRequest request) {
         User user = findUser(userId);
-        user.updateNotificationSettings(request.recordCreated(), request.recordUpdated(), request.assignmentChanged(),
-                request.informationRequestReceived());
+        user.updateNotificationSettings(request.recordCreated(), request.recordUpdated(), request.assignmentChanged());
         return NotificationSettingsResponse.from(user);
     }
 
