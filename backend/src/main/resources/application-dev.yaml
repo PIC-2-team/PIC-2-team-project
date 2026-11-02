@@ -29,3 +29,6 @@ logging:
 
 app:
   seed-test-accounts: true
+
+openai:
+  api-key: "${OPENAI_API_KEY:}"

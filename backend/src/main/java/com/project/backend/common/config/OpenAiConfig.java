@@ -4,14 +4,18 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.util.StringUtils;
 
 @Configuration
-@ConditionalOnProperty(prefix = "openai", name = "api-key")
+@Conditional(OpenAiConfig.ApiKeyConfigured.class)
 public class OpenAiConfig {
 
-    @Value("${openai.api-key}")
+    @Value("${openai.api-key:${openai.api.key:}}")
     private String apiKey;
 
     @Bean
@@ -19,5 +23,14 @@ public class OpenAiConfig {
         return OpenAIOkHttpClient.builder()
                 .apiKey(apiKey)
                 .build();
+    }
+
+    public static class ApiKeyConfigured implements Condition {
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            var environment = context.getEnvironment();
+            return StringUtils.hasText(environment.getProperty("openai.api-key"))
+                    || StringUtils.hasText(environment.getProperty("openai.api.key"));
+        }
     }
 }
