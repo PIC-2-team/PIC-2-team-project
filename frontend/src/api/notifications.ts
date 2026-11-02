@@ -37,6 +37,10 @@ export function markNotificationRead(id: number, read: boolean = true): Promise<
   });
 }
 
+export function deleteNotification(id: number): Promise<void> {
+  return apiRequest(`/api/notifications/${id}`, { method: 'DELETE' });
+}
+
 export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   return apiRequest('/api/notifications/read-all', {
     method: 'PATCH',

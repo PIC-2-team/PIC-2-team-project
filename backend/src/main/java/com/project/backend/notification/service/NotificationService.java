@@ -45,6 +45,12 @@ public class NotificationService {
         return NotificationResponse.from(notification);
     }
 
+    public void delete(Long userId, Long notificationId) {
+        Notification notification = notifications.findByIdAndUserId(notificationId, userId)
+                .orElseThrow(this::notFound);
+        notifications.delete(notification);
+    }
+
     public int markAllRead(Long userId) {
         return notifications.markAllReadByUserId(userId);
     }

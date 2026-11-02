@@ -101,11 +101,15 @@
   gap: 0.75rem;
 }
 
+.itemRow {
+  position: relative;
+}
+
 .item {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  padding: 1rem;
+  padding: 1rem 2.75rem 1rem 1rem;
   background: #ffffff;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 10px;
@@ -173,6 +177,29 @@
 
 .itemUnread .message {
   font-weight: 600;
+}
+
+.deleteBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
+  color: #b54747;
 }
 
 .emptyState {

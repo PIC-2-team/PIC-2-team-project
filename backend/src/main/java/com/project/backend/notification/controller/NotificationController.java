@@ -59,4 +59,11 @@ public class NotificationController {
             @PathVariable Long notificationId, @Valid @RequestBody MarkNotificationReadRequest request) {
         return ApiResponse.ok(service.markRead(userId, notificationId, request.read()));
     }
+
+    @Operation(summary = "내 알림 삭제")
+    @DeleteMapping("/{notificationId}")
+    public ApiResponse<Void> delete(@AuthenticationPrincipal Long userId, @PathVariable Long notificationId) {
+        service.delete(userId, notificationId);
+        return ApiResponse.ok(null);
+    }
 }

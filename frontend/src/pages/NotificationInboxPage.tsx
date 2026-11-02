@@ -5,6 +5,7 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
 } from '../api/notifications';
 import type { NotificationItem, NotificationType } from '../types/notification';
 import { UnreadNotificationSummaryCard } from '../components/UnreadNotificationSummaryCard';
@@ -70,6 +71,7 @@ export function NotificationInboxPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const fetchList = useCallback(async (currentFilter: 'all' | 'unread') => {
@@ -118,6 +120,18 @@ export function NotificationInboxPage() {
     navigate(target);
   };
 
+  const handleDeleteItem = async (id: number) => {
+    setActionError(null);
+    try {
+      await deleteNotification(id);
+      setNotifications(prev => prev.filter(item => item.id !== id));
+      setFeedback('알림을 삭제했습니다.');
+      setTimeout(() => setFeedback(null), 3000);
+    } catch {
+      setActionError('알림을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -150,6 +164,7 @@ export function NotificationInboxPage() {
             </button>
           </div>
         )}
+        {actionError && <p className="error" role="alert">{actionError}</p>}
 
         <div className={styles.tabs} role="tablist">
           <button
@@ -201,23 +216,33 @@ export function NotificationInboxPage() {
         ) : (
           <div className={styles.list}>
             {notifications.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className={`${styles.item} ${!item.read ? styles.itemUnread : ''}`}
-                onClick={() => handleClickItem(item)}
-              >
-                <div className={styles.itemHeader}>
-                  <div className={styles.tagGroup}>
-                    <span className={styles.typeTag}>
-                      {NOTIFICATION_LABELS[item.type] ?? '알림'}
-                    </span>
-                    {!item.read && <span className={styles.newTag}>새 알림</span>}
+              <div className={styles.itemRow} key={item.id}>
+                <button
+                  type="button"
+                  className={`${styles.item} ${!item.read ? styles.itemUnread : ''}`}
+                  onClick={() => handleClickItem(item)}
+                >
+                  <div className={styles.itemHeader}>
+                    <div className={styles.tagGroup}>
+                      <span className={styles.typeTag}>
+                        {NOTIFICATION_LABELS[item.type] ?? '알림'}
+                      </span>
+                      {!item.read && <span className={styles.newTag}>새 알림</span>}
+                    </div>
+                    <span className={styles.time}>{formatRelativeTime(item.createdAt)}</span>
                   </div>
-                  <span className={styles.time}>{formatRelativeTime(item.createdAt)}</span>
-                </div>
-                <p className={styles.message}>{item.message}</p>
-              </button>
+                  <p className={styles.message}>{item.message}</p>
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  aria-label={`알림 삭제: ${item.message}`}
+                  title="알림 삭제"
+                  onClick={() => void handleDeleteItem(item.id)}
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
