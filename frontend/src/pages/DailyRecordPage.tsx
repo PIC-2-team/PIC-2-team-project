@@ -570,7 +570,7 @@ export function DailyRecordPage() {
                           <input type="date" aria-label="일정 날짜 수정" value={editingScheduleDate} onChange={event => setEditingScheduleDate(event.target.value)} />
                           <input type="time" aria-label="일정 시간 수정" value={editingScheduleTime} onChange={event => setEditingScheduleTime(event.target.value)} />
                         </div>
-                        <div className={styles.memoEditControls}>
+                        <div className={`${styles.memoEditControls} ${styles.scheduleEditControls}`}>
                           <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.memoEditSaveBtn}`} onClick={() => handleUpdateSchedule(schedule.id)} disabled={isUpdatingSchedule || !editingScheduleTitle.trim()}>저장</button>
                           <button type="button" className={styles.viewAll} onClick={cancelScheduleEdit} disabled={isUpdatingSchedule}>취소</button>
                         </div>

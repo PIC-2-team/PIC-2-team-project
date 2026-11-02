@@ -545,7 +545,7 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 
 .scheduleEditForm textarea {
@@ -559,6 +559,10 @@
 
 .scheduleEditDateTime input {
   flex: 1;
+}
+
+.scheduleEditControls {
+  justify-content: flex-end;
 }
 
 /* Schedule add form */

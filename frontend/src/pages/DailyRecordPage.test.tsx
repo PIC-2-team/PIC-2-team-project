@@ -376,6 +376,7 @@ it('일정 작성자는 제목과 날짜·시간을 수정하고 달력 마커�
   fireEvent.change(screen.getByLabelText('일정 설명 수정'), { target: { value: '오전 진료' } });
   fireEvent.change(screen.getByLabelText('일정 날짜 수정'), { target: { value: '2026-11-04' } });
   fireEvent.change(screen.getByLabelText('일정 시간 수정'), { target: { value: '08:45' } });
+  expect(screen.getByRole('button', { name: '저장' }).parentElement).toHaveClass(/scheduleEditControls/);
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
 
   await waitFor(() => expect(update).toHaveBeenCalledWith(42, 1, {
