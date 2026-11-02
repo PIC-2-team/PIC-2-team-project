@@ -6,6 +6,8 @@ import com.project.backend.common.exception.ApiException;
 import com.project.backend.user.dto.ChangePasswordRequest;
 import com.project.backend.user.dto.NotificationSettingsResponse;
 import com.project.backend.user.dto.UpdateProfileRequest;
+import com.project.backend.user.dto.WithdrawRequest;
+import com.project.backend.user.dto.WithdrawalPreviewResponse;
 import com.project.backend.user.dto.UpdateNotificationSettingsRequest;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.repository.UserRepository;
@@ -25,6 +27,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final GuardianWithdrawalService guardianWithdrawal;
 
     @Transactional(readOnly = true)
     public UserInfo getMe(Long userId) {
@@ -59,8 +62,18 @@ public class UserService {
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 
-    public void withdraw(Long userId) {
-        findUser(userId).anonymize(LocalDateTime.now());
+    @Transactional(readOnly = true)
+    public WithdrawalPreviewResponse withdrawalPreview(Long userId) {
+        findUser(userId);
+        return guardianWithdrawal.preview(userId);
+    }
+
+    public void withdraw(Long userId, WithdrawRequest request) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+        LocalDateTime now = LocalDateTime.now();
+        guardianWithdrawal.process(userId, request, now);
+        user.anonymize(now);
         refreshTokenRepository.deleteByUserId(userId);
     }
 

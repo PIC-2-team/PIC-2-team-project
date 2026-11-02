@@ -2,12 +2,14 @@ package com.project.backend.care.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "care_recipient")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CareRecipient {
@@ -57,6 +59,12 @@ public class CareRecipient {
     @Column
     private LocalDateTime latestRecordAt;
 
+    @Column
+    private LocalDateTime deletedAt;
+
+    @Column
+    private LocalDateTime transferredAt;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -100,6 +108,21 @@ public class CareRecipient {
         if (supportCenterName != null) this.supportCenterName = blankToNull(supportCenterName);
         if (supportCenterManagerName != null) this.supportCenterManagerName = blankToNull(supportCenterManagerName);
         if (supportCenterPhone != null) this.supportCenterPhone = blankToNull(supportCenterPhone);
+    }
+
+    // 동의 주체인 보호자가 사라지므로 의료·연락처 정보는 기관 이관 전에 비운다 (ADR-014)
+    public void transfer(LocalDateTime now) {
+        this.hospitalName = null;
+        this.doctorName = null;
+        this.hospitalPhone = null;
+        this.supportCenterName = null;
+        this.supportCenterManagerName = null;
+        this.supportCenterPhone = null;
+        this.transferredAt = now;
+    }
+
+    public void softDelete(LocalDateTime now) {
+        this.deletedAt = now;
     }
 
     private static String blankToNull(String value) {
