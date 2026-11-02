@@ -133,5 +133,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
+  if (res.status === 204) return undefined as T;
   return parseResponse<T>(res);
 }

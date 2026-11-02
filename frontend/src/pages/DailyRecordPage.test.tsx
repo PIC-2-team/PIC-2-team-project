@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { DailyRecordPage } from './DailyRecordPage';
 import * as recordsApi from '../api/records';
 import * as schedulesApi from '../api/schedules';
+import * as memosApi from '../api/memos';
 
 let mockRole = 'GUARDIAN';
 let mockUserId = 1;
@@ -31,6 +32,8 @@ it('전체 목록에서도 활동지원사에게 기록 작성 버튼이 표시�
 function mockEmpty() {
   vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
   vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getMemosByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getMemosByDate').mockResolvedValue([]);
 }
 
 it('더보기를 누르면 달력 없이 전체 기록을 조회하고 카테고리로 필터링한다', async () => {
@@ -153,6 +156,55 @@ it('"일정" 탭 전환 시 일정 목록을 표시한다', async () => {
   render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
   fireEvent.click(screen.getByRole('tab', { name: '일정' }));
   expect(await screen.findByText('병원 예약')).toBeInTheDocument();
+});
+
+it('일정 달력에서 메모 작성일은 종이 마커로, 일정일은 둥근 점으로 표시한다', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-03T03:00:00Z'));
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 1, careRecipientId: 42, createdById: 1, title: '병원 예약', scheduledAt: '2026-11-02T01:00:00Z', createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z' },
+  ]);
+  const monthMemos = vi.spyOn(memosApi, 'getMemosByMonth').mockResolvedValue([
+    { id: 2, careRecipientId: 42, createdById: 1, date: '2026-11-02', content: '외출 전에 사진으로 알려주기', createdAt: '2026-11-03T01:00:00Z', updatedAt: '2026-11-03T01:00:00Z' },
+  ]);
+  vi.spyOn(memosApi, 'getMemosByDate').mockResolvedValue([]);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  vi.useRealTimers();
+
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await waitFor(() => expect(monthMemos).toHaveBeenCalledWith(42, 2026, 11));
+  const dateCell = await screen.findByRole('button', { name: /11월 2일.*일정 있음.*메모 있음/ });
+  expect(dateCell.querySelector('[class*="scheduleMarker"]')).toBeInTheDocument();
+  expect(dateCell.querySelector('[class*="memoMarker"]')).toBeInTheDocument();
+});
+
+it('메모를 추가하고 삭제하면 일정 달력의 작성일 마커가 즉시 갱신된다', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-03T03:00:00Z'));
+  vi.spyOn(recordsApi, 'getRecordsByMonth').mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getMemosByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getMemosByDate').mockResolvedValue([]);
+  const memo = { id: 2, careRecipientId: 42, createdById: 1, date: '2026-11-03', content: '외출 전에 사진으로 알려주기', createdAt: '2026-11-03T01:00:00Z', updatedAt: '2026-11-03T01:00:00Z' };
+  vi.spyOn(memosApi, 'createMemo').mockResolvedValue(memo);
+  const remove = vi.spyOn(memosApi, 'deleteMemo').mockResolvedValue(undefined);
+  render(<MemoryRouter><DailyRecordPage /></MemoryRouter>);
+  vi.useRealTimers();
+
+  fireEvent.click(screen.getByRole('tab', { name: '일정' }));
+  await screen.findByText('이 날의 일정이 없어요.');
+  const todayCell = screen.getByRole('button', { name: '11월 3일' });
+  expect(todayCell).not.toHaveAttribute('aria-label', expect.stringContaining('메모 있음'));
+
+  fireEvent.click(screen.getByRole('button', { name: '+ 메모 추가' }));
+  fireEvent.change(screen.getByRole('textbox', { name: '메모 내용' }), { target: { value: memo.content } });
+  fireEvent.click(screen.getByRole('button', { name: /^추가$/ }));
+  expect(await screen.findByRole('button', { name: /11월 3일.*메모 있음/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '메모 삭제' }));
+  await waitFor(() => expect(remove).toHaveBeenCalledWith(42, memo.id));
+  await waitFor(() => expect(screen.getByRole('button', { name: '11월 3일' })).not.toHaveAttribute('aria-label', expect.stringContaining('메모 있음')));
 });
 
 it('활동지원사 일정 탭에 일정 추가와 삭제 기능을 표시한다', async () => {

@@ -25,6 +25,12 @@ describe('apiRequest', () => {
     expect(result).toEqual({ id: 1 });
   });
 
+  it('204 No Content 응답을 본문 없이 성공 처리한다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 })));
+
+    await expect(apiRequest('/api/test', { method: 'DELETE' })).resolves.toBeUndefined();
+  });
+
   it('success: false 응답에서 ApiError를 throw한다', async () => {
     vi.stubGlobal(
       'fetch',

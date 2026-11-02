@@ -3,7 +3,7 @@ import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-rout
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
 import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
-import { getMemosByDate, createMemo, updateMemo, deleteMemo } from '../api/memos';
+import { getMemosByDate, getMemosByMonth, createMemo, updateMemo, deleteMemo } from '../api/memos';
 import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
@@ -136,6 +136,7 @@ export function DailyRecordPage() {
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [dayMemos, setDayMemos] = useState<Memo[]>([]);
+  const [memoMonthData, setMemoMonthData] = useState<{ recipientId: number; year: number; month: number; items: Memo[] } | null>(null);
   const [isMemoLoading, setIsMemoLoading] = useState(false);
   const [memoError, setMemoError] = useState<string | null>(null);
   const [memoFormOpen, setMemoFormOpen] = useState(() => searchParams.get('memo') === 'write');
@@ -198,6 +199,17 @@ export function DailyRecordPage() {
     return () => { isCurrent = false; };
   }, [selectedRecipientId, activeTab, selectedKey]);
 
+  useEffect(() => {
+    if (!selectedRecipientId || activeTab !== 'schedules') return;
+    let isCurrent = true;
+    getMemosByMonth(selectedRecipientId, viewYear, viewMonth + 1)
+      .then(items => {
+        if (isCurrent) setMemoMonthData({ recipientId: selectedRecipientId, year: viewYear, month: viewMonth + 1, items });
+      })
+      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); });
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, activeTab, viewYear, viewMonth]);
+
   const recordUrl = (recordId: number) => {
     const params = new URLSearchParams(searchParams);
     params.set('record', String(recordId));
@@ -211,6 +223,12 @@ export function DailyRecordPage() {
 
   const selectedSchedules = monthSchedules.filter(s => toSeoulDateKey(s.scheduledAt) === selectedKey);
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
+  const monthMemos = memoMonthData?.recipientId === selectedRecipientId
+    && memoMonthData.year === viewYear
+    && memoMonthData.month === viewMonth + 1
+    ? memoMonthData.items
+    : [];
+  const datesWithMemos = new Set(monthMemos.map(memo => memo.date));
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
   const canDeleteSchedule = (schedule: Schedule) => canWrite && schedule.createdById === user?.id;
@@ -262,6 +280,9 @@ export function DailyRecordPage() {
     try {
       const created = await createMemo(selectedRecipientId, { date: selectedKey, content: newMemoContent.trim() });
       setDayMemos(prev => [...prev, created]);
+      setMemoMonthData(prev => prev?.recipientId === selectedRecipientId && prev.year === viewYear && prev.month === viewMonth + 1
+        ? { ...prev, items: [...prev.items, created] }
+        : { recipientId: selectedRecipientId, year: viewYear, month: viewMonth + 1, items: [created] });
       setNewMemoContent('');
       setMemoFormOpen(false);
     } catch (e) {
@@ -288,12 +309,13 @@ export function DailyRecordPage() {
     try {
       await deleteMemo(selectedRecipientId, memoId);
       setDayMemos(prev => prev.filter(m => m.id !== memoId));
+      setMemoMonthData(prev => prev?.recipientId === selectedRecipientId && prev.year === viewYear && prev.month === viewMonth + 1
+        ? { ...prev, items: prev.items.filter(m => m.id !== memoId) }
+        : prev);
     } catch (e) {
       setMemoError(e instanceof Error ? e.message : '메모 삭제 실패');
     }
   };
-
-  const activeDots = activeTab === 'records' ? datesWithRecords : datesWithSchedules;
 
   return (
     <div className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
@@ -322,7 +344,10 @@ export function DailyRecordPage() {
           ))}
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
             const key = toDateKey(viewYear, viewMonth, day);
-            const hasDot = activeDots.has(key);
+            const hasRecord = activeTab === 'records' && datesWithRecords.has(key);
+            const hasSchedule = activeTab === 'schedules' && datesWithSchedules.has(key);
+            const hasMemo = activeTab === 'schedules' && datesWithMemos.has(key);
+            const hasMarker = hasRecord || hasSchedule || hasMemo;
             const isSelected = day === selectedDay;
             const weekday = new Date(viewYear, viewMonth, day).getDay();
 
@@ -332,11 +357,17 @@ export function DailyRecordPage() {
                 type="button"
                 style={{ color: !isSelected && weekday === 0 ? '#e05555' : !isSelected && weekday === 6 ? '#5b8dee' : undefined }}
                 onClick={() => { setViewDate(new Date(viewYear, viewMonth, day)); setShowAllDayRecords(false); }}
-                aria-label={`${viewMonth + 1}월 ${day}일${hasDot ? ', 항목 있음' : ''}`}
+                aria-label={`${viewMonth + 1}월 ${day}일${hasMarker ? ', 항목 있음' : ''}${hasSchedule ? ', 일정 있음' : ''}${hasMemo ? ', 메모 있음' : ''}`}
                 aria-pressed={isSelected}
               >
                 {day}
-                {hasDot && <span aria-hidden="true" />}
+                {hasRecord && <span aria-hidden="true" />}
+                {activeTab === 'schedules' && hasMarker && (
+                  <span className={styles.calendarMarkers} aria-hidden="true">
+                    {hasSchedule && <i className={styles.scheduleMarker} />}
+                    {hasMemo && <i className={styles.memoMarker} />}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -344,6 +375,12 @@ export function DailyRecordPage() {
             <div key={`empty-after-${i}`} />
           ))}
         </div>
+        {activeTab === 'schedules' && (
+          <div className={styles.calendarLegend} aria-label="달력 표시 기준">
+            <span><i className={styles.scheduleMarker} aria-hidden="true" />일정</span>
+            <span><i className={styles.memoMarker} aria-hidden="true" />메모 작성일</span>
+          </div>
+        )}
       </section>}
 
       {!listOnly && <div className={styles.tabRow} role="tablist" aria-label="기록 유형">

@@ -5,6 +5,10 @@ export function getMemosByDate(recipientId: number, date: string): Promise<Memo[
   return apiRequest(`/api/care-recipients/${recipientId}/memos?date=${date}`);
 }
 
+export function getMemosByMonth(recipientId: number, year: number, month: number): Promise<Memo[]> {
+  return apiRequest(`/api/care-recipients/${recipientId}/memos/month?year=${year}&month=${month}`);
+}
+
 export function getTodayMemos(recipientId: number): Promise<Memo[]> {
   return apiRequest(`/api/care-recipients/${recipientId}/memos/today`);
 }

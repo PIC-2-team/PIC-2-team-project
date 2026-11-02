@@ -332,6 +332,56 @@
   border-color: var(--line) !important;
 }
 
+.calendarMarkers {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: auto !important;
+  height: 6px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.scheduleMarker,
+.memoMarker {
+  display: block;
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+}
+
+.scheduleMarker {
+  border-radius: 50%;
+  background: var(--calendar-accent, var(--green));
+}
+
+.memoMarker {
+  border-radius: 1px;
+  background: #597a9b;
+}
+
+.calendarLegend {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.25rem 0.125rem 0;
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.calendarLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+:global(.calendar-grid button[aria-pressed='true']) .scheduleMarker,
+:global(.calendar-grid button[aria-pressed='true']) .memoMarker {
+  background: white;
+}
+
 .tabRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
