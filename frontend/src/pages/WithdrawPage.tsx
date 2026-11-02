@@ -90,7 +90,7 @@ export function WithdrawPage() {
   return (
     <div className="demo-page">
       <div className={styles.header}>
-        <button type="button" className={styles.back} onClick={() => navigate(-1)} aria-label="뒤로가기">‹</button>
+        <button type="button" className={styles.back} onClick={() => navigate('/more')} aria-label="뒤로가기">‹</button>
         <h1 className={styles.title}>회원 탈퇴</h1>
       </div>
 

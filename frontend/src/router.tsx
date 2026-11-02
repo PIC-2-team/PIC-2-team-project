@@ -57,7 +57,11 @@ export const router = createBrowserRouter([
             ],
           },
           { path: '/more', element: <MorePage /> },
-          { path: '/withdraw', element: <WithdrawPage /> },
+          {
+            // 관리자는 탈퇴 대상이 아니다. 더보기에서만 들어오지만 주소로 직접 열 수도 있어 막는다
+            element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER', 'INSTITUTION']} />,
+            children: [{ path: '/withdraw', element: <WithdrawPage /> }],
+          },
           { path: '/notifications', element: <NotificationInboxPage /> },
         ],
       },

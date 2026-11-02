@@ -77,6 +77,16 @@ function submitButton() {
   return screen.getByRole('button', { name: '탈퇴하기' });
 }
 
+it('뒤로가기는 직접 열었을 때도 갈 곳이 있도록 더보기로 이동한다', async () => {
+  mockApi({ recipients: [], endedAssignmentCount: 0 });
+
+  renderPage();
+  fireEvent.click(screen.getByRole('button', { name: '뒤로가기' }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/more');
+  await waitFor(() => expect(submitButton()).toBeEnabled());
+});
+
 it('당사자별로 처리 방식을 카드로 보여 준다', async () => {
   mockApi(guardianPreview);
 
