@@ -1,5 +1,5 @@
 import type { DisabilitySeverity } from '../types/careRecipient';
-import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian } from '../types/agency';
+import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian, GuardianClaim } from '../types/agency';
 import { apiRequest } from './client';
 
 export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
@@ -130,6 +130,27 @@ export function getAssignments(): Promise<CareAssignment[]> {
 
 export function getLinkRequests(): Promise<LinkRequest[]> {
   return apiRequest('/api/organizations/me/link-requests');
+}
+
+export type ConnectionDecision = 'accept' | 'reject';
+
+export function decideOrganizationLinkRequest(
+  careRecipientId: number,
+  linkId: number,
+  decision: ConnectionDecision,
+): Promise<void> {
+  return apiRequest(
+    `/api/care-recipients/${careRecipientId}/organization-link-requests/${linkId}/${decision}`,
+    { method: 'POST' },
+  );
+}
+
+export function getGuardianClaims(): Promise<GuardianClaim[]> {
+  return apiRequest('/api/organizations/me/guardian-claims');
+}
+
+export function decideGuardianClaim(claimId: number, decision: ConnectionDecision): Promise<void> {
+  return apiRequest(`/api/organizations/me/guardian-claims/${claimId}/${decision}`, { method: 'POST' });
 }
 
 export function assignSupportWorker(payload: {
