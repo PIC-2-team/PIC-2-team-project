@@ -582,7 +582,7 @@ export function DailyRecordPage() {
                       </>
                     )}
                   </div>
-                  {editingScheduleId !== schedule.id && <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>}
+                  {editingScheduleId !== schedule.id && <span className={`${styles.recordTime} ${styles.scheduleTime}`}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>}
                   {canDeleteSchedule(schedule) && editingScheduleId !== schedule.id && (
                     <div className={styles.memoActions}>
                       {canEditSchedule(schedule) && <button type="button" className={`${styles.deleteBtn} ${styles.scheduleEditBtn}`} aria-label={`${schedule.title} 수정`} onClick={() => beginScheduleEdit(schedule)}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>}
@@ -629,7 +629,7 @@ export function DailyRecordPage() {
 
           {memoError && <p className="error" role="alert">{memoError}</p>}
 
-          <div className={styles.records}>
+          <div className={`${styles.records} ${styles.memoRecords}`}>
             {dayMemos.map(memo => (
               <div key={memo.id} className={styles.scheduleCard}>
                 <div className={styles.scheduleIcon} aria-hidden="true">📝</div>

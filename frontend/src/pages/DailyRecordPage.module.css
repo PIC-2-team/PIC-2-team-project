@@ -246,6 +246,10 @@
   gap: 0.625rem;
 }
 
+.memoRecords {
+  padding-bottom: 2rem;
+}
+
 .recordCard {
   display: flex;
   align-items: center;
@@ -417,6 +421,10 @@
   white-space: nowrap;
 }
 
+.scheduleTime {
+  margin-right: -0.25rem;
+}
+
 /* Schedule cards */
 .scheduleCard {
   display: flex;
@@ -548,7 +556,7 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font: inherit;
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
 }
 
 :global(.demo-page) .scheduleEditForm textarea {
@@ -572,7 +580,7 @@
 }
 
 :global(.demo-page) .scheduleEditDateTime input::-webkit-datetime-edit {
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
 }
 
 .scheduleEditControls {
