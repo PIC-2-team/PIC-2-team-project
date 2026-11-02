@@ -33,4 +33,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByRole(UserRole role, Pageable pageable);
     Page<User> findByIdIn(java.util.List<Long> ids, Pageable pageable);
     Page<User> findByIdInAndRole(java.util.List<Long> ids, UserRole role, Pageable pageable);
+    List<User> findByRoleIn(List<UserRole> roles);
 }

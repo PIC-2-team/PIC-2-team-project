@@ -3,6 +3,7 @@ import type { User } from '../types/user';
 import type { GoogleAuthResult, LoginResponse } from '../types/auth';
 import * as authApi from '../api/auth';
 import { setAccessTokenUpdater, setTokenProvider, setUnauthorizedHandler } from '../api/client';
+import { usePushNotification } from '../hooks/usePushNotification';
 
 type State = {
   user: User | null;
@@ -137,6 +138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setSelectedRecipient = useCallback((id: number | null) =>
     dispatch({ type: 'SELECT_RECIPIENT', id }), []);
+
+  usePushNotification(state.user);
 
   return (
     <Ctx.Provider value={{ ...state, login, loginWithGoogle, setAuth, logout, setSelectedRecipient }}>
