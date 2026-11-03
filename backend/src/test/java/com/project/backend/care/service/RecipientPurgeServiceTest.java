@@ -2,8 +2,6 @@ package com.project.backend.care.service;
 
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.*;
-import com.project.backend.information.entity.InformationRequest;
-import com.project.backend.information.repository.InformationRequestRepository;
 import com.project.backend.organization.entity.OrganizationRecipientLink;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.record.entity.*;
@@ -59,7 +57,6 @@ class RecipientPurgeServiceTest {
     @Autowired RecordMediaRepository media;
     @Autowired RecordMediaLinkRepository mediaLinks;
     @Autowired ScheduleRepository schedules;
-    @Autowired InformationRequestRepository informationRequests;
     @MockitoBean S3Client s3;
     @MockitoBean S3Presigner presigner;
 
@@ -76,7 +73,6 @@ class RecipientPurgeServiceTest {
         info.update("내용", INSTANT);
         careInfos.save(info);
         schedules.save(Schedule.builder().careRecipientId(id).createdById(1L).title("일정").scheduledAt(INSTANT).now(INSTANT).build());
-        informationRequests.save(new InformationRequest(id, 1L, 1L, "요청", INSTANT));
         routines.save(CareRecipientRoutine.builder().careRecipientId(id).routineTime(LocalTime.of(8, 0)).title("기상").build());
         disabilities.save(CareRecipientDisability.builder().careRecipientId(id).disabilityType(DisabilityType.AUTISM).build());
         assignments.save(CareAssignment.builder().careRecipientId(id).supportWorkerId(2L).organizationId(1L)
@@ -93,7 +89,7 @@ class RecipientPurgeServiceTest {
         em.clear();
         assertThat(purged).isEqualTo(1);
         assertThat(count("care_recipient", id)).isZero();
-        for (String table : List.of("daily_record", "care_info", "record_media", "schedule", "information_request",
+        for (String table : List.of("daily_record", "care_info", "record_media", "schedule",
                 "care_recipient_routine", "care_recipient_disability", "care_assignment", "care_guardian",
                 "organization_recipient_link")) {
             assertThat(count(table, id)).as(table).isZero();

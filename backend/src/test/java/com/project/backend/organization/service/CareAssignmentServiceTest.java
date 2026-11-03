@@ -36,6 +36,7 @@ class CareAssignmentServiceTest {
     @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock com.project.backend.notification.service.NotificationService notificationService;
     @Mock UserRepository userRepository;
+    @Mock com.project.backend.care.repository.CareRecipientRepository careRecipientRepository;
 
     @InjectMocks CareAssignmentService careAssignmentService;
 
@@ -45,10 +46,14 @@ class CareAssignmentServiceTest {
                 1L, 10L, OrganizationMemberStatus.ACTIVE)).willReturn(true);
         given(organizationRecipientLinkRepository.existsByOrganizationIdAndCareRecipientIdAndStatus(
                 1L, 20L, LinkStatus.ACCEPTED)).willReturn(true);
-        given(userRepository.findByIdForUpdate(30L)).willReturn(Optional.of(org.mockito.Mockito.mock(com.project.backend.user.entity.User.class)));
+        com.project.backend.user.entity.User workerUser = org.mockito.Mockito.mock(com.project.backend.user.entity.User.class);
+        given(workerUser.getName()).willReturn("김지원");
+        given(userRepository.findByIdForUpdate(30L)).willReturn(Optional.of(workerUser));
         given(organizationMemberRepository.findByUserIdAndStatusForUpdate(30L, OrganizationMemberStatus.ACTIVE))
                 .willReturn(List.of(OrganizationMember.builder().organizationId(1L).userId(30L).build()));
         given(careAssignmentRepository.existsByIdempotencyKey("idem-001")).willReturn(false);
+        given(careRecipientRepository.findById(20L)).willReturn(Optional.of(
+                com.project.backend.care.entity.CareRecipient.builder().name("김삼결").build()));
         given(careAssignmentRepository.save(any())).willAnswer(inv -> {
             CareAssignment a = inv.getArgument(0);
             ReflectionTestUtils.setField(a, "id", 99L);
@@ -64,8 +69,8 @@ class CareAssignmentServiceTest {
         assertThat(response.careRecipientId()).isEqualTo(20L);
         assertThat(response.supportWorkerId()).isEqualTo(30L);
         assertThat(response.endedAt()).isNull();
-        org.mockito.Mockito.verify(notificationService).notifyAssignmentChanged(30L, "새 당사자가 배정되었습니다.");
-        org.mockito.Mockito.verify(notificationService).notifyAssignmentChangedGuardians(20L, "새 활동지원사가 배정되었습니다.");
+        org.mockito.Mockito.verify(notificationService).notifyAssignmentChanged(30L, "새 당사자 김삼결님이 배정되었습니다. 프로필 보러가기 >");
+        org.mockito.Mockito.verify(notificationService).notifyAssignmentChangedGuardians(20L, "새 활동지원사 김지원님이 배정되었습니다. 프로필 보러가기 >");
     }
 
     @Test

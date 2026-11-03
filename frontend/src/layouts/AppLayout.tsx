@@ -4,7 +4,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import TabBar from '../components/TabBar/TabBar';
 import styles from './AppLayout.module.css';
 import { AppShell } from '../components/AppShell';
-import { getUnreadNotificationCount } from '../api/notifications';
 import { RecordDetailModal } from '../components/RecordDetailModal';
 
 export function AppLayout() {
@@ -15,7 +14,6 @@ export function AppLayout() {
   const isMountedRef = useRef(true);
   const [recordVersion, setRecordVersion] = useState(0);
   const [recordActionError, setRecordActionError] = useState<string | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
   const recordParam = new URLSearchParams(location.search).get('record');
   const recordId = recordParam ? Number(recordParam) : null;
   const showRecordModal = (location.pathname === '/home' || location.pathname === '/records')
@@ -53,17 +51,8 @@ export function AppLayout() {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  useEffect(() => {
-    if (!user?.role) return;
-    let mounted = true;
-    getUnreadNotificationCount()
-      .then(n => { if (mounted) setUnreadCount(n); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [user?.role]);
-
   return (
-    <AppShell role={user?.role} footer={<TabBar unreadCount={unreadCount} />}>
+    <AppShell role={user?.role} footer={<TabBar />}>
       {recordActionError && (
         <div className={styles.recordError} role="alert">
           <span>{recordActionError}</span>

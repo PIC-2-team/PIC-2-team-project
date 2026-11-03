@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -46,6 +47,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 @ExtendWith(OutputCaptureExtension.class)
 class RecordApiTest {
@@ -251,13 +253,14 @@ class RecordApiTest {
     void removedRequestNotificationSettingsAreNotExposed() throws Exception {
         perform(get("/api/users/me/notification-settings"), guardian)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.informationRequestReceived").value(true))
+                .andExpect(jsonPath("$.data.informationRequestReceived").doesNotExist())
                 .andExpect(jsonPath("$.data.suggestionReceived").doesNotExist())
                 .andExpect(jsonPath("$.data.recordRequestReceived").doesNotExist());
         perform(put("/api/users/me/notification-settings")
-                        .content("{\"recordCreated\":true,\"recordUpdated\":true,\"assignmentChanged\":true,\"informationRequestReceived\":false}"), guardian)
+                        .content("{\"recordCreated\":true,\"recordUpdated\":true,\"assignmentChanged\":false}"), guardian)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.informationRequestReceived").value(false));
+                .andExpect(jsonPath("$.data.assignmentChanged").value(false))
+                .andExpect(jsonPath("$.data.informationRequestReceived").doesNotExist());
     }
 
     @Test

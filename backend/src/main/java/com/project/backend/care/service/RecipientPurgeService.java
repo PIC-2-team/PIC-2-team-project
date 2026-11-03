@@ -24,7 +24,7 @@ public class RecipientPurgeService {
 
     // careRecipientId를 가진 엔티티는 여기 있거나 RETAINED에 사유와 함께 있어야 한다. 테스트가 누락을 잡는다
     static final List<String> PURGED_ENTITIES = List.of("DailyRecord", "CareInfo", "RecordMedia", "Schedule",
-            "InformationRequest", "CareRecipientRoutine", "CareRecipientDisability", "CareAssignment",
+            "CareRecipientRoutine", "CareRecipientDisability", "CareAssignment",
             "CareGuardian", "OrganizationRecipientLink", "CareMemo");
     // 접근 이력은 감사 목적으로 보존한다 (ADR-014)
     static final List<String> RETAINED_ENTITIES = List.of("AccessLog");

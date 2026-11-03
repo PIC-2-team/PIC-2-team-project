@@ -15,6 +15,7 @@ import com.project.backend.organization.entity.OrganizationRecipientLink;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
 import com.project.backend.organization.repository.OrganizationRecipientLinkRepository;
 import com.project.backend.organization.repository.OrganizationRepository;
+import com.project.backend.notification.repository.NotificationRepository;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
@@ -50,6 +51,7 @@ class DevDataInitializerTest {
     @Mock OrganizationMemberRepository organizationMemberRepository;
     @Mock OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock CareAssignmentRepository careAssignmentRepository;
+    @Mock NotificationRepository notificationRepository;
 
     @InjectMocks DevDataInitializer devDataInitializer;
 

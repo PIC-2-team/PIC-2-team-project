@@ -9,12 +9,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 afterEach(cleanup);
 
-it('unreadCount > 0 이면 더보기 탭에 배지가 표시된다', () => {
-  render(<MemoryRouter><TabBar unreadCount={3} /></MemoryRouter>);
-  expect(screen.getByLabelText(/안 읽은 알림 3개/)).toBeInTheDocument();
-});
-
-it('unreadCount가 0이면 배지가 표시되지 않는다', () => {
-  render(<MemoryRouter><TabBar unreadCount={0} /></MemoryRouter>);
+it('미확인 알림이 있어도 더보기 탭에 배지를 표시하지 않는다', () => {
+  render(<MemoryRouter><TabBar /></MemoryRouter>);
   expect(screen.queryByLabelText(/안 읽은 알림/)).not.toBeInTheDocument();
 });
