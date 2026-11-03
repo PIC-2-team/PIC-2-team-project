@@ -65,6 +65,9 @@ class ExpressionSoftenerTest {
         assertThat(softener.soften("정신박약이 있어요")).isEqualTo("지적장애가 있어요");
         assertThat(softener.soften("정신박약으로 등록됨")).isEqualTo("지적장애로 등록됨");
         assertThat(softener.soften("정신박약 장애로 등록됨")).isEqualTo("지적 장애로 등록됨");
+        assertThat(softener.soften("장애우로서 일했어요")).isEqualTo("장애인으로서 일했어요");
+        assertThat(softener.soften("정신박약으로서 일했어요")).isEqualTo("지적장애로서 일했어요");
+        assertThat(softener.soften("정신박약이었어요")).isEqualTo("지적장애였어요");
         assertThat(softener.soften("정신지체로 알려져 있어요")).isEqualTo("지적장애로 알려져 있어요");
     }
 }
