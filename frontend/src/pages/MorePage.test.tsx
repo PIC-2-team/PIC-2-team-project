@@ -164,7 +164,7 @@ it('다이얼로그 확인 버튼을 클릭하면 로그아웃을 실행한다',
   fireEvent.click(logoutButtons[logoutButtons.length - 1]); // 다이얼로그의 로그아웃 버튼
 
   expect(mockLogout).toHaveBeenCalled();
-  expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
 });
 
 it('서비스 이용약관 클릭 시 role=status 토스트에 "준비 중입니다." 텍스트가 나타난다', () => {

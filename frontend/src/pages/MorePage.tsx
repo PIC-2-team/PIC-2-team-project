@@ -122,7 +122,7 @@ export function MorePage() {
 
   const handleLogoutConfirm = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const sections: MenuSection[] = [];
