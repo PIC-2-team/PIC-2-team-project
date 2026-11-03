@@ -63,7 +63,7 @@ public class DevDataInitializer implements CommandLineRunner {
         User worker = getOrCreateTestUser("worker@test.com", "테스트 요양사", "010-0000-0002", UserRole.SUPPORT_WORKER);
         User institution = getOrCreateTestUser("institution@test.com", "테스트 기관", "010-0000-0003", UserRole.INSTITUTION);
         getOrCreateTestUser("admin@test.com", "테스트 관리자", "010-0000-0004", UserRole.ADMIN);
-        if (newGuardian) seedUnreadNotifications(guardian);
+        if (newGuardian) seedUnreadNotifications(guardian, institution);
         log.info("[Dev] 테스트 계정 4개 확인/생성 완료 (비밀번호: {})", TEST_PASSWORD);
 
         CareRecipient recipient = getOrCreateCareRecipient(SEED_RECIPIENT_NUMBER, "김삼결",
@@ -78,14 +78,18 @@ public class DevDataInitializer implements CommandLineRunner {
         log.info("[Dev] 테스트 당사자 및 활동지원사({}) 배정 시딩 완료", worker.getEmail());
     }
 
-    private void seedUnreadNotifications(User guardian) {
+    private void seedUnreadNotifications(User guardian, User institution) {
         Instant now = Instant.now();
         notificationRepository.saveAll(List.of(
                 new Notification(guardian.getId(), NotificationType.RECORD_CREATED,
                         "오전 산책 활동 기록이 등록됐어요.", now.minusSeconds(3600)),
                 new Notification(guardian.getId(), NotificationType.ASSIGNMENT_CHANGED,
-                        "새 활동지원사가 배정됐어요.", now.minusSeconds(1800))));
-        log.info("[Dev] 요약 확인용 미확인 알림 2건 시딩 완료");
+                        "새 활동지원사가 배정됐어요.", now.minusSeconds(1800)),
+                new Notification(institution.getId(), NotificationType.ORGANIZATION_LINK_REQUESTED,
+                        "새 돌봄 연계 요청이 도착했어요. 요청 확인하기 >", now.minusSeconds(2400)),
+                new Notification(institution.getId(), NotificationType.ORGANIZATION_LINK_REQUESTED,
+                        "새 돌봄 연계 요청이 도착했어요. 요청 확인하기 >", now.minusSeconds(900))));
+        log.info("[Dev] 요약 확인용 미확인 알림 시딩 완료 (보호자 2건, 기관 2건)");
     }
 
     private User getOrCreateTestUser(String email, String name, String phone, UserRole role) {

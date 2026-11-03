@@ -52,6 +52,18 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
+function renderMessage(message: string) {
+  if (message.endsWith(' >')) {
+    return (
+      <>
+        {message.slice(0, -2)}
+        <span className={styles.ctaArrow} aria-hidden="true">›</span>
+      </>
+    );
+  }
+  return message;
+}
+
 export function NotificationInboxPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -253,7 +265,7 @@ export function NotificationInboxPage() {
                       </div>
                       <span className={styles.time}>{formatRelativeTime(item.createdAt)}</span>
                     </div>
-                    <p className={styles.message}>{item.message}</p>
+                    <p className={styles.message}>{renderMessage(item.message)}</p>
                   </button>
                   <button
                     type="button"

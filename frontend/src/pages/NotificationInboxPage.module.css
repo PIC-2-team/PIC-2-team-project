@@ -167,6 +167,12 @@
   font-weight: 600;
 }
 
+.ctaArrow {
+  margin-left: 4px;
+  color: var(--color-primary, #3cab7e);
+  font-weight: 700;
+}
+
 .deleteBtn {
   position: absolute;
   top: 0.5rem;
