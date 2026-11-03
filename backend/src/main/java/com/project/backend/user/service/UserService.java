@@ -10,6 +10,7 @@ import com.project.backend.user.dto.WithdrawRequest;
 import com.project.backend.user.dto.WithdrawalPreviewResponse;
 import com.project.backend.user.dto.UpdateNotificationSettingsRequest;
 import com.project.backend.user.entity.User;
+import com.project.backend.user.entity.UserRole;
 import com.project.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -65,6 +66,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public WithdrawalPreviewResponse withdrawalPreview(Long userId) {
         User user = findUser(userId);
+        rejectAdmin(user);
         WithdrawalPreviewResponse preview = guardianWithdrawal.preview(userId);
         return new WithdrawalPreviewResponse(preview.recipients(),
                 staffWithdrawal.endedAssignmentCount(userId, user.getRole()));
@@ -73,11 +75,18 @@ public class UserService {
     public void withdraw(Long userId, WithdrawRequest request) {
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+        rejectAdmin(user);
         LocalDateTime now = LocalDateTime.now();
         guardianWithdrawal.process(userId, request, now);
         staffWithdrawal.process(userId, user.getRole());
         user.anonymize(now);
         refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    private void rejectAdmin(User user) {
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "ADMIN_CANNOT_WITHDRAW", "관리자 계정은 탈퇴할 수 없습니다.");
+        }
     }
 
     private User findUser(Long userId) {

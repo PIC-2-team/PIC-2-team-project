@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -90,5 +91,21 @@ class UserWithdrawalApiTest {
     @Test
     void withdrawRequiresLogin() throws Exception {
         mvc.perform(delete("/api/users/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminCannotWithdrawOrPreview() throws Exception {
+        User admin = users.save(User.builder().name("관리자").email("admin@test.invalid").password("encoded")
+                .publicCode("P-ADMIN").role(UserRole.ADMIN).build());
+        String adminToken = jwt.generateAccessToken(admin.getId(), "ADMIN");
+
+        mvc.perform(get("/api/users/me/withdrawal-preview").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("ADMIN_CANNOT_WITHDRAW"));
+        mvc.perform(delete("/api/users/me").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("ADMIN_CANNOT_WITHDRAW"));
+
+        assertThat(users.findById(admin.getId()).orElseThrow().getDeletedAt()).isNull();
     }
 }
