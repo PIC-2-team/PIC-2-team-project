@@ -16,7 +16,8 @@ public class KeywordCategoryClassifier {
             new CategoryRule(RecordCategory.EMERGENCY, 3.0, List.of(
                     "응급", "119", "구급차", "실종", "부상", "낙상", "골절", "화상",
                     "질식", "기도폐쇄", "기도막", "기도가 막", "호흡곤란", "경련", "발작",
-                    "의식소실", "심폐소생", "출혈", "기절", "응급실", "112", "사고"
+                    "의식소실", "심폐소생", "출혈", "기절", "응급실", "112",
+                    "교통사고", "안전사고", "^사고가", "^사고를", "^사고로"
             )),
             new CategoryRule(RecordCategory.CHALLENGING_BEHAVIOR, 2.0, List.of(
                     "소리지르", "자해", "공격", "때리", "꼬집", "물어", "물기", "던지",
@@ -24,25 +25,25 @@ public class KeywordCategoryClassifier {
                     "할퀴", "난폭", "발버둥", "자해행동", "도전행동"
             )),
             new CategoryRule(RecordCategory.HEALTH, 1.5, List.of(
-                    "약", "복약", "투약", "처방", "병원", "진료", "의사", "간호사",
-                    "열", "체온", "감기", "기침", "두통", "복통", "설사", "구토",
+                    "^약을", "^약이", "^약은", "복약", "투약", "처방", "병원", "진료", "의사", "간호사",
+                    "^열이", "^열을", "^열나", "고열", "미열", "체온", "감기", "기침", "두통", "복통", "설사", "구토",
                     "오한", "혈압", "혈당", "연고", "안약", "주사", "치과", "물리치료",
                     "반창고", "소독", "통증", "아프", "아파"
             )),
             new CategoryRule(RecordCategory.MEAL, 1.0, List.of(
-                    "밥", "식사", "아침", "점심", "저녁", "간식", "반찬", "국", "찌개",
-                    "수저", "숟가락", "젓가락", "포크", "물", "음료", "우유", "먹었",
+                    "밥", "식사", "아침", "점심", "저녁", "간식", "반찬", "^국을", "^국은", "^국이", "국물", "찌개",
+                    "수저", "숟가락", "젓가락", "포크", "^물을", "^물이", "^물은", "음료", "우유", "먹었",
                     "먹음", "먹다", "삼키", "씹", "편식", "식판", "배고", "배불",
                     "급식", "간식시간"
             )),
             new CategoryRule(RecordCategory.LIFESTYLE, 1.0, List.of(
-                    "기상", "취침", "잠", "수면", "낮잠", "양치", "이닦", "칫솔", "치약",
+                    "기상", "취침", "^잠을", "^잠이", "^잠들", "^잠자", "수면", "낮잠", "양치", "이닦", "칫솔", "치약",
                     "세수", "세안", "샤워", "목욕", "머리감", "옷", "환복", "갈아입",
                     "화장실", "배변", "대변", "소변", "기저귀", "산책", "운동", "체조",
                     "청소", "정리", "외출", "등원", "하원", "귀가"
             )),
             new CategoryRule(RecordCategory.COMMUNICATION, 1.0, List.of(
-                    "말", "대화", "표현", "눈맞춤", "눈을 맞", "제스처", "손짓", "몸짓",
+                    "^말을", "^말이", "^말로", "^말하", "^말했", "대화", "표현", "눈맞춤", "눈을 맞", "제스처", "손짓", "몸짓",
                     "목소리", "대답", "인사", "aac", "그림카드", "낱말", "발음", "호명",
                     "끄덕", "도리도리", "지시따르", "의사표현", "손가락질"
             )),
@@ -76,7 +77,7 @@ public class KeywordCategoryClassifier {
         for (CategoryRule rule : RULES) {
             int matchCount = 0;
             for (String keyword : rule.keywords()) {
-                if (fullText.contains(keyword.toLowerCase(Locale.ROOT))) {
+                if (containsKeyword(fullText, keyword.toLowerCase(Locale.ROOT))) {
                     matchCount++;
                 }
             }
@@ -91,5 +92,19 @@ public class KeywordCategoryClassifier {
         }
 
         return bestCategory;
+    }
+
+    // "^"로 시작하는 키워드는 다른 한글 뒤에 붙어 있으면(약속의 '약', 동물의 '물') 일치로 세지 않는다
+    private static boolean containsKeyword(String text, String keyword) {
+        if (!keyword.startsWith("^")) return text.contains(keyword);
+        String word = keyword.substring(1);
+        for (int i = text.indexOf(word); i >= 0; i = text.indexOf(word, i + 1)) {
+            if (i == 0 || !isHangul(text.charAt(i - 1))) return true;
+        }
+        return false;
+    }
+
+    private static boolean isHangul(char c) {
+        return c >= '가' && c <= '힣';
     }
 }
