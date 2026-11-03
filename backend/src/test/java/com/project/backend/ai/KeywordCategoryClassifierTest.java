@@ -132,4 +132,14 @@ class KeywordCategoryClassifierTest {
     void classifiesBitingFormsAsChallengingBehavior(String text, RecordCategory expected) {
         assertThat(classifier.classify(text)).isEqualTo(expected);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "형이 입던 옷을 물려받았어요, LIFESTYLE",
+            "동생에게 장난감을 물려주었어요, PREFERENCE",
+    })
+    @DisplayName("물려받다·물려주다는 도전적 행동으로 분류되지 않는다")
+    void doesNotTreatInheritingAsBiting(String text, RecordCategory expected) {
+        assertThat(classifier.classify(text)).isEqualTo(expected);
+    }
 }
