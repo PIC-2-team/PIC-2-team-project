@@ -65,7 +65,7 @@ const CATEGORIES: { id: CareInfoCategory; label: string; bg: string; icon: React
   },
   {
     id: 'CHALLENGING_BEHAVIOR',
-    label: '도전행동',
+    label: '행동 특성과 지원 방법',
     bg: '#fef3e2',
     icon: (
       <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">

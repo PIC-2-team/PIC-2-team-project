@@ -16,8 +16,8 @@ class ExpressionSoftenerTest {
 
     @Test
     void usesTheProjectTermForChallengingBehavior() {
-        assertThat(softener.soften("오후에 문제행동이 있었습니다.")).isEqualTo("오후에 도전적 행동이 있었습니다.");
-        assertThat(softener.soften("문제 행동을 보였습니다.")).isEqualTo("도전적 행동을 보였습니다.");
+        assertThat(softener.soften("오후에 문제행동이 있었습니다.")).isEqualTo("오후에 행동 특성과 지원 방법이 있었습니다.");
+        assertThat(softener.soften("문제 행동을 보였습니다.")).isEqualTo("행동 특성과 지원 방법을 보였습니다.");
     }
 
     @Test
@@ -43,7 +43,7 @@ class ExpressionSoftenerTest {
 
     @Test
     void doesNotDuplicateWordsAlreadyInTheReplacement() {
-        assertThat(softener.soften("도전적 문제행동이 있었습니다.")).isEqualTo("도전적 문제행동이 있었습니다.");
+        assertThat(softener.soften("행동 특성과 지원 방법이 필요했습니다.")).isEqualTo("행동 특성과 지원 방법이 필요했습니다.");
         assertThat(softener.soften("정신지체 장애인 시설에 다닙니다.")).isEqualTo("지적 장애인 시설에 다닙니다.");
         assertThat(softener.soften("정신지체장애 진단을 받았습니다.")).isEqualTo("지적장애 진단을 받았습니다.");
         assertThat(softener.soften("정신지체인으로 등록되어 있습니다.")).isEqualTo("지적장애인으로 등록되어 있습니다.");

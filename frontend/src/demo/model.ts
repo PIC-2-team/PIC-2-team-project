@@ -9,7 +9,7 @@ export const categories: Record<string, string> = {
   PREFERENCE: '선호/비선호',
   LIFESTYLE: '생활습관',
   HEALTH_MEDICATION: '건강복약',
-  BEHAVIOR: '주의사항',
+  BEHAVIOR: '행동 특성과 지원 방법',
   EMERGENCY: '위기대응',
 };
 export const today = () => {

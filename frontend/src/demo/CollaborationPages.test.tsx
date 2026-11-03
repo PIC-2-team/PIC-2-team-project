@@ -28,12 +28,12 @@ function renderRequests(role: 'agency' | 'provider') {
   );
 }
 
-it('기관 요청함에서 도전행동 기록 요청을 보낼 수 없다', () => {
+it('기관 요청함에서 행동 특성과 지원 방법 기록 요청을 보낼 수 없다', () => {
   renderRequests('agency');
   expect(
-    screen.queryByRole('link', { name: '도전행동 기록 요청' }),
+    screen.queryByRole('link', { name: '행동 특성과 지원 방법 기록 요청' }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByText('도전행동 기록 요청')).not.toBeInTheDocument();
+  expect(screen.queryByText('행동 특성과 지원 방법 기록 요청')).not.toBeInTheDocument();
 });
 
 it('활동지원사는 추가 정보 요청을 보낼 수 있다', () => {
