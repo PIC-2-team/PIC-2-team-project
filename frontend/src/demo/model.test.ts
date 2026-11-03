@@ -113,4 +113,28 @@ describe('돌봄 데모 상태', () => {
     expect(readDemo('invalid').version).toBe(1);
     expect(readDemo('{"version":1}').records.length).toBeGreaterThan(0);
   });
+  it('기존 저장값에서 도전행동 기록 요청과 지원사 알림을 제거한다', () => {
+    const legacy = createDemo();
+    legacy.requests.push({
+      id: 'old-request',
+      recipientId: 'p1',
+      content: '도전행동 관찰 내용을 기록해주세요.',
+      kind: 'information',
+      status: 'pending',
+      response: '',
+    });
+    legacy.notifications.push({
+      id: 'old-notification',
+      role: 'provider',
+      text: '새 정보 요청이 도착했어요.',
+      to: '/requests',
+      read: false,
+    });
+    const serialized = JSON.parse(JSON.stringify(legacy));
+    serialized.requests[0].kind = 'behavior';
+
+    const restored = readDemo(JSON.stringify(serialized));
+    expect(restored.requests).toEqual([]);
+    expect(restored.notifications).toEqual([]);
+  });
 });

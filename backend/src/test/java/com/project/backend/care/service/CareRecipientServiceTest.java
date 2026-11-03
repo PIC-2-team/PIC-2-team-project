@@ -3,6 +3,7 @@ package com.project.backend.care.service;
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
+import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.entity.*;
 import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
@@ -43,6 +44,7 @@ class CareRecipientServiceTest {
     @Mock com.project.backend.organization.repository.OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     @Mock com.project.backend.organization.repository.OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     @Mock com.project.backend.organization.repository.OrganizationRepository organizationRepository;
+    @Mock GuardianClaimService guardianClaimService;
 
     @InjectMocks CareRecipientService careRecipientService;
 
@@ -61,15 +63,88 @@ class CareRecipientServiceTest {
 
         CreateCareRecipientRequest req = new CreateCareRecipientRequest(
                 "김삶결", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.INTELLECTUAL), 1, null
+                List.of(DisabilityType.INTELLECTUAL), DisabilitySeverity.SEVERE, null,
+                "삼결병원", " 김의사 ", "053-000-0000", "행복센터", "박담당", "053-111-1111"
         );
 
         CareRecipientResponse response = careRecipientService.register(1L, req);
 
         assertThat(response.careRecipientNumber()).isEqualTo("R-ABCD1234");
         assertThat(response.name()).isEqualTo("김삶결");
+        assertThat(response.disabilitySeverity()).isEqualTo(DisabilitySeverity.SEVERE);
+        assertThat(response.hospitalName()).isEqualTo("삼결병원");
+        assertThat(response.doctorName()).isEqualTo("김의사");
+        assertThat(response.hospitalPhone()).isEqualTo("053-000-0000");
+        assertThat(response.supportCenterName()).isEqualTo("행복센터");
+        assertThat(response.supportCenterManagerName()).isEqualTo("박담당");
+        assertThat(response.supportCenterPhone()).isEqualTo("053-111-1111");
         verify(careRecipientRepository).save(any(CareRecipient.class));
         verify(careGuardianRepository).save(any(CareGuardian.class));
+    }
+
+    @Test
+    void update_장애_정도를_심하지_않은_장애로_변경하면_응답에_반영() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0001").name("김삶결")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE)
+                .disabilitySeverity(DisabilitySeverity.SEVERE).build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findById(100L)).willReturn(Optional.of(recipient));
+
+        UpdateCareRecipientRequest req = new UpdateCareRecipientRequest(
+                null, null, null, null, DisabilitySeverity.NOT_SEVERE, null,
+                null, null, null, null, null, null);
+
+        CareRecipientResponse response = careRecipientService.update(1L, 100L, req);
+
+        assertThat(response.disabilitySeverity()).isEqualTo(DisabilitySeverity.NOT_SEVERE);
+        assertThat(recipient.getDisabilitySeverity()).isEqualTo(DisabilitySeverity.NOT_SEVERE);
+    }
+
+    @Test
+    void update_주치의와_활동지원센터_정보를_수정하고_null은_기존_값을_유지() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0001").name("김삶결")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE)
+                .hospitalName("기존병원").supportCenterName("기존센터").build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findById(100L)).willReturn(Optional.of(recipient));
+
+        UpdateCareRecipientRequest req = new UpdateCareRecipientRequest(
+                null, null, null, null, null, null,
+                null, "이주치", "053-222-2222", null, null, null);
+
+        CareRecipientResponse response = careRecipientService.update(1L, 100L, req);
+
+        assertThat(response.hospitalName()).isEqualTo("기존병원");
+        assertThat(response.doctorName()).isEqualTo("이주치");
+        assertThat(response.hospitalPhone()).isEqualTo("053-222-2222");
+        assertThat(response.supportCenterName()).isEqualTo("기존센터");
+    }
+
+    @Test
+    void update_빈_문자열을_보내면_해당_정보를_삭제() {
+        User guardian = guardianUser(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(guardian));
+        CareRecipient recipient = CareRecipient.builder()
+                .careRecipientNumber("R-TEST0001").name("김삶결")
+                .birthDate(LocalDate.of(2000, 1, 1)).gender(Gender.MALE)
+                .hospitalName("기존병원").doctorName("김의사").build();
+        ReflectionTestUtils.setField(recipient, "id", 100L);
+        given(careRecipientRepository.findById(100L)).willReturn(Optional.of(recipient));
+
+        UpdateCareRecipientRequest req = new UpdateCareRecipientRequest(
+                null, null, null, null, null, null,
+                "  ", null, null, null, null, null);
+
+        CareRecipientResponse response = careRecipientService.update(1L, 100L, req);
+
+        assertThat(response.hospitalName()).isNull();
+        assertThat(response.doctorName()).isEqualTo("김의사");
     }
 
     @Test
@@ -79,7 +154,8 @@ class CareRecipientServiceTest {
 
         CreateCareRecipientRequest req = new CreateCareRecipientRequest(
                 "김삶결", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.AUTISM), null, null
+                List.of(DisabilityType.AUTISM), null, null,
+                null, null, null, null, null, null
         );
 
         assertThatThrownBy(() -> careRecipientService.register(2L, req))
@@ -163,7 +239,7 @@ class CareRecipientServiceTest {
         given(careGuardianRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
         given(disabilityRepository.findByCareRecipientId(100L)).willReturn(List.of());
 
-        CareRecipientResponse response = careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123"));
+        CareRecipientResponse response = careRecipientService.claim(1L, new ClaimCareRecipientRequest("R-CLAIM123")).recipient();
 
         assertThat(response.id()).isEqualTo(100L);
         assertThat(response.careRecipientNumber()).isEqualTo("R-CLAIM123");

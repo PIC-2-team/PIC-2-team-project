@@ -57,6 +57,10 @@ public class CareGuardian {
         this.invitationExpiresAt = null;
     }
 
+    public void promoteToPrimary() {
+        this.type = GuardianType.PRIMARY;
+    }
+
     public void revoke() {
         this.status = GuardianStatus.REVOKED;
     }

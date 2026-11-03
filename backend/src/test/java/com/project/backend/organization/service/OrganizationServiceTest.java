@@ -7,6 +7,7 @@ import com.project.backend.common.exception.ApiException;
 import com.project.backend.organization.dto.RegisterOrganizationRequest;
 import com.project.backend.organization.dto.LinkRequestResponse;
 import com.project.backend.organization.dto.MemberResponse;
+import com.project.backend.organization.dto.UpdateMemberCharacteristicsRequest;
 import com.project.backend.organization.dto.OrganizationResponse;
 import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.OrganizationMemberRepository;
@@ -54,6 +55,41 @@ class OrganizationServiceTest {
     @Mock UserRepository userRepository;
 
     @InjectMocks OrganizationService organizationService;
+
+    @Test
+    void updateMemberCharacteristics_기관이_소속_지원사_특성을_저장하고_공백은_비운다() {
+        Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(1L).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        OrganizationMember member = OrganizationMember.builder().organizationId(10L).userId(2L).build();
+        ReflectionTestUtils.setField(member, "id", 50L);
+        User worker = User.builder().name("지원사").email("worker@example.com").role(UserRole.SUPPORT_WORKER).build();
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+        given(userRepository.findById(2L)).willReturn(Optional.of(worker));
+
+        MemberResponse saved = organizationService.updateMemberCharacteristics(1L, 50L,
+                new UpdateMemberCharacteristicsRequest("차분한 안내를 선호합니다."));
+        assertThat(saved.characteristics()).isEqualTo("차분한 안내를 선호합니다.");
+
+        MemberResponse cleared = organizationService.updateMemberCharacteristics(1L, 50L,
+                new UpdateMemberCharacteristicsRequest("   "));
+        assertThat(cleared.characteristics()).isNull();
+    }
+
+    @Test
+    void updateMemberCharacteristics_다른_기관_지원사_메모는_수정할_수_없다() {
+        Organization org = Organization.builder().name("행복복지관").organizationCode("KNU001").ownerId(1L).build();
+        ReflectionTestUtils.setField(org, "id", 10L);
+        OrganizationMember member = OrganizationMember.builder().organizationId(11L).userId(2L).build();
+        ReflectionTestUtils.setField(member, "id", 50L);
+        given(organizationRepository.findFirstByOwnerIdOrderByIdAsc(1L)).willReturn(Optional.of(org));
+        given(organizationMemberRepository.findById(50L)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> organizationService.updateMemberCharacteristics(1L, 50L,
+                new UpdateMemberCharacteristicsRequest("메모")))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+    }
 
     @Test
     void verifyWorkerOrganization_등록된_활동지원사만_기관을_확인할_수_있다() {

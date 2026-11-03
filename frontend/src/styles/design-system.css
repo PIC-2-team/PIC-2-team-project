@@ -607,7 +607,11 @@
 .app-shell .app-header { flex-shrink: 0; }
 .app-shell .role-badge { cursor: default; }
 .app-shell .app-main > main { min-height: 100%; }
-.app-shell .app-main:has(.calendar-grid) { scrollbar-gutter: stable; }
+.app-shell .app-main {
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+}
+.app-shell .app-main::-webkit-scrollbar { display: none; }
 .app-shell .demo-page:has(.calendar-grid) { min-height: 100%; }
 .app-shell .status-page { min-height: 100%; }
 .app-shell .status-page > .empty-state { margin-block: auto; }

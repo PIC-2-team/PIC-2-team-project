@@ -19,9 +19,13 @@ import {
   removeOrganizationGuardian,
   addMember,
   updateMember,
+  updateMemberCharacteristics,
   removeMember,
 } from '../../api/organizations';
 import { ApiError } from '../../api/client';
+import { toSeoulDateKey } from '../../utils/date';
+import { ConnectionRequests } from './ConnectionRequests';
+import { RecipientProfileDialog } from './RecipientProfileDialog';
 import type {
   Organization,
   OrganizationMember,
@@ -46,11 +50,20 @@ type PageState =
 // 지원사 카드 전용 액션 버튼 컴포넌트 (상단 "+ 지원사 추가" 버튼과 차별화된 디자인)
 interface CardActionButtonProps {
   label: string;
+  ariaLabel?: string;
   onClick: () => void;
   variant?: 'default' | 'danger' | 'success';
 }
 
-function CardActionButton({ label, onClick, variant = 'default' }: CardActionButtonProps) {
+// 서버의 현재 담당 판정과 같은 기준: 종료되지 않았고 오늘이 시작일~종료일 안에 있는 배정
+function isCurrentAssignment(
+  a: { endedAt: string | null; startDate: string; endDate: string | null },
+  today: string,
+) {
+  return !a.endedAt && a.startDate <= today && (!a.endDate || a.endDate >= today);
+}
+
+function CardActionButton({ label, ariaLabel, onClick, variant = 'default' }: CardActionButtonProps) {
   let background = '#f8fafc';
   let color = '#475569';
   let border = '1px solid #e2e8f0';
@@ -68,6 +81,7 @@ function CardActionButton({ label, onClick, variant = 'default' }: CardActionBut
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       onClick={onClick}
       style={{
         display: 'inline-flex',
@@ -130,6 +144,25 @@ export function AgencyDashboardPage() {
   const [searchParams] = useSearchParams();
   const [page, setPage] = useState<PageState>({ status: 'loading' });
   const activeMembers = page.status === 'ok' ? page.members.filter((member) => member.status === 'ACTIVE') : [];
+  const [profileMember, setProfileMember] = useState<OrganizationMember | null>(null);
+  const [characteristicsDraft, setCharacteristicsDraft] = useState('');
+  const [isSavingCharacteristics, setIsSavingCharacteristics] = useState(false);
+  const [profileRecipient, setProfileRecipient] = useState<OrganizationCareRecipient | null>(null);
+  const todayKey = toSeoulDateKey(new Date().toISOString());
+  // 지원사가 현재 담당 중인 당사자 (같은 당사자에 대한 중복 배정은 한 명으로 센다)
+  const currentRecipientsOf = (member: OrganizationMember) => {
+    if (page.status !== 'ok') return [];
+    const workerId = member.userId ?? member.id;
+    const ids = new Set(
+      page.assignments
+        .filter((a) => a.supportWorkerId === workerId && isCurrentAssignment(a, todayKey))
+        .map((a) => a.careRecipientId),
+    );
+    return [...ids].map((id) => {
+      const recipient = page.recipients.find((r) => r.id === id);
+      return { id, name: recipient?.name ?? `당사자 #${id}`, number: recipient?.careRecipientNumber ?? null };
+    });
+  };
   const [orgCode, setOrgCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -396,6 +429,23 @@ export function AgencyDashboardPage() {
     } });
   };
 
+  const handleSaveCharacteristics = async () => {
+    if (!profileMember || characteristicsDraft.length > 2000) return;
+    setIsSavingCharacteristics(true);
+    setActionError(null);
+    try {
+      const updated = await updateMemberCharacteristics(profileMember.id, characteristicsDraft);
+      setProfileMember(updated);
+      setPage((current) => current.status === 'ok'
+        ? { ...current, members: current.members.map((member) => member.id === updated.id ? updated : member) }
+        : current);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '특성 저장에 실패했습니다.');
+    } finally {
+      setIsSavingCharacteristics(false);
+    }
+  };
+
   // 필터링된 돌봄 대상자 목록 (배정 모달용)
   const filteredRecipients = useMemo(() => {
     if (page.status !== 'ok') return [];
@@ -547,6 +597,9 @@ export function AgencyDashboardPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* 보호자의 기관 연결 요청, 이관된 당사자 재연결 요청 */}
+                <ConnectionRequests onChanged={() => void fetchDashboardData()} />
 
                 {/* 돌봄 보호자 관리 섹션 */}
                 <section className="demo-card" style={{ padding: '16px 14px' }}>
@@ -774,7 +827,7 @@ export function AgencyDashboardPage() {
                         <div
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
                             gap: 6,
                             borderTop: '1px solid #f0f0f0',
                             paddingTop: 8,
@@ -782,6 +835,11 @@ export function AgencyDashboardPage() {
                             boxSizing: 'border-box',
                           }}
                         >
+                          <CardActionButton
+                            label="프로필 보기"
+                            ariaLabel={`${m.name} 프로필 보기`}
+                            onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
+                          />
                           <CardActionButton
                             label={m.status === 'ACTIVE' ? '비활성화' : '활성화'}
                             variant={m.status === 'ACTIVE' ? 'default' : 'success'}
@@ -1136,22 +1194,48 @@ export function AgencyDashboardPage() {
                             style={{ marginBottom: 6, fontSize: '0.82rem' }}
                           />
 
-                          <select
-                            aria-label="돌봄 대상자"
-                            value={assignCareRecipientId}
-                            onChange={(e) => setAssignCareRecipientId(e.target.value)}
-                            required
-                          >
+                          <div role="radiogroup" aria-label="돌봄 대상자" style={{ maxHeight: 240, overflowY: 'auto' }}>
                             {filteredRecipients.length > 0 ? (
-                              filteredRecipients.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.name} ({r.careRecipientNumber || `#${r.id}`})
-                                </option>
-                              ))
+                              filteredRecipients.map((r) => {
+                                const value = String(r.id);
+                                return (
+                                  <div
+                                    key={r.id}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #eef1f4' }}
+                                  >
+                                    <label style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 8, minWidth: 0, margin: 0 }}>
+                                      <input
+                                        type="radio"
+                                        name="assignRecipient"
+                                        value={value}
+                                        checked={assignCareRecipientId === value}
+                                        onChange={() => setAssignCareRecipientId(value)}
+                                        required
+                                        style={{ width: 'auto', margin: 0, flexShrink: 0 }}
+                                      />
+                                      <span style={{ minWidth: 0 }}>
+                                        <strong>{r.name}</strong>{' '}
+                                        <span className="muted">{r.careRecipientNumber || `#${r.id}`}</span>
+                                      </span>
+                                    </label>
+                                    <button
+                                      type="button"
+                                      aria-label={`${r.name} 프로필 보기`}
+                                      onClick={() => setProfileRecipient(r)}
+                                      style={{
+                                        minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
+                                        background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
+                                      }}
+                                    >
+                                      프로필 보기
+                                    </button>
+                                  </div>
+                                );
+                              })
                             ) : (
-                              <option disabled value="">검색 결과가 없습니다</option>
+                              <p className="muted" style={{ margin: '8px 0' }}>검색 결과가 없습니다</p>
                             )}
-                          </select>
+                          </div>
                         </>
                       ) : (
                         <div
@@ -1171,22 +1255,50 @@ export function AgencyDashboardPage() {
                     </div>
 
                     {/* 돌봄 지원사 선택 영역 */}
-                    <label style={{ marginTop: 12, fontWeight: 600 }}>
-                      돌봄 지원사
-                      <select
-                        aria-label="돌봄 지원사"
-                        value={assignWorkerId}
-                        onChange={(e) => setAssignWorkerId(e.target.value)}
-                        disabled={activeMembers.length === 0}
-                        required
-                      >
-                        {activeMembers.map((m) => (
-                          <option key={m.id} value={m.userId ?? m.id}>
-                            {m.name} ({m.publicCode || `#${m.id}`})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <fieldset
+                      disabled={activeMembers.length === 0}
+                      style={{ border: 0, padding: 0, margin: '12px 0 0' }}
+                    >
+                      <legend style={{ fontWeight: 600, marginBottom: 4, padding: 0 }}>돌봄 지원사</legend>
+                      {activeMembers.map((m) => {
+                        const value = String(m.userId ?? m.id);
+                        const count = currentRecipientsOf(m).length;
+                        return (
+                          <div
+                            key={m.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #eef1f4' }}
+                          >
+                            <label style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 8, minWidth: 0, margin: 0 }}>
+                              <input
+                                type="radio"
+                                name="assignWorker"
+                                value={value}
+                                checked={assignWorkerId === value}
+                                onChange={() => setAssignWorkerId(value)}
+                                required
+                                style={{ width: 'auto', margin: 0, flexShrink: 0 }}
+                              />
+                              <span style={{ minWidth: 0 }}>
+                                <strong>{m.name}</strong>{' '}
+                                <span className="muted">{m.publicCode || `#${m.id}`}</span>
+                                <span className="muted" style={{ display: 'block', fontSize: '0.85rem' }}>담당 {count}명</span>
+                              </span>
+                            </label>
+                            <button
+                              type="button"
+                              aria-label={`${m.name} 프로필 보기`}
+                              onClick={() => { setProfileMember(m); setCharacteristicsDraft(m.characteristics ?? ''); }}
+                              style={{
+                                minHeight: 44, padding: '8px 12px', border: '1px solid #c8dfd4', borderRadius: 8,
+                                background: '#fff', color: '#3CAB7E', font: 'inherit', fontSize: '0.85rem', cursor: 'pointer',
+                              }}
+                            >
+                              프로필 보기
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </fieldset>
                     {activeMembers.length === 0 && (
                       <p className="muted">활성 상태인 돌봄 지원사가 없습니다. 지원사를 활성화한 뒤 배정해 주세요.</p>
                     )}
@@ -1237,7 +1349,78 @@ export function AgencyDashboardPage() {
             )}
           </>
         )}
-        {actionError && <p role="alert" className="error">{actionError}</p>}
+        {profileRecipient && <RecipientProfileDialog recipient={profileRecipient} onClose={() => setProfileRecipient(null)} />}
+        {profileMember && page.status === 'ok' && (() => {
+          const recipients = currentRecipientsOf(profileMember);
+          return (
+            <div
+              role="presentation"
+              onClick={() => { if (!isSavingCharacteristics) setProfileMember(null); }}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 12, boxSizing: 'border-box',
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="돌봄 지원사 프로필"
+                className="demo-card"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxWidth: 360, width: '100%', maxHeight: '88vh', overflowY: 'auto', background: '#fff',
+                  borderRadius: 14, padding: '20px 16px', boxSizing: 'border-box',
+                }}
+              >
+                <h2 style={{ marginTop: 0, fontSize: '1.15rem' }}>돌봄 지원사 프로필</h2>
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px' }}>
+                  <dt className="muted">이름</dt><dd style={{ margin: 0 }}>{profileMember.name}</dd>
+                  <dt className="muted">고유번호</dt><dd style={{ margin: 0 }}>{profileMember.publicCode || `#${profileMember.id}`}</dd>
+                  <dt className="muted">상태</dt><dd style={{ margin: 0 }}>{profileMember.status === 'ACTIVE' ? '활성' : '비활성'}</dd>
+                  {profileMember.joinedAt && (
+                    <>
+                      <dt className="muted">소속 시작일</dt><dd style={{ margin: 0 }}>{profileMember.joinedAt.slice(0, 10)}</dd>
+                    </>
+                  )}
+                </dl>
+                <h3 style={{ fontSize: '1rem', margin: '16px 0 6px' }}>현재 담당 당사자 ({recipients.length}명)</h3>
+                {recipients.length === 0 ? (
+                  <p className="muted" style={{ margin: 0 }}>담당 중인 당사자가 없어요.</p>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {recipients.map((r) => (
+                      <li key={r.id}>{r.name}{r.number ? ` (${r.number})` : ''}</li>
+                    ))}
+                  </ul>
+                )}
+                <h3 style={{ fontSize: '1rem', margin: '16px 0 6px' }}>활동지원사 특성</h3>
+                <label htmlFor="worker-characteristics" className="muted" style={{ display: 'block', marginBottom: 6 }}>
+                  기관 내 인수인계에 필요한 업무 특성을 기록해 주세요.
+                </label>
+                <textarea
+                  id="worker-characteristics"
+                  value={characteristicsDraft}
+                  onChange={(event) => setCharacteristicsDraft(event.target.value)}
+                  maxLength={2000}
+                  rows={5}
+                  placeholder="예: 선호하는 소통 방식, 업무 시 참고사항"
+                  style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: 10, border: '1px solid #cbd5e1', borderRadius: 8 }}
+                />
+                {actionError && <p role="alert" className="error">{actionError}</p>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>{characteristicsDraft.length}/2000자</span>
+                  <button type="button" className="btn" disabled={isSavingCharacteristics || characteristicsDraft.length > 2000} onClick={() => void handleSaveCharacteristics()}>
+                    {isSavingCharacteristics ? '저장 중…' : '특성 저장'}
+                  </button>
+                </div>
+                <button type="button" className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setProfileMember(null)}>
+                  닫기
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+        {actionError && !profileMember && <p role="alert" className="error">{actionError}</p>}
         <ConfirmDialog open={confirmation !== null} title={confirmation?.title ?? ''}
           confirmLabel={confirmation?.confirmLabel} variant="danger"
           onConfirm={() => { const action = confirmation?.action; setConfirmation(null); void action?.(); }}

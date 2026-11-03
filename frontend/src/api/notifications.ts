@@ -2,6 +2,16 @@ import type { NotificationItem } from '../types/notification';
 import type { PaginatedData } from '../types/common';
 import { apiRequest } from './client';
 
+export type NotificationSummary = {
+  unreadCount: number;
+  summary: string | null;
+  generatedAt: string;
+};
+
+export function summarizeUnreadNotifications(): Promise<NotificationSummary> {
+  return apiRequest('/api/notifications/summary', { method: 'POST', body: {} });
+}
+
 export function getNotifications(params?: {
   read?: boolean;
   page?: number;
@@ -25,6 +35,10 @@ export function markNotificationRead(id: number, read: boolean = true): Promise<
     method: 'PATCH',
     body: { read },
   });
+}
+
+export function deleteNotification(id: number): Promise<void> {
+  return apiRequest(`/api/notifications/${id}`, { method: 'DELETE' });
 }
 
 export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {

@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRecords, getRecordsByMonth } from '../api/records';
-import { getSchedulesByMonth, createSchedule, deleteSchedule } from '../api/schedules';
+import { getSchedulesByMonth, createSchedule, updateSchedule, deleteSchedule } from '../api/schedules';
+import { getMemosByDate, getMemosByMonth, createMemo, updateMemo, deleteMemo } from '../api/memos';
 import { ApiError } from '../api/client';
 import type { DailyRecord, RecordCategory } from '../types/record';
 import type { Schedule } from '../types/schedule';
+import type { Memo } from '../types/memo';
 import { toSeoulDateKey } from '../utils/date';
 import styles from './DailyRecordPage.module.css';
 import { Skeleton } from '../components/Skeleton/Skeleton';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -101,6 +104,14 @@ function toSeoulTimeLabel(instant: string): string {
   return parts.map(p => p.value).join('').trim();
 }
 
+function toSeoulTimeInput(instant: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(instant));
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
+}
+
 export function DailyRecordPage() {
   const { selectedRecipientId, user } = useAuth();
   const navigate = useNavigate();
@@ -110,7 +121,9 @@ export function DailyRecordPage() {
   const [category, setCategory] = useState<RecordCategory | ''>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>('records');
+  const [activeTab, setActiveTab] = useState<'records' | 'schedules'>(() =>
+    searchParams.get('tab') === 'schedules' ? 'schedules' : 'records'
+  );
   const [today] = useState(() => {
     const [year, month, day] = toSeoulDateKey(new Date().toISOString()).split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -128,9 +141,36 @@ export function DailyRecordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newScheduleTitle, setNewScheduleTitle] = useState('');
+  const [newScheduleDescription, setNewScheduleDescription] = useState('');
   const [newScheduleTime, setNewScheduleTime] = useState('09:00');
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ type: 'schedule' | 'memo'; id: number } | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [editingScheduleTitle, setEditingScheduleTitle] = useState('');
+  const [editingScheduleDescription, setEditingScheduleDescription] = useState('');
+  const [editingScheduleDate, setEditingScheduleDate] = useState('');
+  const [editingScheduleTime, setEditingScheduleTime] = useState('09:00');
+  const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
+  const [dayMemos, setDayMemos] = useState<Memo[]>([]);
+  const [memoMonthData, setMemoMonthData] = useState<{ recipientId: number; year: number; month: number; items: Memo[] } | null>(null);
+  const [memoError, setMemoError] = useState<string | null>(null);
+  const [memoFormOpen, setMemoFormOpen] = useState(() => searchParams.get('memo') === 'write');
+  const [newMemoContent, setNewMemoContent] = useState('');
+  const [isAddingMemo, setIsAddingMemo] = useState(false);
+  const [editingMemoId, setEditingMemoId] = useState<number | null>(null);
+  const [editingMemoContent, setEditingMemoContent] = useState('');
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+  const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
+  const trailingDays = 42 - firstDayOfWeek - daysInMonth;
+  const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
+
+  useEffect(() => {
+    if (searchParams.get('memo') !== 'write') return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('memo');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!selectedRecipientId) return;
@@ -170,15 +210,32 @@ export function DailyRecordPage() {
     return () => { isCurrent = false; };
   }, [selectedRecipientId, activeTab, viewYear, viewMonth, listOnly, category, page, recordVersion]);
 
+  useEffect(() => {
+    if (!selectedRecipientId || activeTab !== 'schedules') return;
+    let isCurrent = true;
+    setMemoError(null);
+    getMemosByDate(selectedRecipientId, selectedKey)
+      .then(items => { if (isCurrent) setDayMemos(items); })
+      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); });
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, activeTab, selectedKey]);
+
+  useEffect(() => {
+    if (!selectedRecipientId || activeTab !== 'schedules') return;
+    let isCurrent = true;
+    getMemosByMonth(selectedRecipientId, viewYear, viewMonth + 1)
+      .then(items => {
+        if (isCurrent) setMemoMonthData({ recipientId: selectedRecipientId, year: viewYear, month: viewMonth + 1, items });
+      })
+      .catch(e => { if (isCurrent) setMemoError(e instanceof Error ? e.message : '메모 불러오기 실패'); });
+    return () => { isCurrent = false; };
+  }, [selectedRecipientId, activeTab, viewYear, viewMonth]);
+
   const recordUrl = (recordId: number) => {
     const params = new URLSearchParams(searchParams);
     params.set('record', String(recordId));
     return `/records?${params.toString()}`;
   };
-
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDayOfWeek = getFirstDayOfWeek(viewYear, viewMonth);
-  const selectedKey = toDateKey(viewYear, viewMonth, selectedDay);
 
   const selectedRecords = listOnly ? monthRecords : monthRecords.filter(r => toSeoulDateKey(r.recordedAt) === selectedKey);
   const visibleRecords = listOnly || showAllDayRecords ? selectedRecords : selectedRecords.slice(0, 3);
@@ -187,9 +244,16 @@ export function DailyRecordPage() {
 
   const selectedSchedules = monthSchedules.filter(s => toSeoulDateKey(s.scheduledAt) === selectedKey);
   const datesWithSchedules = new Set(monthSchedules.map(s => toSeoulDateKey(s.scheduledAt)));
+  const monthMemos = memoMonthData?.recipientId === selectedRecipientId
+    && memoMonthData.year === viewYear
+    && memoMonthData.month === viewMonth + 1
+    ? memoMonthData.items
+    : [];
+  const datesWithMemos = new Set(monthMemos.map(memo => memo.date));
 
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
   const canDeleteSchedule = (schedule: Schedule) => canWrite && schedule.createdById === user?.id;
+  const canEditSchedule = canDeleteSchedule;
 
   const prevMonth = () => {
     setViewDate(date => new Date(date.getFullYear(), date.getMonth() - 1, Math.min(date.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth() - 1))));
@@ -206,12 +270,14 @@ export function DailyRecordPage() {
       const scheduledAt = new Date(`${selectedKey}T${newScheduleTime}:00+09:00`).toISOString();
       const created = await createSchedule(selectedRecipientId, {
         title: newScheduleTitle.trim(),
+        ...(newScheduleDescription.trim() ? { description: newScheduleDescription.trim() } : {}),
         scheduledAt,
       });
       setMonthSchedules(prev => [...prev, created].sort(
         (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
       ));
       setNewScheduleTitle('');
+      setNewScheduleDescription('');
       setNewScheduleTime('09:00');
       setScheduleFormOpen(false);
     } catch (e) {
@@ -232,7 +298,94 @@ export function DailyRecordPage() {
     }
   };
 
-  const activeDots = activeTab === 'records' ? datesWithRecords : datesWithSchedules;
+  const beginScheduleEdit = (schedule: Schedule) => {
+    setEditingScheduleId(schedule.id);
+    setEditingScheduleTitle(schedule.title);
+    setEditingScheduleDescription(schedule.description ?? '');
+    setEditingScheduleDate(toSeoulDateKey(schedule.scheduledAt));
+    setEditingScheduleTime(toSeoulTimeInput(schedule.scheduledAt));
+    setError(null);
+  };
+
+  const cancelScheduleEdit = () => {
+    setEditingScheduleId(null);
+    setEditingScheduleTitle('');
+    setEditingScheduleDescription('');
+    setEditingScheduleDate('');
+    setEditingScheduleTime('09:00');
+  };
+
+  const handleUpdateSchedule = async (scheduleId: number) => {
+    if (!selectedRecipientId || !editingScheduleTitle.trim() || !editingScheduleDate || !editingScheduleTime) return;
+    setIsUpdatingSchedule(true);
+    try {
+      const updated = await updateSchedule(selectedRecipientId, scheduleId, {
+        title: editingScheduleTitle.trim(),
+        description: editingScheduleDescription.trim(),
+        scheduledAt: new Date(`${editingScheduleDate}T${editingScheduleTime}:00+09:00`).toISOString(),
+      });
+      setMonthSchedules(prev => {
+        const updatedKey = toSeoulDateKey(updated.scheduledAt);
+        const isInCurrentMonth = updatedKey.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`);
+        return (isInCurrentMonth
+          ? prev.map(schedule => schedule.id === scheduleId ? updated : schedule)
+          : prev.filter(schedule => schedule.id !== scheduleId)
+        ).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+      });
+      cancelScheduleEdit();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '일정 수정 실패');
+    } finally {
+      setIsUpdatingSchedule(false);
+    }
+  };
+
+  const handleAddMemo = async () => {
+    if (!selectedRecipientId || !newMemoContent.trim()) return;
+    setIsAddingMemo(true);
+    try {
+      const created = await createMemo(selectedRecipientId, { content: newMemoContent.trim() });
+      if (created.date === selectedKey) setDayMemos(prev => [...prev, created]);
+      setMemoMonthData(prev => prev?.recipientId === selectedRecipientId && prev.year === viewYear && prev.month === viewMonth + 1
+        ? { ...prev, items: [...prev.items, created] }
+        : { recipientId: selectedRecipientId, year: viewYear, month: viewMonth + 1, items: [created] });
+      if (created.date !== selectedKey) {
+        const [year, month, day] = created.date.split('-').map(Number);
+        setScheduleDate(new Date(year, month - 1, day));
+      }
+      setNewMemoContent('');
+      setMemoFormOpen(false);
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 추가 실패');
+    } finally {
+      setIsAddingMemo(false);
+    }
+  };
+
+  const handleUpdateMemo = async (memoId: number) => {
+    if (!selectedRecipientId || !editingMemoContent.trim()) return;
+    try {
+      const updated = await updateMemo(selectedRecipientId, memoId, { content: editingMemoContent.trim() });
+      setDayMemos(prev => prev.map(m => m.id === memoId ? updated : m));
+      setEditingMemoId(null);
+      setEditingMemoContent('');
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 수정 실패');
+    }
+  };
+
+  const handleDeleteMemo = async (memoId: number) => {
+    if (!selectedRecipientId) return;
+    try {
+      await deleteMemo(selectedRecipientId, memoId);
+      setDayMemos(prev => prev.filter(m => m.id !== memoId));
+      setMemoMonthData(prev => prev?.recipientId === selectedRecipientId && prev.year === viewYear && prev.month === viewMonth + 1
+        ? { ...prev, items: prev.items.filter(m => m.id !== memoId) }
+        : prev);
+    } catch (e) {
+      setMemoError(e instanceof Error ? e.message : '메모 삭제 실패');
+    }
+  };
 
   return (
     <div className="demo-page" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
@@ -261,7 +414,10 @@ export function DailyRecordPage() {
           ))}
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
             const key = toDateKey(viewYear, viewMonth, day);
-            const hasDot = activeDots.has(key);
+            const hasRecord = activeTab === 'records' && datesWithRecords.has(key);
+            const hasSchedule = activeTab === 'schedules' && datesWithSchedules.has(key);
+            const hasMemo = activeTab === 'schedules' && datesWithMemos.has(key);
+            const hasMarker = hasRecord || hasSchedule || hasMemo;
             const isSelected = day === selectedDay;
             const weekday = new Date(viewYear, viewMonth, day).getDay();
 
@@ -271,15 +427,30 @@ export function DailyRecordPage() {
                 type="button"
                 style={{ color: !isSelected && weekday === 0 ? '#e05555' : !isSelected && weekday === 6 ? '#5b8dee' : undefined }}
                 onClick={() => { setViewDate(new Date(viewYear, viewMonth, day)); setShowAllDayRecords(false); }}
-                aria-label={`${viewMonth + 1}월 ${day}일${hasDot ? ', 항목 있음' : ''}`}
+                aria-label={`${viewMonth + 1}월 ${day}일${hasMarker ? ', 항목 있음' : ''}${hasSchedule ? ', 일정 있음' : ''}${hasMemo ? ', 메모 있음' : ''}`}
                 aria-pressed={isSelected}
               >
                 {day}
-                {hasDot && <span aria-hidden="true" />}
+                {hasRecord && <span aria-hidden="true" />}
+                {activeTab === 'schedules' && hasMarker && (
+                  <span className={styles.calendarMarkers} aria-hidden="true">
+                    {hasSchedule && <i className={styles.scheduleMarker} />}
+                    {hasMemo && <i className={styles.memoMarker} />}
+                  </span>
+                )}
               </button>
             );
           })}
+          {Array.from({ length: trailingDays }).map((_, i) => (
+            <div key={`empty-after-${i}`} />
+          ))}
         </div>
+        {activeTab === 'schedules' && (
+          <div className={styles.calendarLegend} aria-label="달력 표시 기준">
+            <span><i className={styles.scheduleMarker} aria-hidden="true" />일정</span>
+            <span><i className={styles.memoMarker} aria-hidden="true" />메모</span>
+          </div>
+        )}
       </section>}
 
       {!listOnly && <div className={styles.tabRow} role="tablist" aria-label="기록 유형">
@@ -366,7 +537,7 @@ export function DailyRecordPage() {
           </div>
 
           {scheduleFormOpen && canWrite && (
-            <div className={styles.scheduleForm}>
+            <div className={`${styles.scheduleForm} ${styles.scheduleAddForm}`}>
               <input
                 type="text"
                 placeholder="일정 제목"
@@ -374,6 +545,14 @@ export function DailyRecordPage() {
                 onChange={e => setNewScheduleTitle(e.target.value)}
                 aria-label="일정 제목"
                 maxLength={200}
+              />
+              <textarea
+                placeholder="일정 설명 (선택)"
+                value={newScheduleDescription}
+                onChange={e => setNewScheduleDescription(e.target.value)}
+                aria-label="일정 설명"
+                maxLength={500}
+                rows={2}
               />
               <input
                 type="time"
@@ -383,7 +562,7 @@ export function DailyRecordPage() {
               />
               <button
                 type="button"
-                className={`btn ${styles.scheduleAddBtn}`}
+                className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`}
                 onClick={handleAddSchedule}
                 disabled={isAddingSchedule || !newScheduleTitle.trim()}
               >
@@ -400,26 +579,108 @@ export function DailyRecordPage() {
                 <div key={schedule.id} className={styles.scheduleCard}>
                   <div className={styles.scheduleIcon} aria-hidden="true">📅</div>
                   <div className={styles.scheduleBody}>
-                    <p className={styles.scheduleTitle}>{schedule.title}</p>
-                    {schedule.description && (
-                      <p className={styles.scheduleDesc}>{schedule.description}</p>
+                    {editingScheduleId === schedule.id ? (
+                      <div className={styles.scheduleEditForm} aria-label="일정 수정">
+                        <input type="text" aria-label="일정 제목 수정" value={editingScheduleTitle} maxLength={200} onChange={event => setEditingScheduleTitle(event.target.value)} />
+                        <textarea aria-label="일정 설명 수정" value={editingScheduleDescription} maxLength={500} rows={2} onChange={event => setEditingScheduleDescription(event.target.value)} />
+                        <div className={styles.scheduleEditDateTime}>
+                          <input type="date" aria-label="일정 날짜 수정" value={editingScheduleDate} onChange={event => setEditingScheduleDate(event.target.value)} />
+                          <input type="time" aria-label="일정 시간 수정" value={editingScheduleTime} onChange={event => setEditingScheduleTime(event.target.value)} />
+                        </div>
+                        <div className={`${styles.memoEditControls} ${styles.scheduleEditControls}`}>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`} onClick={() => handleUpdateSchedule(schedule.id)} disabled={isUpdatingSchedule || !editingScheduleTitle.trim()}>저장</button>
+                          <button type="button" className={styles.viewAll} onClick={cancelScheduleEdit} disabled={isUpdatingSchedule}>취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className={styles.scheduleTitle}>{schedule.title}</p>
+                        {schedule.description && <p className={styles.scheduleDesc}>{schedule.description}</p>}
+                      </>
                     )}
                   </div>
-                  <span className={styles.recordTime}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>
-                  {canDeleteSchedule(schedule) && (
-                    <button
-                      type="button"
-                      className={styles.deleteBtn}
-                      aria-label={`${schedule.title} 삭제`}
-                      onClick={() => handleDeleteSchedule(schedule.id)}
-                    >
-                      ✕
-                    </button>
+                  {editingScheduleId !== schedule.id && <span className={`${styles.recordTime} ${styles.scheduleTime}`}>{toSeoulTimeLabel(schedule.scheduledAt)}</span>}
+                  {canDeleteSchedule(schedule) && editingScheduleId !== schedule.id && (
+                    <div className={styles.memoActions}>
+                      {canEditSchedule(schedule) && <button type="button" className={`${styles.deleteBtn} ${styles.scheduleEditBtn}`} aria-label={`${schedule.title} 수정`} onClick={() => beginScheduleEdit(schedule)}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>}
+                      <button type="button" className={styles.deleteBtn} aria-label={`${schedule.title} 삭제`} onClick={() => setDeleteConfirmation({ type: 'schedule', id: schedule.id })}>✕</button>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           )}
+
+          <hr className={styles.memoDivider} />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>메모</h3>
+            {canWrite && (
+              <button type="button" className={styles.viewAll} onClick={() => { setMemoFormOpen(v => !v); setEditingMemoId(null); }}>
+                {memoFormOpen ? '취소' : '+ 메모 추가'}
+              </button>
+            )}
+          </div>
+
+          {memoFormOpen && canWrite && (
+            <div className={`${styles.scheduleForm} ${styles.memoAddForm}`}>
+              <textarea
+                placeholder="메모 내용을 입력하세요"
+                value={newMemoContent}
+                onChange={e => setNewMemoContent(e.target.value)}
+                aria-label="메모 내용"
+                maxLength={500}
+                rows={2}
+                className={`${styles.memoTextarea} ${styles.memoAddTextarea}`}
+              />
+              <button
+                type="button"
+                className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`}
+                onClick={handleAddMemo}
+                disabled={isAddingMemo || !newMemoContent.trim()}
+              >
+                {isAddingMemo ? '추가 중…' : '추가'}
+              </button>
+            </div>
+          )}
+
+          {memoError && <p className="error" role="alert">{memoError}</p>}
+
+          <div className={`${styles.records} ${styles.memoRecords}`}>
+            {dayMemos.map(memo => (
+              <div key={memo.id} className={styles.scheduleCard}>
+                <div className={styles.scheduleIcon} aria-hidden="true">📝</div>
+                <div className={styles.scheduleBody}>
+                  {editingMemoId === memo.id ? (
+                    <>
+                      <textarea
+                        value={editingMemoContent}
+                        onChange={e => setEditingMemoContent(e.target.value)}
+                        aria-label="메모 수정"
+                        maxLength={500}
+                        rows={2}
+                        className={`${styles.memoTextarea} ${styles.memoEditTextarea}`}
+                      />
+                      <div className={styles.memoEditFooter} aria-label="메모 수정 동작">
+                        <div className={styles.memoEditControls}>
+                          <button type="button" className={`btn ${styles.scheduleAddBtn} ${styles.compactActionBtn}`} onClick={() => handleUpdateMemo(memo.id)} disabled={!editingMemoContent.trim()}>저장</button>
+                          <button type="button" className={styles.viewAll} onClick={() => setEditingMemoId(null)}>취소</button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className={styles.scheduleTitle}>{memo.content}</p>
+                  )}
+                </div>
+                {memo.createdById === user?.id && editingMemoId !== memo.id && (
+                  <div className={styles.memoActions}>
+                    <button type="button" className={`${styles.deleteBtn} ${styles.memoEditBtn}`} aria-label="메모 수정" onClick={() => { setEditingMemoId(memo.id); setEditingMemoContent(memo.content); setMemoFormOpen(false); }} style={{ fontSize: '0.75rem' }}><span className={styles.memoEditIcon} aria-hidden="true">✏️</span></button>
+                    <button type="button" className={styles.deleteBtn} aria-label="메모 삭제" onClick={() => setDeleteConfirmation({ type: 'memo', id: memo.id })}>✕</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -435,6 +696,20 @@ export function DailyRecordPage() {
         </button>
         </>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmation !== null}
+        title={deleteConfirmation?.type === 'memo' ? '메모를 삭제하시겠습니까?' : '일정을 삭제하시겠습니까?'}
+        confirmLabel="삭제"
+        variant="danger"
+        onCancel={() => setDeleteConfirmation(null)}
+        onConfirm={() => {
+          const confirmation = deleteConfirmation;
+          setDeleteConfirmation(null);
+          if (confirmation?.type === 'memo') void handleDeleteMemo(confirmation.id);
+          if (confirmation?.type === 'schedule') void handleDeleteSchedule(confirmation.id);
+        }}
+      />
     </div>
   );
 }

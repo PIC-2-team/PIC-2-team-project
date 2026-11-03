@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { UserRole } from '../types/user';
 import { getUnreadNotificationCount } from '../api/notifications';
+import { onNotificationsChanged } from '../utils/notificationEvents';
 import '../styles/design-system.css';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -49,15 +50,20 @@ export function AppShell({ children, footer, role, homeDisabled = false }: { chi
   useEffect(() => {
     if (!role) return;
     let mounted = true;
-    getUnreadNotificationCount()
-      .then(count => {
-        if (mounted) setUnreadCount(count);
-      })
-      .catch(() => {
-        // 알림 조회 실패 시 배지 표시 생략
-      });
+    const refetch = () => {
+      getUnreadNotificationCount()
+        .then(count => {
+          if (mounted) setUnreadCount(count);
+        })
+        .catch(() => {
+          // 알림 조회 실패 시 배지 표시 생략
+        });
+    };
+    refetch();
+    const unsubscribe = onNotificationsChanged(refetch);
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [role]);
 

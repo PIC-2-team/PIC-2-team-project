@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Profile("prod")
+@Profile({"prod", "ai"})
 public class OpenAiConfig {
 
     @Value("${openai.api-key}")
