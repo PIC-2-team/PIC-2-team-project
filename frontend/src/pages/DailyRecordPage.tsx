@@ -17,7 +17,7 @@ const DAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 const CATEGORY_LABEL: Record<RecordCategory, string> = {
   COMMUNICATION: '의사소통', LIFESTYLE: '생활습관', MEAL: '식사',
-  PREFERENCE: '선호·비선호', CHALLENGING_BEHAVIOR: '주의 사항',
+  PREFERENCE: '선호·비선호', CHALLENGING_BEHAVIOR: '행동 특성과 지원 방법',
   HEALTH: '건강·복약', EMERGENCY: '위기대처', OTHER: '기타',
 };
 

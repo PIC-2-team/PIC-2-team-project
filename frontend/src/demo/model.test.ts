@@ -113,12 +113,12 @@ describe('돌봄 데모 상태', () => {
     expect(readDemo('invalid').version).toBe(1);
     expect(readDemo('{"version":1}').records.length).toBeGreaterThan(0);
   });
-  it('기존 저장값에서 주의 사항 기록 요청과 지원사 알림을 제거한다', () => {
+  it('기존 저장값에서 행동 특성과 지원 방법 기록 요청과 지원사 알림을 제거한다', () => {
     const legacy = createDemo();
     legacy.requests.push({
       id: 'old-request',
       recipientId: 'p1',
-      content: '주의 사항 관찰 내용을 기록해주세요.',
+      content: '행동 특성과 지원 방법 관찰 내용을 기록해주세요.',
       kind: 'information',
       status: 'pending',
       response: '',

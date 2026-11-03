@@ -11,7 +11,7 @@ public class KeywordCategoryClassifier {
     private record CategoryRule(RecordCategory category, double weight, List<String> keywords) {}
 
     // 카테고리별 키워드 및 가중치 정의
-    // 위기대처(EMERGENCY) 및 주의 사항(CHALLENGING_BEHAVIOR)은 안전 관련이므로 더 높은 가중치 부여
+    // 위기대처(EMERGENCY) 및 행동 특성과 지원 방법(CHALLENGING_BEHAVIOR)은 안전 관련이므로 더 높은 가중치 부여
     private static final List<CategoryRule> RULES = List.of(
             new CategoryRule(RecordCategory.EMERGENCY, 3.0, List.of(
                     "응급", "119", "구급차", "실종", "부상", "낙상", "골절", "화상",
@@ -21,7 +21,7 @@ public class KeywordCategoryClassifier {
             new CategoryRule(RecordCategory.CHALLENGING_BEHAVIOR, 2.0, List.of(
                     "소리지르", "자해", "공격", "때리", "꼬집", "물어", "물기", "던지",
                     "부수", "뛰쳐", "배회", "침뱉", "고함", "울부짖", "떼쓰", "머리박",
-                    "할퀴", "난폭", "발버둥", "자해행동", "주의사항"
+                    "할퀴", "난폭", "발버둥", "자해행동", "행동 특성과 지원 방법"
             )),
             new CategoryRule(RecordCategory.HEALTH, 1.5, List.of(
                     "약", "복약", "투약", "처방", "병원", "진료", "의사", "간호사",

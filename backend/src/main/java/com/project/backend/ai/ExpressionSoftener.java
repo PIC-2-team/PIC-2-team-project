@@ -22,7 +22,7 @@ public class ExpressionSoftener {
         add("장애우", "장애인");
         add("정신(?:지체|박약)(?=\\s?장애)", "지적");
         add("정신(?:지체|박약)", "지적장애");
-        add("문제\\s?행동", "주의 사항");
+        add("문제\\s?행동", "행동 특성과 지원 방법");
     }
 
     private static void add(String regex, String replacement) {

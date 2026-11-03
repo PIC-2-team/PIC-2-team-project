@@ -41,7 +41,7 @@ class KeywordCategoryClassifierTest {
     }
 
     @Test
-    @DisplayName("주의 사항 관련 키워드가 포함되면 CHALLENGING_BEHAVIOR로 분류된다")
+    @DisplayName("행동 특성과 지원 방법 관련 키워드가 포함되면 CHALLENGING_BEHAVIOR로 분류된다")
     void classifiesChallengingBehavior() {
         RecordCategory category = classifier.classify("자신의 뜻대로 되지 않자 고함을 지르고 머리를 박는 자해 행동을 보였습니다.");
         assertThat(category).isEqualTo(RecordCategory.CHALLENGING_BEHAVIOR);
