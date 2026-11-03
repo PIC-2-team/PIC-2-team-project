@@ -13,7 +13,7 @@ function formatTimer(sec: number): string {
 const CATEGORIES: { id: RecordCategory; label: string }[] = [
   { id: 'COMMUNICATION', label: '의사소통' }, { id: 'LIFESTYLE', label: '생활습관' },
   { id: 'MEAL', label: '식사' }, { id: 'PREFERENCE', label: '선호·비선호' },
-  { id: 'CHALLENGING_BEHAVIOR', label: '도전행동' }, { id: 'HEALTH', label: '건강·복약' },
+  { id: 'CHALLENGING_BEHAVIOR', label: '주의 사항' }, { id: 'HEALTH', label: '건강·복약' },
   { id: 'EMERGENCY', label: '위기대처' }, { id: 'OTHER', label: '기타' },
 ];
 

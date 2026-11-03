@@ -11,7 +11,7 @@ public class KeywordCategoryClassifier {
     private record CategoryRule(RecordCategory category, double weight, List<String> keywords) {}
 
     // 카테고리별 키워드 및 가중치 정의
-    // 위기대처(EMERGENCY) 및 도전행동(CHALLENGING_BEHAVIOR)은 안전/위험 관련이므로 더 높은 가중치 부여
+    // 위기대처(EMERGENCY) 및 주의 사항(CHALLENGING_BEHAVIOR)은 안전 관련이므로 더 높은 가중치 부여
     private static final List<CategoryRule> RULES = List.of(
             new CategoryRule(RecordCategory.EMERGENCY, 3.0, List.of(
                     "응급", "119", "구급차", "실종", "부상", "낙상", "골절", "화상",

@@ -75,8 +75,8 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
     ),
   },
   CHALLENGING_BEHAVIOR: {
-    label: '도전행동 · 주의사항',
-    desc: '주의 행동 및 대처법',
+    label: '주의 사항',
+    desc: '주의가 필요한 상황 및 대처법',
     bg: '#fef3e2',
     color: '#e65100',
     normalizedCategory: 'CHALLENGING_BEHAVIOR',
