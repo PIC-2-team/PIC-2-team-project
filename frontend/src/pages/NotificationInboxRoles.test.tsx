@@ -67,6 +67,41 @@ describe('NotificationInboxPage 역할별 알림 확인 및 딥링크 테스트'
     });
   });
 
+  it('활동지원사(SUPPORT_WORKER): 배정 알림 클릭 시 /care-info로 이동한다', async () => {
+    currentRole = 'SUPPORT_WORKER';
+    const notifs: NotificationItem[] = [
+      {
+        id: 11,
+        type: 'ASSIGNMENT_CHANGED',
+        message: '새 당사자 김삼결님이 배정되었습니다. 프로필 보러가기 >',
+        read: false,
+        createdAt: '2026-10-22T08:00:00Z',
+      },
+    ];
+    vi.spyOn(notificationApi, 'getNotifications').mockResolvedValue({
+      items: notifs,
+      pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+    });
+    vi.spyOn(notificationApi, 'markNotificationRead').mockResolvedValue({ ...notifs[0], read: true });
+
+    render(
+      <MemoryRouter>
+        <NotificationInboxPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/새 당사자 김삼결님이 배정/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/새 당사자 김삼결님이 배정/));
+
+    await waitFor(() => {
+      expect(notificationApi.markNotificationRead).toHaveBeenCalledWith(11, true);
+      expect(mockNavigate).toHaveBeenCalledWith('/care-info');
+    });
+  });
+
   it('기관 담당자(INSTITUTION): 배정/연계 알림 클릭 시 /agency로 이동한다', async () => {
     currentRole = 'INSTITUTION';
     const notifs: NotificationItem[] = [

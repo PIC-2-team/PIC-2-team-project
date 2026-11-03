@@ -26,7 +26,7 @@ function getDestination(type: NotificationType, role?: string): string {
     case 'ASSIGNMENT_CHANGED':
       if (role === 'INSTITUTION') return '/agency';
       if (role === 'GUARDIAN') return '/care-relations';
-      return '/home';
+      return '/care-info';
     case 'ORGANIZATION_LINK_REQUESTED':
       return role === 'INSTITUTION' ? '/agency' : '/care-relations';
     default:
