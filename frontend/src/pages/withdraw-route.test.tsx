@@ -47,9 +47,9 @@ it('관리자는 주소로 직접 열어도 탈퇴 화면에 들어갈 수 없�
   memoryRouter.dispose();
 });
 
-it('로그인하지 않으면 탈퇴 화면 대신 로그인 화면으로 보내진다', async () => {
+it('로그인하지 않으면 탈퇴 화면 대신 역할 선택 화면으로 보내진다', async () => {
   const memoryRouter = open('/withdraw');
 
-  await vi.waitFor(() => expect(memoryRouter.state.location.pathname).toBe('/login'));
+  await vi.waitFor(() => expect(memoryRouter.state.location.pathname).toBe('/'));
   memoryRouter.dispose();
 });

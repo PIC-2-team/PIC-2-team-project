@@ -16,11 +16,11 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it('앱 첫 화면에서 이용 동의 단계를 거치지 않고 로그인 화면을 보여준다', async () => {
+it('앱 첫 화면에서 역할 선택 화면을 보여준다', async () => {
   const memoryRouter = createMemoryRouter(router.routes, { initialEntries: ['/'] });
   render(<AuthProvider><RouterProvider router={memoryRouter} /></AuthProvider>);
 
-  await screen.findByRole('heading', { name: '로그인' });
+  await screen.findByRole('heading', { name: '어떤 역할로 체험하시겠어요?' });
   expect(memoryRouter.state.location.pathname).toBe('/');
   memoryRouter.dispose();
 });
@@ -90,7 +90,7 @@ it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다'
   memoryRouter.dispose();
 });
 
-it('기록 화면에서 세션 갱신에 실패하면 로그인 화면으로 보내고 복귀 경로를 보존한다', async () => {
+it('기록 화면에서 세션 갱신에 실패하면 역할 선택 화면으로 보낸다', async () => {
   let expireSession = false;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const url = String(input);
@@ -118,8 +118,8 @@ it('기록 화면에서 세션 갱신에 실패하면 로그인 화면으로 보
   expireSession = true;
   await memoryRouter.navigate('/records');
 
-  await screen.findByRole('heading', { name: '로그인' });
-  expect(memoryRouter.state.location.pathname).toBe('/login');
-  expect(memoryRouter.state.location.search).toBe('?redirect=%2Frecords');
+  await screen.findByRole('heading', { name: '어떤 역할로 체험하시겠어요?' });
+  expect(memoryRouter.state.location.pathname).toBe('/');
+  expect(memoryRouter.state.location.search).toBe('');
   memoryRouter.dispose();
 });
