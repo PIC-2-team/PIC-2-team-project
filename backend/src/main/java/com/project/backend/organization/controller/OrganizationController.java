@@ -2,8 +2,11 @@ package com.project.backend.organization.controller;
 
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
+import com.project.backend.care.dto.GuardianClaimResponse;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
 import com.project.backend.care.service.CareRecipientService;
+import com.project.backend.care.service.GuardianClaimService;
+import com.project.backend.common.exception.ApiException;
 import com.project.backend.common.response.ApiResponse;
 import com.project.backend.organization.dto.*;
 import com.project.backend.organization.service.CareAssignmentService;
@@ -29,6 +32,14 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final CareAssignmentService careAssignmentService;
     private final CareRecipientService careRecipientService;
+    private final GuardianClaimService guardianClaimService;
+
+    @Operation(summary = "활동지원사 소속 기관 QR 코드 확인")
+    @PostMapping("/worker/verify")
+    public ApiResponse<OrganizationResponse> verifyWorkerOrganization(@AuthenticationPrincipal Long userId,
+                                                                       @Valid @RequestBody VerifyWorkerOrganizationRequest request) {
+        return ApiResponse.ok(organizationService.verifyWorkerOrganization(userId, request.organizationCode()));
+    }
 
     @Operation(summary = "기관 등록 (6자리 코드)")
     @PostMapping
@@ -57,7 +68,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.getMember(userId, memberId));
     }
 
-    @Operation(summary = "지원사 추가")
+    @Operation(summary = "지원사 고유 코드로 소속 등록")
     @PostMapping("/me/members")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MemberResponse> addMember(@AuthenticationPrincipal Long userId,
@@ -65,12 +76,20 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.addMember(userId, request));
     }
 
-    @Operation(summary = "지원사 상태 및 정보 변경")
+    @Operation(summary = "지원사 소속 상태 변경")
     @PatchMapping("/me/members/{memberId}")
     public ApiResponse<MemberResponse> updateMemberStatus(@AuthenticationPrincipal Long userId,
                                                            @PathVariable Long memberId,
                                                            @RequestBody UpdateMemberRequest request) {
         return ApiResponse.ok(organizationService.updateMember(userId, memberId, request));
+    }
+
+    @Operation(summary = "기관 지원사의 특성 메모 수정")
+    @PatchMapping("/me/members/{memberId}/characteristics")
+    public ApiResponse<MemberResponse> updateMemberCharacteristics(@AuthenticationPrincipal Long userId,
+                                                                    @PathVariable Long memberId,
+                                                                    @Valid @RequestBody UpdateMemberCharacteristicsRequest request) {
+        return ApiResponse.ok(organizationService.updateMemberCharacteristics(userId, memberId, request));
     }
 
     @Operation(summary = "지원사 삭제 (소속 해제)")
@@ -87,7 +106,7 @@ public class OrganizationController {
         return ApiResponse.ok(organizationService.getGuardians(userId));
     }
 
-    @Operation(summary = "기관 돌봄 보호자 등록")
+    @Operation(summary = "보호자 고유 코드로 기관 등록")
     @PostMapping("/me/guardians")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<OrganizationGuardianResponse> registerGuardian(@AuthenticationPrincipal Long userId,
@@ -121,7 +140,7 @@ public class OrganizationController {
     @PatchMapping("/me/recipients/{recipientId}")
     public ApiResponse<CareRecipientResponse> updateRecipient(@AuthenticationPrincipal Long userId,
                                                                @PathVariable Long recipientId,
-                                                               @RequestBody UpdateCareRecipientRequest request) {
+                                                               @Valid @RequestBody UpdateCareRecipientRequest request) {
         return ApiResponse.ok(careRecipientService.updateByOrganization(userId, recipientId, request));
     }
 
@@ -144,6 +163,24 @@ public class OrganizationController {
     @GetMapping("/me/link-requests")
     public ApiResponse<List<LinkRequestResponse>> getLinkRequests(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(organizationService.getLinkRequests(userId));
+    }
+
+    @Operation(summary = "이관된 당사자 재연결 요청 목록 조회")
+    @GetMapping("/me/guardian-claims")
+    public ApiResponse<List<GuardianClaimResponse>> getGuardianClaims(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(guardianClaimService.list(userId));
+    }
+
+    @Operation(summary = "이관된 당사자 재연결 요청 수락/거절")
+    @PostMapping("/me/guardian-claims/{claimId}/{decision}")
+    public ApiResponse<Void> decideGuardianClaim(@AuthenticationPrincipal Long userId,
+                                                 @PathVariable Long claimId,
+                                                 @PathVariable String decision) {
+        if (!"accept".equalsIgnoreCase(decision) && !"reject".equalsIgnoreCase(decision)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DECISION", "accept 또는 reject만 사용할 수 있습니다.");
+        }
+        guardianClaimService.decide(userId, claimId, "accept".equalsIgnoreCase(decision));
+        return ApiResponse.ok(null);
     }
 
     @Operation(summary = "지원사 배정")

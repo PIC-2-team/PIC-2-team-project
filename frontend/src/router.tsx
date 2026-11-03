@@ -5,28 +5,29 @@ import { RequireRecipient } from './components/RequireRecipient';
 import { RequireRole } from './components/RequireRole';
 import { ConsentPage } from './pages/ConsentPage';
 import { LoginPage } from './pages/LoginPage';
-import { DemoEntryPage } from './pages/DemoEntryPage';
 import { HomePage } from './pages/HomePage';
 import { DailyRecordPage } from './pages/DailyRecordPage';
+import { DeletedRecordsPage } from './pages/DeletedRecordsPage';
 import { RecordFormPage } from './pages/RecordFormPage';
-import { RecordDetailPage } from './pages/RecordDetailPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
+import { WithdrawPage } from './pages/WithdrawPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CareRecipientRegistrationPage } from './pages/CareRecipientRegistrationPage';
 import { GoogleRegisterPage } from './pages/GoogleRegisterPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { RecordRequestPage } from './pages/RecordRequestPage';
 import { SecondaryGuardianPage } from './pages/SecondaryGuardianPage';
 import { CareRelationsPage } from './pages/CareRelationsPage';
-import { RecordSuggestionsPage } from './pages/RecordSuggestionsPage';
+import { WorkerOrganizationPage } from './pages/WorkerOrganizationPage';
 import { NotificationInboxPage } from './pages/NotificationInboxPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { LegacyRecordDetailRedirect } from './components/LegacyRecordDetailRedirect';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <DemoEntryPage /> },
+  { path: '/', element: <LoginPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/consent', element: <ConsentPage /> },
   { path: '/register', element: <RegisterPage /> },
@@ -47,24 +48,41 @@ export const router = createBrowserRouter([
             element: <RequireRecipient />,
             children: [
               { path: '/records', element: <DailyRecordPage /> },
+              {
+                element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER']} />,
+                children: [{ path: '/records/deleted', element: <DeletedRecordsPage /> }],
+              },
               { path: '/care-info', element: <CareInfoPage /> },
+              { path: '/profile', element: <ProfilePage /> },
             ],
           },
           { path: '/more', element: <MorePage /> },
+          {
+            // 관리자는 탈퇴 대상이 아니다. 더보기에서만 들어오지만 주소로 직접 열 수도 있어 막는다
+            element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER', 'INSTITUTION']} />,
+            children: [{ path: '/withdraw', element: <WithdrawPage /> }],
+          },
           { path: '/notifications', element: <NotificationInboxPage /> },
         ],
       },
       {
+        element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER']} />,
+        children: [{
+          element: <RequireRecipient />,
+          children: [{ path: '/records/new', element: <RecordFormPage /> }],
+        }],
+      },
+      {
         element: <RequireRecipient />,
         children: [
-          { path: '/records/:id', element: <RecordDetailPage /> },
+          { path: '/records/:id', element: <LegacyRecordDetailRedirect /> },
           { path: '/care-info/:categoryId', element: <CareInfoDetailPage /> },
         ],
       },
     ],
   },
 
-  // GUARDIAN 전용 — 활동지원사는 기록 작성 불가
+  // GUARDIAN 전용
   {
     element: <RequireAuth />,
     children: [
@@ -73,10 +91,8 @@ export const router = createBrowserRouter([
         children: [{
           element: <RequireRecipient />,
           children: [
-            { path: '/records/new', element: <RecordFormPage /> },
             { path: '/secondary-guardian', element: <SecondaryGuardianPage /> },
             { path: '/care-relations', element: <CareRelationsPage /> },
-            { path: '/record-suggestions', element: <RecordSuggestionsPage /> },
           ],
         }],
       },
@@ -89,13 +105,7 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <RequireRole role="SUPPORT_WORKER" />,
-        children: [{
-          element: <RequireRecipient />,
-          children: [
-            { path: '/record-requests/new', element: <RecordRequestPage /> },
-            { path: '/care-info/request', element: <RecordRequestPage /> },
-          ],
-        }],
+        children: [{ path: '/worker/organization', element: <WorkerOrganizationPage /> }],
       },
     ],
   },

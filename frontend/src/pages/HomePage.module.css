@@ -6,6 +6,70 @@
   min-height: 100%;
 }
 
+.emptyPage {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 20px 16px 28px;
+}
+
+.emptyGreeting {
+  margin: 0;
+  color: #1a2533;
+  font-size: 1.125rem;
+  font-weight: 750;
+}
+
+.emptyRecipient {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1.25rem;
+  border: 1px dashed #d5dce2;
+  border-radius: 16px;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.emptyAvatar {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8edf0;
+  color: #6d8a9a;
+  font-size: 1.8rem;
+}
+
+.emptyRecipient h2 {
+  margin: 0;
+  color: #25313b;
+  font-size: 1rem;
+}
+
+.emptyRecipient p {
+  margin: 0;
+  color: #7c8790;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.emptyRegisterButton {
+  min-height: 50px;
+  border: 0;
+  border-radius: 11px;
+  background: #202124;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .profile {
   display: flex;
   align-items: center;
@@ -402,6 +466,11 @@
   color: #1a2533;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.memoIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 @keyframes fadeIn {

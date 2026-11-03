@@ -9,7 +9,7 @@ date: 2026-10-22
 
 ## 상태
 
-승인됨
+승인됨 — 이후 변경된 모델에 맞춘 보완은 [ADR-014](014-account-deletion-policy-update.md)를 따른다.
 
 ## 맥락
 

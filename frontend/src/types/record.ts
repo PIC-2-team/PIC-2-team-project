@@ -12,10 +12,24 @@ export type RecordCategory =
 
 export type DailyRecord = {
   id: number;
+  author?: { id: number; name: string; role: string; publicCode?: string };
   content: string;
   category: RecordCategory;
   recordedAt: string; // ISO 8601
   pinned?: boolean;
+  media?: RecordMedia[];
+};
+
+export type RecordMedia = {
+  mediaId: number;
+  fileName: string;
+  mediaType: string;
+  sizeBytes: number;
+};
+
+export type DeletedRecord = Pick<DailyRecord, 'id' | 'content' | 'category' | 'recordedAt'> & {
+  deletedAt: string;
+  restoreUntil: string;
 };
 
 export type CreateRecordPayload = {
@@ -23,6 +37,7 @@ export type CreateRecordPayload = {
   category: RecordCategory;
   recordedAt: string;
   pinned?: boolean;
+  mediaIds?: number[];
 };
 
 export type UpdateRecordPayload = {
@@ -30,20 +45,6 @@ export type UpdateRecordPayload = {
   category?: RecordCategory;
   recordedAt?: string;
   mediaIds?: number[];
-};
-
-export type RecordRequestStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
-
-export type RecordRequestItem = {
-  id: number;
-  organizationId: number;
-  careRecipientId: number;
-  supportWorkerId: number;
-  idempotencyKey: string;
-  message?: string;
-  completedRecordId?: number | null;
-  status: RecordRequestStatus;
-  createdAt: string;
 };
 
 export type RecordRevision = {

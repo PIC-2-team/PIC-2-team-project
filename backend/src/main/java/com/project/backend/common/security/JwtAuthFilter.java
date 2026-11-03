@@ -1,5 +1,6 @@
 package com.project.backend.common.security;
 
+import com.project.backend.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -29,12 +31,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (StringUtils.hasText(token) && jwtProvider.isValid(token)) {
             Long userId = jwtProvider.extractUserId(token);
-            String role = jwtProvider.extractRole(token);
-
-            var auth = new UsernamePasswordAuthenticationToken(
-                userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
-            );
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            // 탈퇴한 계정의 액세스 토큰이 만료 전까지 통과하지 않도록 요청마다 확인한다 (ADR-014)
+            if (userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+                String role = jwtProvider.extractRole(token);
+                var auth = new UsernamePasswordAuthenticationToken(
+                    userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
         }
 
         filterChain.doFilter(request, response);

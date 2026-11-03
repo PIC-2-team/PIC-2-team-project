@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 
 export function RequireRecipient() {
-  const layout = useOutletContext<{ hasAppShell: boolean } | undefined>();
+  const layout = useOutletContext<{ hasAppShell: boolean; recordVersion?: number } | undefined>();
   const { selectedRecipientId, setSelectedRecipient } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [empty, setEmpty] = useState(false);
@@ -25,7 +25,7 @@ export function RequireRecipient() {
     return () => { active = false; };
   }, [selectedRecipientId, setSelectedRecipient]);
 
-  if (selectedRecipientId !== null) return <Outlet />;
+  if (selectedRecipientId !== null) return <Outlet context={layout} />;
   const content = (
     <div className="demo-page status-page">
       {error || empty ? (

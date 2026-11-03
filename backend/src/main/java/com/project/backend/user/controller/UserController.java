@@ -5,6 +5,8 @@ import com.project.backend.common.response.ApiResponse;
 import com.project.backend.user.dto.ChangePasswordRequest;
 import com.project.backend.user.dto.NotificationSettingsResponse;
 import com.project.backend.user.dto.UpdateProfileRequest;
+import com.project.backend.user.dto.WithdrawRequest;
+import com.project.backend.user.dto.WithdrawalPreviewResponse;
 import com.project.backend.user.dto.UpdateNotificationSettingsRequest;
 import com.project.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,5 +59,19 @@ public class UserController {
     public void changePassword(@AuthenticationPrincipal Long userId,
                                 @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(userId, request);
+    }
+
+    @Operation(summary = "회원 탈퇴 미리보기 (당사자별 선택 가능 여부)")
+    @GetMapping("/me/withdrawal-preview")
+    public ApiResponse<WithdrawalPreviewResponse> withdrawalPreview(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(userService.withdrawalPreview(userId));
+    }
+
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(@AuthenticationPrincipal Long userId,
+                         @RequestBody(required = false) WithdrawRequest request) {
+        userService.withdraw(userId, request);
     }
 }

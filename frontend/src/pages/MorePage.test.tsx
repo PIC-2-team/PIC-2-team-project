@@ -55,31 +55,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('활동지원사 로그인 시 돌봄 협업 섹션과 돌봄 내용 수정 요청 메뉴가 표시된다', () => {
-  render(
-    <MemoryRouter>
-      <MorePage />
-    </MemoryRouter>
-  );
-
-  expect(screen.getByText('활동지원사')).toBeInTheDocument();
-  expect(screen.getByText('돌봄 협업')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /돌봄 내용 수정 요청/ })).toBeInTheDocument();
-});
-
-it('돌봄 내용 수정 요청 클릭 시 /record-requests/new 경로로 이동한다', () => {
-  render(
-    <MemoryRouter>
-      <MorePage />
-    </MemoryRouter>
-  );
-
-  const requestMenu = screen.getByRole('button', { name: /돌봄 내용 수정 요청/ });
-  fireEvent.click(requestMenu);
-
-  expect(mockNavigate).toHaveBeenCalledWith('/record-requests/new');
-});
-
 it('돌봄 보호자 로그인 시 돌봄 협업 섹션이 표시되지 않는다', () => {
   mockUser = {
     id: 2,
@@ -109,7 +84,13 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
     careRecipientNumber: 'REC-2026-0001',
     birthDate: '2010-05-15',
     gender: 'MALE',
-    disabilityGrade: 1,
+    disabilitySeverity: 'SEVERE',
+    hospitalName: '삼결병원',
+    doctorName: '김의사',
+    hospitalPhone: '053-000-0000',
+    supportCenterName: '행복센터',
+    supportCenterManagerName: '박담당',
+    supportCenterPhone: '053-111-1111',
   });
 
   render(
@@ -126,7 +107,9 @@ it('프로필 아바타 원을 클릭하면 당사자 프로필 모달이 열리
   expect(await screen.findByText('김당사 님')).toBeInTheDocument();
   expect(screen.getByText(/REC-2026-0001/)).toBeInTheDocument();
   expect(screen.getByText(/2010-05-15/)).toBeInTheDocument();
-  expect(screen.getByText(/1급/)).toBeInTheDocument();
+  expect(screen.getByText(/심한 장애/)).toBeInTheDocument();
+  expect(screen.getByText('삼결병원 · 김의사 · 053-000-0000')).toBeInTheDocument();
+  expect(screen.getByText('행복센터 · 박담당 · 053-111-1111')).toBeInTheDocument();
 
   // 닫기 버튼 클릭
   const closeBtn = screen.getByRole('button', { name: '닫기' });
@@ -209,11 +192,11 @@ it('회원 탈퇴 버튼이 로그아웃 버튼 아래에 표시된다', () => {
   expect(withdrawBtn).toBeInTheDocument();
 });
 
-it('회원 탈퇴는 준비 중으로 안내하고 API 호출이나 로그아웃을 하지 않는다', () => {
+it('회원 탈퇴를 누르면 바로 탈퇴하지 않고 탈퇴 화면으로 이동한다', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   render(<MemoryRouter><MorePage /></MemoryRouter>);
   fireEvent.click(screen.getByRole('button', { name: '회원 탈퇴' }));
-  expect(screen.getByRole('status')).toHaveTextContent('회원 탈퇴 기능은 준비 중입니다.');
+  expect(mockNavigate).toHaveBeenCalledWith('/withdraw');
   expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   expect(fetchSpy).not.toHaveBeenCalled();
   expect(mockLogout).not.toHaveBeenCalled();
@@ -260,4 +243,16 @@ it('더보기에서 당사자 전환 시 공통 선택 상태를 변경한다', 
   fireEvent.change(select, { target: { value: '2' } });
   expect(mockSetSelectedRecipient).toHaveBeenCalledWith(2);
   expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+it('프로필 모달의 버튼을 누르면 프로필 화면으로 이동하고 모달이 닫힌다', async () => {
+  mockSelectedRecipientId = 42;
+  vi.spyOn(recipientsApi, 'getCareRecipient').mockResolvedValue({ id: 42, name: '김당사' });
+  render(<MemoryRouter><MorePage /></MemoryRouter>);
+
+  fireEvent.click(screen.getByRole('button', { name: '돌봄 대상자 프로필 보기' }));
+  fireEvent.click(await screen.findByRole('button', { name: '프로필 보기·수정' }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/profile');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

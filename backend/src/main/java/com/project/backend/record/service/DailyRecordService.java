@@ -12,6 +12,7 @@ import com.project.backend.record.entity.*;
 import com.project.backend.record.media.RecordMedia;
 import com.project.backend.record.media.RecordMediaService;
 import com.project.backend.record.repository.*;
+import com.project.backend.notification.service.NotificationService;
 import com.project.backend.user.entity.User;
 import com.project.backend.user.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -40,12 +41,12 @@ public class DailyRecordService {
     private final RecordMediaService media;
     private final Clock clock;
     private final AccessLogService accessLogService;
+    private final NotificationService notifications;
 
     public RecordResponse create(Long userId, Long recipientId, CreateRecordRequest request) {
         access.verifyCreate(userId, recipientId);
         boolean pinned = Boolean.TRUE.equals(request.pinned());
         if (pinned) access.verifyGuardian(userId, recipientId);
-        rejectPendingRecordRequest(request.recordRequestId());
         List<RecordMedia> attached = media.validateIds(recipientId, request.mediaIds());
         CareRecipient recipient = lockRecipient(recipientId);
         DailyRecord record = records.save(DailyRecord.builder().careRecipientId(recipientId).authorId(userId)
@@ -53,6 +54,7 @@ public class DailyRecordService {
                 .pinned(pinned).now(clock.instant()).build());
         media.replaceLinks(record.getId(), attached);
         recipient.updateLatestRecordAt(LocalDateTime.ofInstant(record.getRecordedAt(), ZoneOffset.UTC));
+        notifications.notifyRecordCreatedGuardians(recipientId, recordNotificationMessage(recipient, record));
         RecordResponse result = response(record);
         accessLogService.log(userId, recipientId, AccessLogAction.CREATE, AccessLogResourceType.RECORD, record.getId());
         return result;
@@ -88,7 +90,7 @@ public class DailyRecordService {
     public DeleteRecordResponse delete(Long userId, Long recipientId, Long recordId) {
         access.verifyRead(userId, recipientId);
         DailyRecord record = active(find(recipientId, recordId, true));
-        access.verifyEdit(userId, recipientId, record.getAuthorId());
+        access.verifyDelete(userId, recipientId, record.getAuthorId());
         record.delete(clock.instant());
         accessLogService.log(userId, recipientId, AccessLogAction.DELETE, AccessLogResourceType.RECORD, recordId);
         return new DeleteRecordResponse(record.getDeletedAt(), record.getDeletedAt().plus(RESTORE_WINDOW));
@@ -104,6 +106,22 @@ public class DailyRecordService {
         }
         record.restore(now);
         return response(record);
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedData<DeletedRecordResponse> deleted(Long userId, Long recipientId, int page, int pageSize) {
+        access.verifyCreate(userId, recipientId);
+        Instant now = clock.instant();
+        Pageable pageable = pageable(page, pageSize, "deletedAt");
+        Page<DailyRecord> result = records.findAll((root, query, cb) -> cb.and(
+                cb.equal(root.get("careRecipientId"), recipientId),
+                cb.equal(root.get("authorId"), userId),
+                cb.isNotNull(root.get("deletedAt")),
+                cb.greaterThan(root.get("deletedAt"), now.minus(RESTORE_WINDOW))), pageable);
+        accessLogService.log(userId, recipientId, AccessLogAction.VIEW, AccessLogResourceType.RECORD, null);
+        return new PaginatedData<>(result.stream()
+                .map(record -> DeletedRecordResponse.of(record, record.getDeletedAt().plus(RESTORE_WINDOW)))
+                .toList(), pagination(result));
     }
 
     public RecordResponse pin(Long userId, Long recipientId, Long recordId, boolean pinned) {
@@ -191,12 +209,6 @@ public class DailyRecordService {
         return users.findAllById(new HashSet<>(ids)).stream().collect(Collectors.toMap(User::getId, Function.identity()));
     }
 
-    private void rejectPendingRecordRequest(Long recordRequestId) {
-        if (recordRequestId != null) {
-            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "UNSUPPORTED_RECORD_LINK", "기록 요청 연결은 아직 지원하지 않습니다.");
-        }
-    }
-
     private Pageable pageable(int page, int size, String sortField) {
         if (page < 1 || size < 1 || size > 100) throw invalidQuery();
         return PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, sortField, "id"));
@@ -223,6 +235,24 @@ public class DailyRecordService {
 
     private ApiException invalidQuery() {
         return new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "날짜 또는 페이지 조건이 올바르지 않습니다.");
+    }
+
+    private String recordNotificationMessage(CareRecipient recipient, DailyRecord record) {
+        return recipient.getName() + "님의 돌봄 기록이 등록됐어요. "
+                + recordCategoryLabel(record.getCategory()) + ": " + record.getContent();
+    }
+
+    private String recordCategoryLabel(RecordCategory category) {
+        return switch (category) {
+            case COMMUNICATION -> "의사소통";
+            case LIFESTYLE -> "생활습관";
+            case MEAL -> "식사";
+            case PREFERENCE -> "선호·비선호";
+            case CHALLENGING_BEHAVIOR -> "도전행동";
+            case HEALTH -> "건강·복약";
+            case EMERGENCY -> "위기대처";
+            case OTHER -> "기타";
+        };
     }
 
     private Specification<DailyRecord> filter(Long recipientId, Instant[] range) {

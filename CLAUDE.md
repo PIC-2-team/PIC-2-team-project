@@ -24,9 +24,9 @@
 
 | 역할 | 설명 | 앱 내 행동 |
 |------|------|-----------|
-| **돌봄 보호자** (주 타겟) | 발달장애인의 부모·가족. 정보를 가장 많이 보유 | 기록 작성·수정, 접근 권한 관리, 기관 선택 |
+| **돌봄 보호자** (주 타겟) | 발달장애인의 부모·가족. 정보를 가장 많이 보유 | 기록 작성·본인 기록 수정·삭제, 접근 권한 관리, 기관 선택 |
 | **세컨드 보호자** | 보호자가 지정한 권한 대리인. 보호자 부재 시 활성화 | 보호자와 동일한 권한 |
-| **돌봄 제공자** | 활동지원사, 복지관 사회복지사 등 | 기록 열람, 수정 제안 |
+| **돌봄 제공자** | 활동지원사, 복지관 사회복지사 등 | 기록 열람, 담당 당사자 기록 작성·본인 기록 수정·삭제 |
 
 > 발달장애인 당사자 직접 사용은 MVP 범위 밖
 
@@ -40,7 +40,7 @@
 | M4 | 역할별 접근 권한 관리 | 기관이 활동지원사를 배정·종료. 담당 종료 시 접근 즉시 회수. 보호자는 기관 코드로 기관 이전 가능 |
 | M5 | 지속 업데이트 | 장기 누적·수정 가능 |
 | M6 | AI 기록 정리 | 음성/텍스트 입력 → AI가 카테고리 자동 배정 후 일지 형태로 정리 |
-| M7 | 수정 제안 | 활동지원사가 오기록 또는 추가 정보를 보호자에게 제안 (보호자 승인 후 반영) |
+| M7 | 작성자별 기록 관리 | 보호자·활동지원사가 본인 작성 기록을 수정·삭제. 배정 종료 시 활동지원사의 접근 회수 |
 
 ## 정보 기록 카테고리
 
@@ -92,7 +92,7 @@
 /
 ├── frontend/          # React PWA
 │   └── src/
-│       ├── pages/     # ConsentPage, HomePage, DailyRecordPage, CareInfoPage, MorePage, RecordFormPage
+│       ├── pages/     # 화면 (라우트별 페이지는 아래 라우트 매핑 표 참고)
 │       ├── layouts/   # AppLayout (하단 탭 네비게이션)
 │       ├── components/
 │       ├── router.tsx
@@ -106,14 +106,32 @@
 
 ## 라우트 매핑
 
+기준: `frontend/src/router.tsx`. 라우트를 바꾸는 PR은 이 표도 같이 고친다.
+
 | 라우트 | 페이지 | 접근 |
 |--------|--------|------|
-| `/` | ConsentPage | 공통 |
-| `/home` | HomePage | 공통 (AppLayout) |
-| `/records` | DailyRecordPage | 공통 (AppLayout) |
-| `/care-info` | CareInfoPage | 공통 (AppLayout) |
-| `/more` | MorePage | 공통 (AppLayout) |
-| `/records/new` | RecordFormPage | 공통 |
+| `/`, `/login` | LoginPage (로그인·계정 찾기) | 비로그인 |
+| `/consent` | ConsentPage (역할 선택·이용 동의) | 비로그인 |
+| `/register` | RegisterPage | 비로그인 |
+| `/google-register` | GoogleRegisterPage | Google 신규 가입 |
+| `/home` | HomePage | 보호자·지원사 (기관은 `/agency`, 관리자는 `/admin`으로 이동) |
+| `/records` | DailyRecordPage (기록·일정) | 로그인 + 당사자 선택 |
+| `/records/new` | RecordFormPage | 보호자·지원사 |
+| `/records/deleted` | DeletedRecordsPage | 보호자·지원사 |
+| `/care-info` | CareInfoPage | 로그인 + 당사자 선택 |
+| `/care-info/:categoryId` | CareInfoDetailPage | 로그인 + 당사자 선택 |
+| `/profile` | ProfilePage (편집은 보호자) | 로그인 + 당사자 선택 |
+| `/more` | MorePage | 로그인 |
+| `/notifications` | NotificationInboxPage | 로그인 |
+| `/withdraw` | WithdrawPage (회원 탈퇴) | 보호자·지원사·기관 |
+| `/care-recipients/new` | CareRecipientRegistrationPage | 보호자 |
+| `/care-relations` | CareRelationsPage | 보호자 |
+| `/secondary-guardian` | SecondaryGuardianPage | 보호자 |
+| `/worker/organization` | WorkerOrganizationPage | 지원사 |
+| `/agency` | AgencyDashboardPage (`?tab=home\|workers\|assignments`) | 기관 |
+| `/admin` | AdminDashboardPage | 관리자 |
+
+`/records/:id`는 기록 목록의 상세 모달로 이동하는 옛 경로다. 알 수 없는 경로는 NotFoundPage가 처리한다.
 
 ---
 
@@ -141,6 +159,7 @@
 
 1. GitHub Issue로 작업을 정의한다
 2. 기술 스택·DB·인증·외부 서비스·아키텍처처럼 되돌리기 어려운 결정은 구현 전에 ADR을 작성한다 (`docs/decisions/NNN-title.md`) — 검토한 대안과 선택 이유를 반드시 포함한다
+   - ADR 번호 규칙과 색인은 [docs/decisions/README.md](docs/decisions/README.md), 운영 DB 수동 SQL 규칙은 [backend/src/main/resources/db/manual/README.md](backend/src/main/resources/db/manual/README.md)를 따른다
 3. `develop`에서 분기한 브랜치에서 작업한다
 4. 핵심 로직과 버그 수정은 테스트를 먼저 작성한다
 5. 검증 후 PR을 통해 `develop`에 병합한다

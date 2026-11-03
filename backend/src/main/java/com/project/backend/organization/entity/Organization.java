@@ -39,6 +39,10 @@ public class Organization {
         this.ownerId = ownerId;
     }
 
+    public void changeCode(String organizationCode) {
+        this.organizationCode = organizationCode;
+    }
+
     public void updateName(String name) {
         this.name = name;
     }

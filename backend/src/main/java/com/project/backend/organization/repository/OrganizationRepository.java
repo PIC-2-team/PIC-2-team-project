@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
     Optional<Organization> findFirstByOwnerIdOrderByIdAsc(Long ownerId);
+    List<Organization> findByOwnerId(Long ownerId);
     Optional<Organization> findByOrganizationCode(String organizationCode);
     boolean existsByOrganizationCode(String organizationCode);
     List<Organization> findAllByOrderByCreatedAtDesc();

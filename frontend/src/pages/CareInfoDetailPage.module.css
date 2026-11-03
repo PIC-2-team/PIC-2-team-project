@@ -3,6 +3,8 @@
   flex-direction: column;
   max-width: 390px;
   width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
   height: 100dvh;
   margin: 0 auto;
   background: #f7f9fc;

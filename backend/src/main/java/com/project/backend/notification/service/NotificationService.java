@@ -19,8 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +45,12 @@ public class NotificationService {
         return NotificationResponse.from(notification);
     }
 
+    public void delete(Long userId, Long notificationId) {
+        Notification notification = notifications.findByIdAndUserId(notificationId, userId)
+                .orElseThrow(this::notFound);
+        notifications.delete(notification);
+    }
+
     public int markAllRead(Long userId) {
         return notifications.markAllReadByUserId(userId);
     }
@@ -54,42 +58,6 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long countUnread(Long userId) {
         return notifications.countByUserIdAndRead(userId, false);
-    }
-
-    public void notifySuggestionReceived(Long careRecipientId) {
-        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
-                .map(guardian -> guardian.getGuardianId()).distinct().toList();
-        Map<Long, User> guardianUsers = users.findAllById(guardianIds).stream()
-                .collect(Collectors.toMap(User::getId, user -> user));
-        for (Long guardianId : guardianIds) {
-            User guardian = guardianUsers.get(guardianId);
-            if (guardian != null && guardian.isSuggestionReceived()) {
-                notifications.save(new Notification(guardianId, NotificationType.SUGGESTION_RECEIVED,
-                        "새 생활기록 수정 제안이 도착했습니다.", clock.instant()));
-            }
-        }
-    }
-
-    public void notifySuggestionDecided(Long suggestedById, boolean approved) {
-        String result = approved ? "승인" : "거절";
-        notifications.save(new Notification(suggestedById, NotificationType.SUGGESTION_DECIDED,
-                "생활기록 수정 제안이 " + result + "됐습니다.", clock.instant()));
-    }
-
-    public void notifyInformationRequest(Long userId, String message) {
-        User user = users.findById(userId).orElse(null);
-        if (user != null && user.isInformationRequestReceived()) {
-            notifications.save(new Notification(userId, NotificationType.INFORMATION_REQUEST_RECEIVED,
-                    message, clock.instant()));
-        }
-    }
-
-    public void notifyInformationRequestGuardians(Long careRecipientId) {
-        var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
-                .map(guardian -> guardian.getGuardianId()).distinct().toList();
-        for (Long guardianId : guardianIds) {
-            notifyInformationRequest(guardianId, "새 정보 요청이 도착했습니다.");
-        }
     }
 
     public void notifyAssignmentChanged(Long userId, String message) {
@@ -100,19 +68,16 @@ public class NotificationService {
         }
     }
 
+    public void notifyOrganizationLinkRequested(Long userId, String message) {
+        notifications.save(new Notification(userId, NotificationType.ORGANIZATION_LINK_REQUESTED,
+                message, clock.instant()));
+    }
+
     public void notifyAssignmentChangedGuardians(Long careRecipientId, String message) {
         var guardianIds = guardians.findByCareRecipientIdAndStatus(careRecipientId, GuardianStatus.ACTIVE).stream()
                 .map(guardian -> guardian.getGuardianId()).distinct().toList();
         for (Long guardianId : guardianIds) {
             notifyAssignmentChanged(guardianId, message);
-        }
-    }
-
-    public void notifyRecordRequest(Long supportWorkerId, String message) {
-        User user = users.findById(supportWorkerId).orElse(null);
-        if (user != null && user.isRecordRequestReceived()) {
-            notifications.save(new Notification(supportWorkerId, NotificationType.RECORD_REQUEST_RECEIVED,
-                    message, clock.instant()));
         }
     }
 

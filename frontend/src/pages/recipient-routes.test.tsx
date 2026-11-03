@@ -35,8 +35,12 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
         ? [{ id: 42, name: '테스트 당사자' }]
         : url.includes('/care-info/')
           ? { category: 'COMMUNICATION', content: '테스트 돌봄정보', updatedAt: '2026-10-14' }
+          : url.endsWith('/memos/today')
+            ? []
           : url.endsWith('/records/today')
           ? []
+          : url.includes('/schedules?')
+            ? []
           : url.endsWith('/records/7')
             ? { id: 7, category: 'OTHER', content: '테스트 기록', recordedAt: '2026-10-14' }
             : { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } };

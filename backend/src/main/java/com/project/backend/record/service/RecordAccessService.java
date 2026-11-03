@@ -49,17 +49,18 @@ public class RecordAccessService {
 
     public void verifyEdit(Long userId, Long recipientId, Long authorId) {
         verifyCreate(userId, recipientId);
-        require(isGuardian(userId, recipientId) || userId.equals(authorId));
+        require(userId.equals(authorId));
+    }
+
+    /** 삭제는 작성자 본인만 하되, 작성자가 탈퇴한 기록은 보호자가 지울 수 있다 (ADR-014). 수정은 막는다 */
+    public void verifyDelete(Long userId, Long recipientId, Long authorId) {
+        boolean authorWithdrawn = users.findById(authorId).map(a -> a.getDeletedAt() != null).orElse(false);
+        if (authorWithdrawn) verifyGuardian(userId, recipientId);
+        else verifyEdit(userId, recipientId, authorId);
     }
 
     public void verifyGuardian(Long userId, Long recipientId) {
         require(user(userId).getRole() == UserRole.GUARDIAN && isGuardian(userId, recipientId));
-    }
-
-    public void verifySuggestionCreate(Long userId, Long recipientId) {
-        User actor = user(userId);
-        require(actor.getRole() == UserRole.SUPPORT_WORKER || actor.getRole() == UserRole.INSTITUTION);
-        verifyRead(userId, recipientId);
     }
 
     private boolean isAssigned(Long userId, Long recipientId) {

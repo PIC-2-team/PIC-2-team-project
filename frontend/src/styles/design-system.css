@@ -588,11 +588,11 @@
   height: 5px;
   width: 5px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--calendar-accent, var(--green));
   display: block;
 }
 .calendar-grid button[aria-pressed='true'] {
-  background: var(--green);
+  background: var(--calendar-accent, var(--green));
   color: white;
 }
 .calendar-grid button[aria-pressed='true'] span {
@@ -607,6 +607,12 @@
 .app-shell .app-header { flex-shrink: 0; }
 .app-shell .role-badge { cursor: default; }
 .app-shell .app-main > main { min-height: 100%; }
+.app-shell .app-main {
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+}
+.app-shell .app-main::-webkit-scrollbar { display: none; }
+.app-shell .demo-page:has(.calendar-grid) { min-height: 100%; }
 .app-shell .status-page { min-height: 100%; }
 .app-shell .status-page > .empty-state { margin-block: auto; }
 .app-shell .record-content { white-space: pre-wrap; overflow-wrap: anywhere; }

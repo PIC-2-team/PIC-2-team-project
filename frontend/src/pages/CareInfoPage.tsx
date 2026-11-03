@@ -142,30 +142,32 @@ export function CareInfoPage() {
     setIsLoading(true);
     setError(null);
 
-    Promise.all([
+    Promise.allSettled([
       getCareInfoOverview(selectedRecipientId),
       getRecords(selectedRecipientId, undefined, 1, 100), // 백엔드 pageSize 상한
-    ])
-      .then(([overview, recordsRes]) => {
-        if (!isCurrent) return;
+    ]).then(([overviewResult, recordsResult]) => {
+      if (!isCurrent) return;
+      if (overviewResult.status === 'fulfilled') {
         const pinnedCounts: Record<string, number> = {};
-        for (const record of overview.pinnedRecords ?? []) {
+        for (const record of overviewResult.value.pinnedRecords ?? []) {
           pinnedCounts[record.category] = (pinnedCounts[record.category] ?? 0) + 1;
         }
         setPinnedCountByCategory(pinnedCounts);
-
+      } else {
+        setError(overviewResult.reason instanceof Error ? overviewResult.reason.message : '불러오기 실패');
+      }
+      if (recordsResult.status === 'fulfilled') {
         const recordCounts: Record<string, number> = {};
-        for (const record of recordsRes.items) {
+        for (const record of recordsResult.value.items) {
           recordCounts[record.category] = (recordCounts[record.category] ?? 0) + 1;
         }
         setRecordCountByCategory(recordCounts);
-      })
-      .catch(e => {
-        if (isCurrent) setError(e instanceof Error ? e.message : '불러오기 실패');
-      })
-      .finally(() => {
-        if (isCurrent) setIsLoading(false);
-      });
+      } else if (overviewResult.status === 'fulfilled') {
+        setError(recordsResult.reason instanceof Error ? recordsResult.reason.message : '불러오기 실패');
+      }
+    }).finally(() => {
+      if (isCurrent) setIsLoading(false);
+    });
 
     return () => { isCurrent = false; };
   }, [selectedRecipientId]);

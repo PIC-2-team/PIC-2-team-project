@@ -8,7 +8,7 @@ type Role = 'GUARDIAN' | 'SUPPORT_WORKER' | 'INSTITUTION';
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: 'GUARDIAN', label: '돌봄 보호자', desc: '발달장애인의 부모·가족으로 기록을 직접 관리합니다.' },
-  { value: 'SUPPORT_WORKER', label: '활동지원사', desc: '담당 이용자의 기록을 열람하고 제안합니다.' },
+  { value: 'SUPPORT_WORKER', label: '활동지원사', desc: '담당 이용자의 기록을 작성하고, 본인 기록을 수정·삭제합니다.' },
   { value: 'INSTITUTION', label: '기관 담당자', desc: '소속 이용자와 지원자를 관리합니다.' },
 ];
 
@@ -24,7 +24,7 @@ type ConsentItem = {
 const CONSENT_ITEMS_BY_ROLE: Record<Role, ConsentItem[]> = {
   GUARDIAN: [
     { id: 'basicInfo', required: true, title: '기본 개인정보 수집·이용 동의', description: '서비스 제공을 위한 필수 정보입니다.' },
-    { id: 'sensitiveInfo', required: true, title: '건강·복약정보 등 민감정보 처리 동의', description: '맞춤형 건강관리 서비스 제공을 위한 필수 정보입니다.' },
+    { id: 'sensitiveInfo', required: true, title: '건강·복약정보, 주치의·병원 정보 등 민감정보 처리 동의', description: '맞춤형 건강관리 서비스 제공을 위한 필수 정보입니다.' },
     { id: 'caregiverShare', required: true, title: '담당 돌봄 제공자에게 필요한 정보 공유 동의', description: '더 나은 돌봄 서비스를 위한 필수 정보입니다.' },
     { id: 'marketing', required: false, title: '마케팅·부가서비스 동의', description: '다양한 이벤트와 유용한 정보를 받아보실 수 있습니다.' },
   ],
@@ -92,7 +92,7 @@ export function ConsentPage() {
         sensitiveInfo: consents.sensitiveInfo,
         caregiverShare: consents.caregiverShare,
         marketing: consents.marketing,
-        termsVersion: '1.0',
+        termsVersion: '1.1',
       });
       if (pendingGoogle) {
         navigate('/google-register', { state: { pendingGoogle, consentTicket, role: selectedRole } });

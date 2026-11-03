@@ -21,9 +21,11 @@ import {
   type PaginatedAdminUsers,
   type AdminCareRecipient,
 } from '../api/admin';
+import { DISABILITY_SEVERITY_LABELS, type DisabilitySeverity } from '../types/careRecipient';
 import { AppShell } from '../components/AppShell';
 import { AdminTabBar, type AdminTabId } from '../components/AdminTabBar/AdminTabBar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { OrganizationQrPrint } from '../components/OrganizationQrPrint';
 import styles from './AdminDashboardPage.module.css';
 
 type Stats = {
@@ -83,7 +85,7 @@ export function AdminDashboardPage() {
   const [recipientDisabilityTypes, setRecipientDisabilityTypes] = useState<
     ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[]
   >([]);
-  const [recipientDisabilityGrade, setRecipientDisabilityGrade] = useState('');
+  const [recipientDisabilitySeverity, setRecipientDisabilitySeverity] = useState<DisabilitySeverity | ''>('');
   const [recipientOtherDisabilityType, setRecipientOtherDisabilityType] = useState('');
   const [isCreatingRecipient, setIsCreatingRecipient] = useState(false);
   const [recipientMessage, setRecipientMessage] = useState<string | null>(null);
@@ -101,6 +103,7 @@ export function AdminDashboardPage() {
   const [newOrgName, setNewOrgName] = useState('');
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
   const [createdOrgBanner, setCreatedOrgBanner] = useState<{ name: string; code: string } | null>(null);
+  const [qrOrganization, setQrOrganization] = useState<{ name: string; code: string } | null>(null);
   const [orgFormError, setOrgFormError] = useState<string | null>(null);
 
   // 기관 수정 모달 상태
@@ -215,14 +218,13 @@ export function AdminDashboardPage() {
     setRecipientMessage(null);
     setRecipientCreatedCode(null);
 
-    const grade = recipientDisabilityGrade.trim() ? Number(recipientDisabilityGrade) : null;
     try {
       const created = await createAdminCareRecipient({
         name: recipientName.trim(),
         birthDate: recipientBirthDate,
         gender: recipientGender,
         disabilityTypes: recipientDisabilityTypes,
-        disabilityGrade: grade,
+        disabilitySeverity: recipientDisabilitySeverity || null,
         otherDisabilityType: recipientDisabilityTypes.includes('OTHER')
           ? recipientOtherDisabilityType.trim()
           : null,
@@ -231,7 +233,7 @@ export function AdminDashboardPage() {
       setRecipientName('');
       setRecipientBirthDate('');
       setRecipientDisabilityTypes([]);
-      setRecipientDisabilityGrade('');
+      setRecipientDisabilitySeverity('');
       setRecipientOtherDisabilityType('');
       setRecipientCreatedCode(created.careRecipientNumber);
       setRecipientMessage(`'${created.name}' 당사자 고유 코드 발급 완료`);
@@ -651,15 +653,16 @@ export function AdminDashboardPage() {
                   )}
 
                   <label>
-                    장애 정도 <span className="muted" style={{ fontWeight: 400 }}>(선택, 숫자)</span>
-                    <input
-                      type="number"
-                      value={recipientDisabilityGrade}
-                      onChange={(e) => setRecipientDisabilityGrade(e.target.value)}
-                      placeholder="예: 1 또는 2"
-                      min={1}
-                      max={6}
-                    />
+                    장애 정도 <span className="muted" style={{ fontWeight: 400 }}>(선택)</span>
+                    <select
+                      value={recipientDisabilitySeverity}
+                      onChange={(e) => setRecipientDisabilitySeverity(e.target.value as DisabilitySeverity | '')}
+                    >
+                      <option value="">선택 안 함</option>
+                      {(Object.keys(DISABILITY_SEVERITY_LABELS) as DisabilitySeverity[]).map((value) => (
+                        <option key={value} value={value}>{DISABILITY_SEVERITY_LABELS[value]}</option>
+                      ))}
+                    </select>
                   </label>
 
                   {recipientMessage && (
@@ -777,8 +780,8 @@ export function AdminDashboardPage() {
                                 {dt === 'OTHER' && r.otherDisabilityType ? `(${r.otherDisabilityType})` : ''}
                               </span>
                             ))}
-                            {r.disabilityGrade && (
-                              <span className={styles.tag}>{r.disabilityGrade}급(정도)</span>
+                            {r.disabilitySeverity && (
+                              <span className={styles.tag}>{DISABILITY_SEVERITY_LABELS[r.disabilitySeverity]}</span>
                             )}
                           </div>
                         )}
@@ -833,15 +836,10 @@ export function AdminDashboardPage() {
                     발급 기관 코드: <code className={styles.userCode}>{createdOrgBanner.code}</code>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className={styles.codeCopyBtn}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(createdOrgBanner.code);
-                  }}
-                >
-                  코드 복사
-                </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <button type="button" className={styles.codeCopyBtn} onClick={() => { void navigator.clipboard.writeText(createdOrgBanner.code); }}>코드 복사</button>
+                  <button type="button" className={styles.codeCopyBtn} aria-label={`${createdOrgBanner.name} QR 코드 인쇄`} onClick={() => setQrOrganization(createdOrgBanner)}>QR 코드 인쇄</button>
+                </div>
               </div>
             )}
 
@@ -868,6 +866,7 @@ export function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className={styles.cardActions}>
+                      <button type="button" className={styles.btnAction} aria-label={`${org.name} QR 코드 인쇄`} onClick={() => setQrOrganization({ name: org.name, code: org.organizationCode })}>QR 코드 인쇄</button>
                       <button
                         type="button"
                         className={`${styles.btnAction} ${styles.btnActionPrimary}`}
@@ -1419,6 +1418,8 @@ export function AdminDashboardPage() {
       {userEditError && <p role="alert" className={styles.errorBanner}>{userEditError}</p>}
       {selfDeleteError && <p role="alert" className={styles.errorBanner}>{selfDeleteError}</p>}
       {deleteUserError && <p role="alert" className={styles.errorBanner}>{deleteUserError}</p>}
+
+      {qrOrganization && <OrganizationQrPrint name={qrOrganization.name} code={qrOrganization.code} onClose={() => setQrOrganization(null)} />}
 
       <ConfirmDialog
         open={showDeleteOrgDialog}

@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 import * as notificationApi from '../api/notifications';
+import { emitNotificationsChanged } from '../utils/notificationEvents';
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -68,5 +69,21 @@ it('역할이 있을 때 알림함 링크를 렌더링하고 안 읽은 알림�
 
   await waitFor(() => {
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+});
+
+it('알림 변경 이벤트가 발생하면 안 읽은 알림 배지를 다시 불러온다', async () => {
+  const spy = vi.spyOn(notificationApi, 'getUnreadNotificationCount').mockResolvedValue(3);
+  render(<MemoryRouter><AppShell role="GUARDIAN"><div>본문</div></AppShell></MemoryRouter>);
+
+  await waitFor(() => {
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  spy.mockResolvedValue(0);
+  act(() => { emitNotificationsChanged(); });
+
+  await waitFor(() => {
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
   });
 });

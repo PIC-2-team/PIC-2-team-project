@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:samgyeol;MODE=MySQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:file:~/pic-samgyeol-dev;MODE=MySQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -10,7 +10,7 @@ spring:
       path: /h2-console
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -20,7 +20,7 @@ jwt:
   secret: ${JWT_SECRET:dev-secret-key-must-be-at-least-32-characters-long}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176}
 
 logging:
   level:
@@ -29,3 +29,6 @@ logging:
 
 app:
   seed-test-accounts: true
+
+server:
+  port: 8082

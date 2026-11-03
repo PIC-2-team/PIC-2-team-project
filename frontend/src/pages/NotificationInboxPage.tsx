@@ -5,40 +5,28 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
 } from '../api/notifications';
 import type { NotificationItem, NotificationType } from '../types/notification';
+import { UnreadNotificationSummaryCard } from '../components/UnreadNotificationSummaryCard';
+import { emitNotificationsChanged } from '../utils/notificationEvents';
 import styles from './NotificationInboxPage.module.css';
 
 const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   RECORD_CREATED: '새 기록',
-  RECORD_UPDATED: '기록 수정',
   ASSIGNMENT_CHANGED: '배정',
-  SUGGESTION_RECEIVED: '수정 제안',
-  SUGGESTION_DECIDED: '제안 결과',
-  INFORMATION_REQUEST_RECEIVED: '정보 요청',
-  RECORD_REQUEST_RECEIVED: '기록 요청',
   RECORD_FORWARDED: '기록 전달',
   ORGANIZATION_LINK_REQUESTED: '기관 연계',
 };
 
 function getDestination(type: NotificationType, role?: string): string {
   switch (type) {
-    case 'SUGGESTION_RECEIVED':
-      return '/record-suggestions';
-    case 'SUGGESTION_DECIDED':
     case 'RECORD_CREATED':
-    case 'RECORD_UPDATED':
       return '/records';
     case 'ASSIGNMENT_CHANGED':
       if (role === 'INSTITUTION') return '/agency';
       if (role === 'GUARDIAN') return '/care-relations';
-      return '/home';
-    case 'RECORD_REQUEST_RECEIVED':
-      return '/records';
-    case 'INFORMATION_REQUEST_RECEIVED':
-      if (role === 'INSTITUTION') return '/agency';
-      if (role === 'SUPPORT_WORKER') return '/record-requests/new';
-      return '/home';
+      return '/care-info';
     case 'ORGANIZATION_LINK_REQUESTED':
       return role === 'INSTITUTION' ? '/agency' : '/care-relations';
     default:
@@ -64,21 +52,38 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
+function renderMessage(message: string) {
+  if (message.endsWith(' >')) {
+    return (
+      <>
+        {message.slice(0, -2)}
+        <span className={styles.ctaArrow} aria-hidden="true">›</span>
+      </>
+    );
+  }
+  return message;
+}
+
 export function NotificationInboxPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [tab, setTab] = useState<'all' | 'unread' | 'read'>('all');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [summaryVisible, setSummaryVisible] = useState(false);
+  const canSummarize = user?.role === 'GUARDIAN'
+    || user?.role === 'SUPPORT_WORKER'
+    || user?.role === 'INSTITUTION';
 
-  const fetchList = useCallback(async (currentFilter: 'all' | 'unread') => {
+  const fetchList = useCallback(async (currentFilter: 'all' | 'unread' | 'read') => {
     setLoading(true);
     setError(null);
     try {
       const res = await getNotifications(
-        currentFilter === 'unread' ? { read: false } : undefined
+        currentFilter === 'unread' ? { read: false } : currentFilter === 'read' ? { read: true } : undefined
       );
       setNotifications(res.items);
     } catch (err) {
@@ -89,18 +94,19 @@ export function NotificationInboxPage() {
   }, []);
 
   useEffect(() => {
-    fetchList(filter);
-  }, [filter, fetchList]);
+    fetchList(tab);
+  }, [tab, fetchList]);
 
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      emitNotificationsChanged();
       setFeedback('모든 알림을 읽음 처리했습니다.');
       setTimeout(() => setFeedback(null), 3000);
     } catch {
       // 갱신 재시도
-      fetchList(filter);
+      fetchList(tab === 'unread' ? 'unread' : 'all');
     }
   };
 
@@ -111,12 +117,39 @@ export function NotificationInboxPage() {
         setNotifications(prev =>
           prev.map(n => (n.id === item.id ? { ...n, read: true } : n))
         );
+        emitNotificationsChanged();
       } catch {
         // 읽음 실패해도 이동 진행
       }
     }
     const target = getDestination(item.type, user?.role);
     navigate(target);
+  };
+
+  const handleMarkUnread = async (id: number) => {
+    setActionError(null);
+    try {
+      await markNotificationRead(id, false);
+      setNotifications(prev => prev.map(item => (item.id === id ? { ...item, read: false } : item)));
+      emitNotificationsChanged();
+      setFeedback('알림을 읽지 않음으로 표시했습니다.');
+      setTimeout(() => setFeedback(null), 3000);
+    } catch {
+      setActionError('알림을 읽지 않음으로 표시하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
+  const handleDeleteItem = async (id: number) => {
+    setActionError(null);
+    try {
+      await deleteNotification(id);
+      setNotifications(prev => prev.filter(item => item.id !== id));
+      emitNotificationsChanged();
+      setFeedback('알림을 삭제했습니다.');
+      setTimeout(() => setFeedback(null), 3000);
+    } catch {
+      setActionError('알림을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -151,28 +184,54 @@ export function NotificationInboxPage() {
             </button>
           </div>
         )}
+        {actionError && <p className="error" role="alert">{actionError}</p>}
 
         <div className={styles.tabs} role="tablist">
           <button
             type="button"
             role="tab"
-            aria-selected={filter === 'all'}
-            className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('all')}
+            aria-selected={tab === 'all'}
+            className={`${styles.tab} ${tab === 'all' ? styles.tabActive : ''}`}
+            onClick={() => {
+              setSummaryVisible(false);
+              setTab('all');
+            }}
           >
             전체
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={filter === 'unread'}
-            className={`${styles.tab} ${filter === 'unread' ? styles.tabActive : ''}`}
-            onClick={() => setFilter('unread')}
+            aria-selected={tab === 'unread'}
+            className={`${styles.tab} ${tab === 'unread' ? styles.tabActive : ''}`}
+            onClick={() => {
+              setSummaryVisible(false);
+              setTab('unread');
+            }}
           >
             읽지 않음
-            {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'read'}
+            className={`${styles.tab} ${tab === 'read' ? styles.tabActive : ''}`}
+            onClick={() => {
+              setSummaryVisible(false);
+              setTab('read');
+            }}
+          >
+            읽음
           </button>
         </div>
+
+        {tab === 'unread' && canSummarize && (
+          <UnreadNotificationSummaryCard onSummaryGenerated={() => {
+            setSummaryVisible(true);
+            void fetchList('unread');
+            emitNotificationsChanged();
+          }} />
+        )}
 
         {loading ? (
           <p className="muted" role="status">
@@ -182,32 +241,56 @@ export function NotificationInboxPage() {
           <p className="error" role="alert">
             {error}
           </p>
-        ) : notifications.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p style={{ margin: 0 }}>도착한 알림이 없습니다.</p>
-          </div>
         ) : (
-          <div className={styles.list}>
-            {notifications.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className={`${styles.item} ${!item.read ? styles.itemUnread : ''}`}
-                onClick={() => handleClickItem(item)}
-              >
-                <div className={styles.itemHeader}>
-                  <div className={styles.tagGroup}>
-                    <span className={styles.typeTag}>
-                      {NOTIFICATION_LABELS[item.type] ?? '알림'}
-                    </span>
-                    {!item.read && <span className={styles.newTag}>새 알림</span>}
+          <>
+            {notifications.length === 0 && !summaryVisible ? (
+              <div className={styles.emptyState}>
+                <p style={{ margin: 0 }}>{tab === 'unread' ? '읽지 않은 알림이 없습니다.' : tab === 'read' ? '읽은 알림이 없습니다.' : '도착한 알림이 없습니다.'}</p>
+              </div>
+            ) : (
+              <div className={styles.list}>
+                {notifications.map(item => (
+                  <div className={styles.itemRow} key={item.id}>
+                  <button
+                    type="button"
+                    className={`${styles.item} ${!item.read ? styles.itemUnread : ''}`}
+                    onClick={() => handleClickItem(item)}
+                  >
+                    <div className={styles.itemHeader}>
+                      <div className={styles.tagGroup}>
+                        <span className={styles.typeTag}>
+                          {NOTIFICATION_LABELS[item.type] ?? '알림'}
+                        </span>
+                        {!item.read && <span className={styles.newTag}>새 알림</span>}
+                      </div>
+                      <span className={styles.time}>{formatRelativeTime(item.createdAt)}</span>
+                    </div>
+                    <p className={styles.message}>{renderMessage(item.message)}</p>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    aria-label={`알림 삭제: ${item.message}`}
+                    title="알림 삭제"
+                    onClick={() => void handleDeleteItem(item.id)}
+                  >
+                    ×
+                  </button>
+                  {item.read && (
+                    <button
+                      type="button"
+                      className={styles.markUnreadBtn}
+                      aria-label={`읽지 않음으로 표시: ${item.message}`}
+                      onClick={() => void handleMarkUnread(item.id)}
+                    >
+                      읽지 않음
+                    </button>
+                  )}
                   </div>
-                  <span className={styles.time}>{formatRelativeTime(item.createdAt)}</span>
-                </div>
-                <p className={styles.message}>{item.message}</p>
-              </button>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

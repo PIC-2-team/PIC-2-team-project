@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient, listCareRecipients } from '../api/careRecipients';
-import type { CareRecipient } from '../types/careRecipient';
+import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
 
@@ -122,7 +122,7 @@ export function MorePage() {
 
   const handleLogoutConfirm = () => {
     logout();
-    navigate('/', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   const sections: MenuSection[] = [];
@@ -133,7 +133,6 @@ export function MorePage() {
       items: [
         { label: '세컨드 보호자 관리', to: '/secondary-guardian' },
         { label: '돌봄 관계 관리', to: '/care-relations' },
-        { label: '수정 제안 검토', to: '/record-suggestions' },
       ],
     });
   }
@@ -142,7 +141,8 @@ export function MorePage() {
     sections.push({
       title: '돌봄 협업',
       items: [
-        { label: '돌봄 내용 수정 요청', to: '/record-requests/new' },
+        { label: '기관 연결 확인', to: '/worker/organization' },
+        { label: '돌봄 내용 수정 요청', pending: true },
       ],
     });
   }
@@ -281,15 +281,38 @@ export function MorePage() {
                       {recipient.gender === 'MALE' ? '(남)' : recipient.gender === 'FEMALE' ? '(여)' : ''}
                     </p>
                   )}
-                  {recipient.disabilityGrade && (
+                  {recipient.disabilitySeverity && (
                     <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
-                      장애 정도: {recipient.disabilityGrade}급
+                      장애 정도: {DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}
+                    </p>
+                  )}
+                  {formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone) && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      주치의·병원<br />
+                      <span>{formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone)}</span>
+                    </p>
+                  )}
+                  {formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone) && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      활동지원센터<br />
+                      <span>{formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone)}</span>
                     </p>
                   )}
                 </div>
               </div>
             ) : (
               <p className="muted">당사자 정보를 찾을 수 없습니다.</p>
+            )}
+
+            {recipient && (
+              <button
+                type="button"
+                className="btn"
+                style={{ width: '100%', marginTop: '0.5rem' }}
+                onClick={() => { setShowRecipientModal(false); navigate('/profile'); }}
+              >
+                프로필 보기·수정
+              </button>
             )}
 
             <button
@@ -344,7 +367,7 @@ export function MorePage() {
         type="button"
         className="btn secondary"
         style={{ color: '#e05555', borderColor: '#f5c6c4', marginTop: '0.5rem' }}
-        onClick={() => setToast('회원 탈퇴 기능은 준비 중입니다.')}
+        onClick={() => navigate('/withdraw')}
       >
         회원 탈퇴
       </button>

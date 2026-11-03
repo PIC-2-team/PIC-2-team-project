@@ -40,12 +40,16 @@ public class User {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column
+    private LocalDateTime deletedAt;
+
     @Column(nullable = false)
     private boolean recordCreated = true;
     @Column(nullable = false)
     private boolean recordUpdated = true;
     @Column(nullable = false)
     private boolean assignmentChanged = true;
+    // 기존 운영 DB의 NOT NULL 컬럼은 별도 스키마 이행 전까지 매핑을 유지한다.
     @Column(nullable = false)
     private boolean suggestionReceived = true;
     @Column(nullable = false)
@@ -78,18 +82,22 @@ public class User {
         if (role != null) this.role = role;
     }
 
+    public void anonymize(LocalDateTime now) {
+        this.name = "탈퇴한 사용자";
+        this.email = "deleted-" + id + "@deleted.invalid";
+        this.phone = null;
+        this.password = null;
+        this.googleId = null;
+        this.deletedAt = now;
+    }
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
 
-    public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged,
-                                           boolean suggestionReceived, boolean informationRequestReceived,
-                                           boolean recordRequestReceived) {
+    public void updateNotificationSettings(boolean recordCreated, boolean recordUpdated, boolean assignmentChanged) {
         this.recordCreated = recordCreated;
         this.recordUpdated = recordUpdated;
         this.assignmentChanged = assignmentChanged;
-        this.suggestionReceived = suggestionReceived;
-        this.informationRequestReceived = informationRequestReceived;
-        this.recordRequestReceived = recordRequestReceived;
     }
 }

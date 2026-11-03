@@ -154,31 +154,6 @@ it('전체 기록 더 보기 클릭 시 모든 기록이 표시된다', async ()
   expect(screen.queryByRole('button', { name: /더 보기/ })).not.toBeInTheDocument();
 });
 
-it('활동지원사는 돌봄 내용 수정 요청 버튼이 표시되고 클릭 시 /record-requests/new로 이동한다', async () => {
-  mockRole = 'SUPPORT_WORKER';
-  vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
-    items: [],
-    pagination: { page: 1, pageSize: 50, totalItems: 0, totalPages: 0 },
-  });
-  vi.spyOn(careInfoApi, 'getCareInfoByCategory').mockRejectedValue(new Error('Not found'));
-
-  render(
-    <MemoryRouter initialEntries={['/care-info/MEAL']}>
-      <Routes>
-        <Route path="/care-info/:categoryId" element={<CareInfoDetailPage />} />
-      </Routes>
-    </MemoryRouter>
-  );
-
-  expect(screen.queryByRole('button', { name: /기록하기/ })).not.toBeInTheDocument();
-  const requestButton = await screen.findByRole('button', { name: /돌봄 내용 수정 요청/ });
-  fireEvent.click(requestButton);
-
-  expect(mockNavigate).toHaveBeenCalledWith('/record-requests/new', {
-    state: { category: 'MEAL', categoryLabel: '식사' },
-  });
-});
-
 it('잘못된 카테고리에서 정상 카테고리로 이동해도 Hook 순서가 유지된다', async () => {
   vi.spyOn(recordsApi, 'getRecordsByCategory').mockResolvedValue({
     items: [], pagination: { page: 1, pageSize: 50, totalItems: 0, totalPages: 0 },

@@ -198,7 +198,7 @@ public class AdminService {
                 .name(request.name().trim())
                 .birthDate(request.birthDate())
                 .gender(request.gender())
-                .disabilityGrade(request.disabilityGrade())
+                .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
                 .build();
         recipient = careRecipientRepository.save(recipient);

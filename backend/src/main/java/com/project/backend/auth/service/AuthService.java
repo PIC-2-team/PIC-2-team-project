@@ -61,6 +61,10 @@ public class AuthService {
     public SessionResult<AuthResponse> register(RegisterRequest request) {
         Claims consentClaims = jwtProvider.parseConsentTicket(request.consentTicket());
 
+        // 탈퇴 익명화 이메일(deleted-{id}@deleted.invalid)을 선점해 탈퇴를 막지 못하게 한다
+        if (request.email().trim().toLowerCase().endsWith("@deleted.invalid")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL", "사용할 수 없는 이메일입니다.");
+        }
         if (userRepository.existsByEmail(request.email())) {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 사용 중인 이메일입니다.");
         }
@@ -129,6 +133,10 @@ public class AuthService {
         User user = userRepository.findById(rt.getUserId())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+
+        if (user.getDeletedAt() != null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다.");
+        }
 
         rt.revoke();
         refreshTokenRepository.save(rt);
