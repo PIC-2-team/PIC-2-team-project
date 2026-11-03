@@ -122,4 +122,14 @@ class KeywordCategoryClassifierTest {
     void stillClassifiesNaturalPhrases(String text, RecordCategory expected) {
         assertThat(classifier.classify(text)).isEqualTo(expected);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "오늘 손을 물려고 한 적이 세 번 있었어요. 모두 점심 직후였어요, CHALLENGING_BEHAVIOR",
+            "친구에게 팔을 물렸어요, CHALLENGING_BEHAVIOR",
+    })
+    @DisplayName("물려고·물렸 같은 활용형도 도전적 행동으로 분류된다")
+    void classifiesBitingFormsAsChallengingBehavior(String text, RecordCategory expected) {
+        assertThat(classifier.classify(text)).isEqualTo(expected);
+    }
 }

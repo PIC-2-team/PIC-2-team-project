@@ -321,4 +321,28 @@ class RecordDraftApiTest {
     private org.springframework.security.authentication.UsernamePasswordAuthenticationToken auth(User user) {
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(user.getId(), null, List.of());
     }
+
+    @Test
+    void contentWrappedAgainAsJsonIsUnwrapped() throws Exception {
+        given(gptMessage.content()).willReturn(Optional.of(
+                "{\"content\":\"{\\\"content\\\":\\\"점심을 잘 먹었습니다.\\\"}\"}"));
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용"))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").value("점심을 잘 먹었습니다."));
+    }
+
+    @Test
+    void promptTellsTheModelNotToTurnCareInformationIntoTodaysFactsOrAddAdvice() throws Exception {
+        mvc.perform(post("/api/ai/record-drafts").contentType("application/json")
+                        .content(textRequest("관찰 내용"))
+                        .with(authentication(auth(guardian))))
+                .andExpect(status().isOk());
+        org.mockito.ArgumentCaptor<ChatCompletionCreateParams> params = org.mockito.ArgumentCaptor.forClass(ChatCompletionCreateParams.class);
+        verify(completions).create(params.capture());
+        String prompt = params.getValue().toString();
+        org.assertj.core.api.Assertions.assertThat(prompt).contains("알레르기", "조언", "권고");
+        org.assertj.core.api.Assertions.assertThat(prompt).doesNotContain("JSON 객체");
+    }
 }
