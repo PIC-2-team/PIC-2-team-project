@@ -250,7 +250,7 @@ class RecordDraftApiTest {
                         .content(textRequest("관찰 내용"))
                         .with(authentication(auth(guardian))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content").value("비장애인과 있을 때 도전적 행동이 있었습니다."));
+                .andExpect(jsonPath("$.data.content").value("비장애인과 있을 때 주의 사항이 있었습니다."));
     }
 
     @Test

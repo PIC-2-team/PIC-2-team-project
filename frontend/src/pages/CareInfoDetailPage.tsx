@@ -90,7 +90,7 @@ const CATEGORY_META: Record<string, { label: string; desc: string; bg: string; c
     ),
   },
   PRECAUTION: {
-    label: '주의사항',
+    label: '주의 사항',
     desc: '주의 행동 및 대처법',
     bg: '#fff8e1',
     color: '#f9a825',
