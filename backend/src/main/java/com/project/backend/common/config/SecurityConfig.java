@@ -33,6 +33,9 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
+    @Value("${cors.allowed-origin-patterns:}")
+    private String allowedOriginPatterns;
+
     @Value("${spring.h2.console.enabled:false}")
     private boolean h2ConsoleEnabled;
 
@@ -88,8 +91,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
+        config.setAllowedOrigins(parseOrigins(allowedOrigins));
+        config.setAllowedOriginPatterns(parseOrigins(allowedOriginPatterns));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
@@ -97,5 +100,10 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private List<String> parseOrigins(String origins) {
+        return Arrays.stream(origins.split(","))
+                .map(String::trim).filter(origin -> !origin.isEmpty()).toList();
     }
 }
