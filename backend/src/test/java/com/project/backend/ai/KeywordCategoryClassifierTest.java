@@ -91,4 +91,35 @@ class KeywordCategoryClassifierTest {
         RecordCategory category = classifier.classify("점심 식사 중 기도가 막히는 질식 사고가 발생하여 응급 처치를 진행했습니다.");
         assertThat(category).isEqualTo(RecordCategory.EMERGENCY);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "약속을 잘 지켰어요, OTHER",
+            "열심히 그림을 그렸어요, OTHER",
+            "물건을 정리했어요, LIFESTYLE",
+            "잠깐 앉아서 쉬었어요, OTHER",
+            "사고력 놀이를 했어요, PREFERENCE",
+            "말썽 없이 지냈어요, OTHER",
+            "동물을 보러 갔어요, OTHER",
+    })
+    @DisplayName("다른 단어의 일부인 한 글자 키워드로는 분류되지 않는다")
+    void doesNotClassifyByPartOfAnotherWord(String text, RecordCategory expected) {
+        assertThat(classifier.classify(text)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "약을 먹었어요, HEALTH",
+            "열이 나서 쉬었어요, HEALTH",
+            "물을 많이 마셨어요, MEAL",
+            "국을 남겼어요, MEAL",
+            "잠을 잘 잤어요, LIFESTYLE",
+            "말을 걸었어요, COMMUNICATION",
+            "교통사고가 났어요, EMERGENCY",
+            "사고가 나서 병원에 갔어요, EMERGENCY",
+    })
+    @DisplayName("한 글자 키워드를 구체적 형태로 바꿔도 자연스러운 표현은 계속 분류된다")
+    void stillClassifiesNaturalPhrases(String text, RecordCategory expected) {
+        assertThat(classifier.classify(text)).isEqualTo(expected);
+    }
 }
