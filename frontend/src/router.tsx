@@ -12,6 +12,7 @@ import { RecordFormPage } from './pages/RecordFormPage';
 import { CareInfoPage } from './pages/CareInfoPage';
 import CareInfoDetailPage from './pages/CareInfoDetailPage';
 import { MorePage } from './pages/MorePage';
+import { WithdrawPage } from './pages/WithdrawPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AgencyDashboardPage } from './pages/agency/AgencyDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -56,6 +57,11 @@ export const router = createBrowserRouter([
             ],
           },
           { path: '/more', element: <MorePage /> },
+          {
+            // 관리자는 탈퇴 대상이 아니다. 더보기에서만 들어오지만 주소로 직접 열 수도 있어 막는다
+            element: <RequireRole role={['GUARDIAN', 'SUPPORT_WORKER', 'INSTITUTION']} />,
+            children: [{ path: '/withdraw', element: <WithdrawPage /> }],
+          },
           { path: '/notifications', element: <NotificationInboxPage /> },
         ],
       },

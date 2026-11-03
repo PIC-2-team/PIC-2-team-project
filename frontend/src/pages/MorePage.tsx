@@ -367,7 +367,7 @@ export function MorePage() {
         type="button"
         className="btn secondary"
         style={{ color: '#e05555', borderColor: '#f5c6c4', marginTop: '0.5rem' }}
-        onClick={() => setToast('회원 탈퇴 기능은 준비 중입니다.')}
+        onClick={() => navigate('/withdraw')}
       >
         회원 탈퇴
       </button>
