@@ -3,9 +3,13 @@ import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { listCareRecipients } from '../api/careRecipients';
 import { getTodayRecords } from '../api/records';
+import { getSchedulesByMonth } from '../api/schedules';
 import { getCareInfoOverview } from '../api/careInfo';
-import type { CareRecipient } from '../types/careRecipient';
+import { getTodayMemos } from '../api/memos';
+import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import type { DailyRecord } from '../types/record';
+import type { Memo } from '../types/memo';
+import type { Schedule } from '../types/schedule';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { toSeoulDateKey } from '../utils/date';
 import { UserProfileModal } from '../components/UserProfileModal';
@@ -31,14 +35,6 @@ function formatDisability(type: string): string {
   return DISABILITY_MAP[type] ?? type;
 }
 
-function formatDisabilitySeverity(severity?: string | null, grade?: number | null): string | null {
-  if (severity === 'SEVERE') return '심한 장애 (1–3급)';
-  if (severity === 'LESS_SEVERE') return '덜 심한 장애';
-  if (grade != null && grade >= 1 && grade <= 3) return '심한 장애 (1–3급)';
-  if (grade != null) return '덜 심한 장애';
-  return null;
-}
-
 function getAgeAndGender(birthDate?: string, gender?: 'MALE' | 'FEMALE'): string {
   const parts: string[] = [];
   if (birthDate) {
@@ -57,7 +53,7 @@ type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'empty' }
-  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; pinnedRecords: DailyRecord[] };
+  | { status: 'ok'; recipient: CareRecipient; todayRecords: DailyRecord[]; todayMemos: Memo[]; todayMemoError: string | null; todaySchedules: Schedule[]; todayScheduleError: string | null; pinnedRecords: DailyRecord[] };
 
 export function HomePage() {
   const { user, selectedRecipientId, setSelectedRecipient } = useAuth();
@@ -90,15 +86,29 @@ export function HomePage() {
           return;
         }
         if (first.id !== selectedRecipientId) setSelectedRecipient(first.id);
-        const [records, overview] = await Promise.all([
+        const todayKey = toSeoulDateKey(new Date().toISOString());
+        const [year, month] = todayKey.split('-').map(Number);
+        const [records, overview, memoResult, scheduleResult] = await Promise.all([
           getTodayRecords(first.id),
           getCareInfoOverview(first.id).catch(() => ({ categories: [], pinnedRecords: [] })),
+          getTodayMemos(first.id)
+            .then(memos => ({ memos, error: null as string | null }))
+            .catch(() => ({ memos: [], error: '오늘 메모를 불러오지 못했어요.' })),
+          getSchedulesByMonth(first.id, year, month)
+            .then(schedules => ({ schedules, error: null as string | null }))
+            .catch(() => ({ schedules: [], error: '오늘 일정을 불러오지 못했어요.' })),
         ]);
         if (requestId !== requestRef.current) return;
         setPage({
           status: 'ok',
           recipient: first,
           todayRecords: records,
+          todayMemos: memoResult.memos,
+          todayMemoError: memoResult.error,
+          todaySchedules: scheduleResult.schedules
+            .filter(schedule => toSeoulDateKey(schedule.scheduledAt) === todayKey)
+            .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
+          todayScheduleError: scheduleResult.error,
           pinnedRecords: overview.pinnedRecords ?? [],
         });
       } catch (e) {
@@ -152,19 +162,17 @@ export function HomePage() {
       );
     }
     return (
-      <div className={styles.emptyPage}>
-        <h1 className={styles.emptyGreeting}>안녕하세요, {user?.name}님!</h1>
-        <section className={styles.emptyRecipient} aria-labelledby="empty-recipient-title">
-          <div className={styles.emptyAvatar} aria-hidden="true">♙</div>
-          <h2 id="empty-recipient-title">등록된 당사자가 없어요</h2>
-          <p>돌봄을 지원받는 당사자의<br />정보를 등록해 시작하세요.</p>
-        </section>
-        <button className={styles.emptyRegisterButton} type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록하기</button>
+      <div className="demo-page status-page">
+        <h1>안녕하세요, {user?.name}님!</h1>
+        <div className="empty-state">
+          <p>{user?.name}님, 당사자 정보를 먼저 등록해 주세요.</p>
+          <button className="btn" type="button" onClick={() => navigate('/care-recipients/new')}>당사자 등록</button>
+        </div>
       </div>
     );
   }
 
-  const { recipient, todayRecords, pinnedRecords } = page;
+  const { recipient, todayRecords, todayMemos, todayMemoError, todaySchedules, todayScheduleError, pinnedRecords } = page;
   const canWrite = user?.role === 'GUARDIAN' || user?.role === 'SUPPORT_WORKER';
 
   return (
@@ -214,8 +222,7 @@ export function HomePage() {
               <span className={styles.detailLabel}>장애 유형</span>
               <span className={styles.detailValue}>
                 {recipient.disabilityTypes.map(formatDisability).join(', ')}
-                {formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)
-                  ? ` · ${formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)}` : ''}
+                {recipient.disabilitySeverity ? ` (${DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]})` : ''}
               </span>
             </div>
           )}
@@ -304,6 +311,66 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>오늘의 메모</h2>
+          <button
+            className={styles.viewAll}
+            onClick={() => navigate('/records?tab=schedules&memo=write')}
+            type="button"
+          >
+            메모 작성 ›
+          </button>
+        </div>
+
+        <div className={styles.records}>
+          {todayMemoError ? (
+            <p className="error" role="alert">{todayMemoError}</p>
+          ) : (
+            todayMemos.map(memo => (
+              <div key={memo.id} className={styles.recordCard}>
+                <span className={styles.memoIcon} aria-hidden="true">📝</span>
+                <p className={styles.recordContent}>{memo.content}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>오늘의 일정</h2>
+          <button
+            className={styles.viewAll}
+            onClick={() => navigate('/records?tab=schedules')}
+            type="button"
+          >
+            전체보기 ›
+          </button>
+        </div>
+
+        <div className={styles.records}>
+          {todayScheduleError ? (
+            <p className="error" role="alert">{todayScheduleError}</p>
+          ) : todaySchedules.length === 0 ? (
+            <p>오늘 예정된 일정이 없어요.</p>
+          ) : (
+            todaySchedules.map(schedule => (
+              <div key={schedule.id} className={styles.recordCard}>
+                <p className={styles.recordContent}>{schedule.title}</p>
+                <span className={styles.recordTime}>
+                  {new Intl.DateTimeFormat('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).format(new Date(schedule.scheduledAt))}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
       {canWrite && (
         <button
           className={styles.recordButton}
@@ -372,10 +439,22 @@ export function HomePage() {
                     </span>
                   </div>
                 )}
-                {formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade) && (
+                {recipient.disabilitySeverity && (
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>장애 정도</span>
-                    <span className={styles.infoValue}>{formatDisabilitySeverity(recipient.disabilitySeverity, recipient.disabilityGrade)}</span>
+                    <span className={styles.infoValue}>{DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>주치의·병원</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone)}</span>
+                  </div>
+                )}
+                {formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone) && (
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>활동지원센터</span>
+                    <span className={styles.infoValue}>{formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone)}</span>
                   </div>
                 )}
                 {recipient.guardianName && (
@@ -388,30 +467,6 @@ export function HomePage() {
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>보호자 연락처</span>
                     <span className={styles.infoValue}>{recipient.guardianPhone}</span>
-                  </div>
-                )}
-                {recipient.emergencyContactPhone && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>비상연락처</span>
-                    <span className={styles.infoValue}>{recipient.emergencyContactPhone}</span>
-                  </div>
-                )}
-                {recipient.doctorHospital && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>주치의·병원</span>
-                    <span className={styles.infoValue}>{recipient.doctorHospital}</span>
-                  </div>
-                )}
-                {recipient.medicationInfo && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>복약 정보</span>
-                    <span className={styles.infoValue}>{recipient.medicationInfo}</span>
-                  </div>
-                )}
-                {recipient.allergyNotes && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>알레르기·주의사항</span>
-                    <span className={styles.infoValue}>{recipient.allergyNotes}</span>
                   </div>
                 )}
               </div>

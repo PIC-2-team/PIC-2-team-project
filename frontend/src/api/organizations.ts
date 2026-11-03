@@ -1,4 +1,5 @@
-import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian } from '../types/agency';
+import type { DisabilitySeverity } from '../types/careRecipient';
+import type { Organization, OrganizationMember, CareAssignment, LinkRequest, OrganizationCareRecipient, OrganizationGuardian, GuardianClaim } from '../types/agency';
 import { apiRequest } from './client';
 
 export function registerOrganization(payload: { organizationCode: string }): Promise<Organization> {
@@ -45,6 +46,13 @@ export function updateMember(memberId: number, payload: { active: boolean }): Pr
   });
 }
 
+export function updateMemberCharacteristics(memberId: number, characteristics: string): Promise<OrganizationMember> {
+  return apiRequest(`/api/organizations/me/members/${memberId}/characteristics`, {
+    method: 'PATCH',
+    body: { characteristics },
+  });
+}
+
 export function updateMemberStatus(memberId: number, active: boolean): Promise<OrganizationMember> {
   return updateMember(memberId, { active });
 }
@@ -81,7 +89,7 @@ export function createOrganizationRecipient(payload: {
   birthDate: string;
   gender: string;
   disabilityTypes?: string[];
-  disabilityGrade?: number | null;
+  disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
 }): Promise<OrganizationCareRecipient> {
   return apiRequest('/api/organizations/me/recipients', {
@@ -100,7 +108,7 @@ export function updateOrganizationRecipient(
     birthDate: string;
     gender: string;
     disabilityTypes?: string[];
-    disabilityGrade?: number | null;
+    disabilitySeverity?: DisabilitySeverity | null;
     otherDisabilityType?: string | null;
   }>
 ): Promise<OrganizationCareRecipient> {
@@ -122,6 +130,27 @@ export function getAssignments(): Promise<CareAssignment[]> {
 
 export function getLinkRequests(): Promise<LinkRequest[]> {
   return apiRequest('/api/organizations/me/link-requests');
+}
+
+export type ConnectionDecision = 'accept' | 'reject';
+
+export function decideOrganizationLinkRequest(
+  careRecipientId: number,
+  linkId: number,
+  decision: ConnectionDecision,
+): Promise<void> {
+  return apiRequest(
+    `/api/care-recipients/${careRecipientId}/organization-link-requests/${linkId}/${decision}`,
+    { method: 'POST' },
+  );
+}
+
+export function getGuardianClaims(): Promise<GuardianClaim[]> {
+  return apiRequest('/api/organizations/me/guardian-claims');
+}
+
+export function decideGuardianClaim(claimId: number, decision: ConnectionDecision): Promise<void> {
+  return apiRequest(`/api/organizations/me/guardian-claims/${claimId}/${decision}`, { method: 'POST' });
 }
 
 export function assignSupportWorker(payload: {

@@ -70,7 +70,7 @@ export type Demo = {
     id: string;
     recipientId: string;
     content: string;
-    kind: 'information' | 'behavior';
+    kind: 'information';
     status: 'pending' | 'relayed' | 'answered';
     response: string;
   }[];
@@ -184,7 +184,18 @@ export function readDemo(raw: string | null): Demo {
       s.role in roles &&
       typeof s.recipientId === 'string'
     )
-      return s;
+      return {
+        ...s,
+        requests: s.requests.filter((r: { kind?: string } | null) => r?.kind === 'information'),
+        notifications: s.notifications.filter(
+          (n: { role?: Role; to?: string; text?: string } | null) =>
+            !(
+              n?.role === 'provider' &&
+              n.to === '/requests' &&
+              n.text === '새 정보 요청이 도착했어요.'
+            ),
+        ),
+      };
   } catch {
     /* 저장 형식이 바뀌거나 손상되면 예시 상태로 복구한다. */
   }
@@ -245,7 +256,7 @@ export type Action =
   | { type: 'link'; id: string; linked: boolean }
   | { type: 'transfer'; code: string }
   | { type: 'secondary'; value: Demo['secondary'] }
-  | { type: 'request'; kind: 'information' | 'behavior'; content: string }
+  | { type: 'request'; content: string }
   | { type: 'respond'; id: string; response: string }
   | { type: 'relay'; id: string }
   | { type: 'settings'; name: string; largeText: boolean; notify: boolean }
@@ -552,37 +563,17 @@ export function transition(previous: Demo, action: Action): Demo {
       break;
     case 'request': {
       access();
-      requireThat(
-        (action.kind === 'behavior' && s.role === 'agency') ||
-          (action.kind === 'information' && s.role === 'provider'),
-        '요청 권한이 없어요.',
-      );
-      if (action.kind === 'behavior')
-        requireThat(
-          s.assignments.some(
-            (a) =>
-              a.recipientId === s.recipientId &&
-              a.active &&
-              a.start <= today() &&
-              (!a.end || a.end >= today()),
-          ),
-          '현재 배정된 활동지원사가 없어요.',
-        );
-      else requireThat(action.content.trim(), '요청 내용을 입력해주세요.');
+      requireThat(s.role === 'provider', '요청 권한이 없어요.');
+      requireThat(action.content.trim(), '요청 내용을 입력해주세요.');
       s.requests.unshift({
         id: uid(),
         recipientId: s.recipientId,
-        content:
-          action.content.trim() || '오늘의 도전행동 관찰 내용을 기록해주세요.',
-        kind: action.kind,
+        content: action.content.trim(),
+        kind: 'information',
         status: 'pending',
         response: '',
       });
-      notify(
-        action.kind === 'behavior' ? 'provider' : 'guardian',
-        '새 정보 요청이 도착했어요.',
-        '/requests',
-      );
+      notify('guardian', '새 정보 요청이 도착했어요.', '/requests');
       log('정보 요청 전송');
       break;
     }
@@ -603,23 +594,14 @@ export function transition(previous: Demo, action: Action): Demo {
       requireThat(r, '요청이 없어요.');
       access(r!.recipientId);
       requireThat(
-        (s.role === 'guardian' &&
-          r!.kind === 'information' &&
-          r!.status === 'pending') ||
-          (s.role === 'provider' &&
-            r!.kind === 'behavior' &&
-            r!.status === 'pending'),
+        s.role === 'guardian' && r!.status === 'pending',
         '응답할 수 없는 요청이에요.',
       );
       requireThat(action.response.trim(), '응답을 입력해주세요.');
       r!.response = action.response.trim();
       r!.status = 'answered';
       notify('agency', '요청에 답변이 도착했어요.', '/requests');
-      notify(
-        r!.kind === 'behavior' ? 'guardian' : 'provider',
-        '요청 답변을 확인해주세요.',
-        '/requests',
-      );
+      notify('provider', '요청 답변을 확인해주세요.', '/requests');
       log('요청 답변');
       break;
     }

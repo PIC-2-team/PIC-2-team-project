@@ -1,6 +1,7 @@
 package com.project.backend.admin.dto;
 
 import com.project.backend.care.entity.CareRecipient;
+import com.project.backend.care.entity.DisabilitySeverity;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 
@@ -15,7 +16,7 @@ public record AdminCareRecipientResponse(
         LocalDate birthDate,
         Gender gender,
         List<DisabilityType> disabilityTypes,
-        Integer disabilityGrade,
+        DisabilitySeverity disabilitySeverity,
         String otherDisabilityType,
         String guardianName,
         String guardianEmail,
@@ -36,7 +37,7 @@ public record AdminCareRecipientResponse(
                 recipient.getBirthDate(),
                 recipient.getGender(),
                 disabilities,
-                recipient.getDisabilityGrade(),
+                recipient.getDisabilitySeverity(),
                 recipient.getOtherDisabilityType(),
                 guardianName,
                 guardianEmail,

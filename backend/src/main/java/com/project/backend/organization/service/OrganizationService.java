@@ -9,6 +9,7 @@ import com.project.backend.care.repository.CareAssignmentRepository;
 import com.project.backend.care.repository.CareGuardianRepository;
 import com.project.backend.care.repository.CareRecipientRepository;
 import com.project.backend.common.exception.ApiException;
+import com.project.backend.notification.service.NotificationService;
 import com.project.backend.organization.dto.*;
 import com.project.backend.organization.entity.*;
 import com.project.backend.organization.repository.OrganizationGuardianLinkRepository;
@@ -49,6 +50,7 @@ public class OrganizationService {
     private final CareGuardianRepository careGuardianRepository;
     private final CareRecipientRepository careRecipientRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public OrganizationResponse verifyWorkerOrganization(Long userId, String code) {
@@ -127,6 +129,9 @@ public class OrganizationService {
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT, "LINK_ALREADY_EXISTS", "이미 연결 요청이 존재합니다.");
         }
+        if (org.getOwnerId() != null) {
+            notificationService.notifyOrganizationLinkRequested(org.getOwnerId(), "보호자의 기관 연결 요청이 도착했습니다.");
+        }
     }
 
     public void decideLinkRequest(Long organizationOwnerId, Long linkId, boolean accepted) {
@@ -196,6 +201,13 @@ public class OrganizationService {
         return MemberResponse.of(member, findUser(member.getUserId()));
     }
 
+    public MemberResponse updateMemberCharacteristics(Long ownerId, Long memberId, UpdateMemberCharacteristicsRequest request) {
+        Organization org = findOrgByOwner(ownerId);
+        OrganizationMember member = findMemberInOrg(org.getId(), memberId);
+        member.updateCharacteristics(request.characteristics());
+        return MemberResponse.of(member, findUser(member.getUserId()));
+    }
+
     @Transactional(readOnly = true)
     public List<CareAssignmentResponse> getAssignments(Long ownerId, Long careRecipientId) {
         Organization org = findOrgByOwner(ownerId);
@@ -208,8 +220,17 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public List<LinkRequestResponse> getLinkRequests(Long ownerId) {
         Organization org = findOrgByOwner(ownerId);
-        return organizationRecipientLinkRepository.findByOrganizationId(org.getId()).stream()
-                .map(LinkRequestResponse::from).toList();
+        List<OrganizationRecipientLink> found = organizationRecipientLinkRepository.findByOrganizationId(org.getId());
+        Map<Long, CareRecipient> recipientMap = careRecipientRepository
+                .findAllById(found.stream().map(OrganizationRecipientLink::getCareRecipientId).distinct().toList()).stream()
+                .collect(Collectors.toMap(CareRecipient::getId, Function.identity()));
+        Map<Long, User> requesterMap = userRepository
+                .findAllById(found.stream().map(OrganizationRecipientLink::getRequestedById).distinct().toList()).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return found.stream()
+                .map(link -> LinkRequestResponse.of(link, recipientMap.get(link.getCareRecipientId()),
+                        requesterMap.get(link.getRequestedById())))
+                .toList();
     }
 
     public MemberResponse addMember(Long ownerId, AddMemberRequest request) {

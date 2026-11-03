@@ -35,8 +35,12 @@ it.each(['/records', '/care-info', '/records/7', '/records/new'])(
         ? [{ id: 42, name: '테스트 당사자' }]
         : url.includes('/care-info/')
           ? { category: 'COMMUNICATION', content: '테스트 돌봄정보', updatedAt: '2026-10-14' }
+          : url.endsWith('/memos/today')
+            ? []
           : url.endsWith('/records/today')
           ? []
+          : url.includes('/schedules?')
+            ? []
           : url.endsWith('/records/7')
             ? { id: 7, category: 'OTHER', content: '테스트 기록', recordedAt: '2026-10-14' }
             : { items: [], pagination: { page: 1, pageSize: 100, totalItems: 0, totalPages: 0 } };
@@ -77,8 +81,8 @@ it('당사자가 없으면 빈 기록으로 오인하지 않도록 안내한다'
   fireEvent.change(screen.getByLabelText('이메일'), { target: { value: 'test@example.com' } });
   fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'test-password' } });
   fireEvent.click(screen.getByRole('button', { name: /^로그인$/ }));
-  await screen.findByRole('heading', { name: '등록된 당사자가 없어요' });
-  fireEvent.click(screen.getByRole('button', { name: '당사자 등록하기' }));
+  await screen.findByText('테스트님, 당사자 정보를 먼저 등록해 주세요.');
+  fireEvent.click(screen.getByRole('button', { name: '당사자 등록' }));
   await screen.findByRole('heading', { name: '당사자 기본 정보' });
   await memoryRouter.navigate('/home');
   await memoryRouter.navigate('/records');

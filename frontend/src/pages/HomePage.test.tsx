@@ -5,8 +5,11 @@ import { HomePage } from './HomePage';
 import * as AuthContext from '../contexts/AuthContext';
 import * as careRecipientsApi from '../api/careRecipients';
 import * as recordsApi from '../api/records';
+import * as schedulesApi from '../api/schedules';
 import * as careInfoApi from '../api/careInfo';
+import * as memosApi from '../api/memos';
 import type { User } from '../types/user';
+import { toSeoulDateKey } from '../utils/date';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -52,16 +55,6 @@ it('INSTITUTION 사용자는 /home 접근 시 /agency로 리다이렉트된다',
   expect(mockNavigate).toHaveBeenCalledWith('/agency', { replace: true });
 });
 
-it('등록된 당사자가 없는 보호자에게 등록 안내와 시작 버튼을 표시한다', async () => {
-  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([]);
-
-  renderHomePage({ id: 3, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
-
-  expect(await screen.findByRole('heading', { name: '등록된 당사자가 없어요' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '당사자 등록하기' }));
-  expect(mockNavigate).toHaveBeenCalledWith('/care-recipients/new');
-});
-
 it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표시하지 않는다', async () => {
   const setSelectedRecipient = vi.fn();
   vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
@@ -81,6 +74,96 @@ it('더보기에서 선택한 당사자로 홈을 조회하고 전환 UI는 표�
   expect(today).toHaveBeenCalledWith(2);
   expect(setSelectedRecipient).not.toHaveBeenCalledWith(1);
   expect(screen.queryByRole('combobox', { name: '당사자 선택' })).not.toBeInTheDocument();
+});
+
+it('선택한 당사자의 오늘 일정만 홈에서 조회한다', async () => {
+  const today = toSeoulDateKey(new Date().toISOString());
+  const nextDay = toSeoulDateKey(
+    new Date(new Date(`${today}T10:00:00+09:00`).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+  );
+  const [year, month] = today.split('-').map(Number);
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '활동지원사', role: 'SUPPORT_WORKER' } as User,
+    token: 'tok', selectedRecipientId: 2, setSelectedRecipient: vi.fn(),
+    login: vi.fn(), loginWithGoogle: vi.fn(), setAuth: vi.fn(), logout: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 1, name: '첫 당사자' }, { id: 2, name: '선택한 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([
+    { id: 10, careRecipientId: 2, createdById: 1, title: '오늘 병원 방문', scheduledAt: `${today}T10:00:00+09:00`, createdAt: '', updatedAt: '' },
+    { id: 11, careRecipientId: 2, createdById: 1, title: '다른 날 일정', scheduledAt: `${nextDay}T10:00:00+09:00`, createdAt: '', updatedAt: '' },
+  ]);
+
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+  await screen.findByRole('heading', { name: '오늘의 기록' });
+  expect(screen.getByText('오늘 병원 방문')).toBeInTheDocument();
+  expect(screen.queryByText('다른 날 일정')).not.toBeInTheDocument();
+  expect(schedulesApi.getSchedulesByMonth).toHaveBeenCalledWith(2, year, month);
+});
+
+it('오늘 일정 조회 실패를 일정 없음 상태와 구분해 안내한다', async () => {
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    user: { id: 1, name: '활동지원사', role: 'SUPPORT_WORKER' } as User,
+    token: 'tok', selectedRecipientId: 2, setSelectedRecipient: vi.fn(),
+    login: vi.fn(), loginWithGoogle: vi.fn(), setAuth: vi.fn(), logout: vi.fn(),
+  });
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([
+    { id: 2, name: '선택한 당사자' },
+  ] as Awaited<ReturnType<typeof careRecipientsApi.listCareRecipients>>);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([]);
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockRejectedValue(new Error('offline'));
+
+  render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('오늘 일정을 불러오지 못했어요.');
+  expect(screen.queryByText('오늘 예정된 일정이 없어요.')).not.toBeInTheDocument();
+});
+
+it('오늘의 메모에는 작성 시간을 표시하지 않는다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([
+    { id: 1, careRecipientId: 2, createdById: 1, date: '2026-11-03', content: '사진으로 안내하기', createdAt: '2026-11-03T01:30:00Z', updatedAt: '2026-11-03T01:30:00Z' },
+  ]);
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  const memo = await screen.findByText('사진으로 안내하기');
+  expect(memo.parentElement?.querySelector('[class*="recordTime"]')).toBeNull();
+});
+
+it('오늘의 메모 조회 실패를 메모 없음 상태와 구분해 안내한다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockRejectedValue(new Error('메모 조회 실패'));
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('오늘 메모를 불러오지 못했어요.');
+  expect(screen.queryByText('오늘 메모가 없어요.')).not.toBeInTheDocument();
+});
+
+it('오늘의 메모가 없으면 빈 영역으로 둔다', async () => {
+  vi.spyOn(careRecipientsApi, 'listCareRecipients').mockResolvedValue([{ id: 2, name: '선택한 당사자' }] as any);
+  vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
+  vi.spyOn(careInfoApi, 'getCareInfoOverview').mockResolvedValue({ categories: [], pinnedRecords: [] });
+  vi.spyOn(schedulesApi, 'getSchedulesByMonth').mockResolvedValue([]);
+  vi.spyOn(memosApi, 'getTodayMemos').mockResolvedValue([]);
+
+  renderHomePage({ id: 1, name: '보호자', email: 'guardian@test.com', role: 'GUARDIAN' });
+
+  await screen.findByRole('heading', { name: '오늘의 메모' });
+  expect(screen.queryByText('오늘 메모가 없어요.')).not.toBeInTheDocument();
 });
 
 
@@ -119,9 +202,15 @@ it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고
       birthDate: '2000-01-01',
       gender: 'MALE',
       disabilityTypes: ['AUTISM'],
-      disabilityGrade: 1,
+      disabilitySeverity: 'SEVERE',
       guardianName: '김보호',
       guardianPhone: '010-1234-5678',
+      hospitalName: '삼결병원',
+      doctorName: '김의사',
+      hospitalPhone: '053-000-0000',
+      supportCenterName: '행복센터',
+      supportCenterManagerName: '박담당',
+      supportCenterPhone: '053-111-1111',
     } as any,
   ]);
   vi.spyOn(recordsApi, 'getTodayRecords').mockResolvedValue([]);
@@ -162,4 +251,6 @@ it('활동지원사 로그인 시 담당 당사자 정보 카드가 표시되고
 
   expect(await screen.findByRole('heading', { name: '담당 이용자 상세 프로필' })).toBeInTheDocument();
   expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
+  expect(screen.getByText('삼결병원 · 김의사 · 053-000-0000')).toBeInTheDocument();
+  expect(screen.getByText('행복센터 · 박담당 · 053-111-1111')).toBeInTheDocument();
 });

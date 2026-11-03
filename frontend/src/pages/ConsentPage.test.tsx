@@ -52,6 +52,12 @@ it('역할을 선택하면 다음 단계로 이동한다', () => {
   expect(screen.getByRole('button', { name: '동의하고 시작하기' })).toBeInTheDocument();
 });
 
+it('보호자 민감정보 동의 문구에 주치의·병원 정보가 명시된다', () => {
+  renderConsentPage();
+  selectRoleAndGoToConsent();
+  expect(screen.getByRole('checkbox', { name: /주치의·병원 정보/ })).toBeInTheDocument();
+});
+
 it('필수 동의가 빠지면 제출할 수 없다', () => {
   const fetchMock = vi.spyOn(globalThis, 'fetch');
   renderConsentPage();
@@ -84,7 +90,7 @@ it.each([false, true])('동의와 약관 버전을 전송하고 /register로 이
     sensitiveInfo: true,
     caregiverShare: true,
     marketing,
-    termsVersion: '1.0',
+    termsVersion: '1.1',
   });
 });
 

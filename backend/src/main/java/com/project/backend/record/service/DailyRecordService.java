@@ -90,7 +90,7 @@ public class DailyRecordService {
     public DeleteRecordResponse delete(Long userId, Long recipientId, Long recordId) {
         access.verifyRead(userId, recipientId);
         DailyRecord record = active(find(recipientId, recordId, true));
-        access.verifyEdit(userId, recipientId, record.getAuthorId());
+        access.verifyDelete(userId, recipientId, record.getAuthorId());
         record.delete(clock.instant());
         accessLogService.log(userId, recipientId, AccessLogAction.DELETE, AccessLogResourceType.RECORD, recordId);
         return new DeleteRecordResponse(record.getDeletedAt(), record.getDeletedAt().plus(RESTORE_WINDOW));

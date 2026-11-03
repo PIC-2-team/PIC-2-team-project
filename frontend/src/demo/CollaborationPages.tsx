@@ -1,18 +1,16 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useDemo } from './context';
 import { canAccess, roles } from './model';
 import { Card, Confirm, Empty, Guard, Nav, Page } from './UI';
 export function RequestForm() {
   const { state, send } = useDemo();
-  const [params] = useSearchParams();
-  const kind = params.get('kind') === 'behavior' ? 'behavior' : 'information';
   const [content, setContent] = useState('');
   const [done, setDone] = useState(false);
   return (
-    <Guard person allowed={kind === 'behavior' ? ['agency'] : ['provider']}>
+    <Guard person allowed={['provider']}>
       <Page
-        title={kind === 'behavior' ? '도전행동 기록 요청' : '추가 정보 요청'}
+        title="추가 정보 요청"
         back="/requests"
       >
         {done ? (
@@ -29,22 +27,20 @@ export function RequestForm() {
                 {state.people.find((p) => p.id === state.recipientId)?.name}님
               </h2>
               <p>
-                {kind === 'behavior'
-                  ? '현재 유효하게 배정된 활동지원사에게 전달됩니다.'
-                  : '돌봄 보호자에게 직접 전달됩니다.'}
+                돌봄 보호자에게 직접 전달됩니다.
               </p>
             </Card>
             <form
               className="demo-form"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (send({ type: 'request', kind, content })) setDone(true);
+                if (send({ type: 'request', content })) setDone(true);
               }}
             >
               <label>
-                요청 내용{kind === 'behavior' ? ' (선택)' : ''}
+                요청 내용
                 <textarea
-                  required={kind === 'information'}
+                  required
                   rows={5}
                   maxLength={1000}
                   value={content}
@@ -52,7 +48,7 @@ export function RequestForm() {
                 />
               </label>
               <button className="btn">
-                {kind === 'behavior' ? '기록 요청 보내기' : '기관에 전달'}
+                기관에 전달
               </button>
             </form>
           </>
@@ -64,21 +60,15 @@ export function RequestForm() {
 export function Requests() {
   const { state, send } = useDemo();
   const [responses, setResponses] = useState<Record<string, string>>({});
-  const items = state.requests.filter(
-    (r) =>
-      canAccess(state, r.recipientId) &&
-      (state.role !== 'guardian' ||
-        (r.kind === 'behavior' && r.status === 'answered') ||
-        r.kind === 'information'),
-  );
+  const items = state.requests.filter((r) => canAccess(state, r.recipientId));
   return (
     <Guard>
       <Page title="요청·중계함" back="/more">
-        {state.role !== 'guardian' && (
+        {state.role === 'provider' && (
           <Nav
-            to={`/requests/new?kind=${state.role === 'agency' ? 'behavior' : 'information'}`}
+            to="/requests/new"
           >
-            {state.role === 'agency' ? '도전행동 기록 요청' : '추가 정보 요청'}
+            추가 정보 요청
           </Nav>
         )}
         {!items.length && <Empty>아직 도착한 요청이 없어요.</Empty>}
@@ -95,7 +85,7 @@ export function Requests() {
             </span>
             <h2>
               {state.people.find((p) => p.id === r.recipientId)?.name}님 ·{' '}
-              {r.kind === 'behavior' ? '기록 요청' : '추가 정보'}
+              추가 정보 요청
             </h2>
             <p>{r.content}</p>
             {r.response && (
@@ -104,12 +94,7 @@ export function Requests() {
                 <p>{r.response}</p>
               </>
             )}
-            {((state.role === 'guardian' &&
-              r.kind === 'information' &&
-              r.status === 'pending') ||
-              (state.role === 'provider' &&
-                r.kind === 'behavior' &&
-                r.status === 'pending')) && (
+            {state.role === 'guardian' && r.status === 'pending' && (
               <form
                 className="demo-form"
                 onSubmit={(e) => {

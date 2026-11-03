@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCareRecipient, listCareRecipients } from '../api/careRecipients';
-import type { CareRecipient } from '../types/careRecipient';
+import { DISABILITY_SEVERITY_LABELS, formatContactLine, type CareRecipient } from '../types/careRecipient';
 import { UserProfileModal } from '../components/UserProfileModal';
 import styles from './MorePage.module.css';
 
@@ -281,21 +281,38 @@ export function MorePage() {
                       {recipient.gender === 'MALE' ? '(남)' : recipient.gender === 'FEMALE' ? '(여)' : ''}
                     </p>
                   )}
-                  {(recipient.disabilitySeverity || recipient.disabilityGrade != null) && (
+                  {recipient.disabilitySeverity && (
                     <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
-                      장애 정도: {recipient.disabilitySeverity === 'SEVERE' || (recipient.disabilitySeverity == null && recipient.disabilityGrade != null && recipient.disabilityGrade <= 3)
-                        ? '심한 장애 (1–3급)' : '덜 심한 장애'}
+                      장애 정도: {DISABILITY_SEVERITY_LABELS[recipient.disabilitySeverity]}
                     </p>
                   )}
-                  {recipient.guardianPhone && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>보호자 연락처: {recipient.guardianPhone}</p>}
-                  {recipient.emergencyContactPhone && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>비상연락처: {recipient.emergencyContactPhone}</p>}
-                  {recipient.doctorHospital && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>주치의·병원: {recipient.doctorHospital}</p>}
-                  {recipient.medicationInfo && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>복약 정보: {recipient.medicationInfo}</p>}
-                  {recipient.allergyNotes && <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>알레르기·주의사항: {recipient.allergyNotes}</p>}
+                  {formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone) && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      주치의·병원<br />
+                      <span>{formatContactLine(recipient.hospitalName, recipient.doctorName, recipient.hospitalPhone)}</span>
+                    </p>
+                  )}
+                  {formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone) && (
+                    <p className="muted" style={{ margin: '2px 0', fontSize: '0.85rem' }}>
+                      활동지원센터<br />
+                      <span>{formatContactLine(recipient.supportCenterName, recipient.supportCenterManagerName, recipient.supportCenterPhone)}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
               <p className="muted">당사자 정보를 찾을 수 없습니다.</p>
+            )}
+
+            {recipient && (
+              <button
+                type="button"
+                className="btn"
+                style={{ width: '100%', marginTop: '0.5rem' }}
+                onClick={() => { setShowRecipientModal(false); navigate('/profile'); }}
+              >
+                프로필 보기·수정
+              </button>
             )}
 
             <button

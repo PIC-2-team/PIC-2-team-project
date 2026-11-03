@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -135,6 +136,20 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_탈퇴_익명화용_예약_도메인_이메일은_거부() {
+        String ticket = jwtProvider.generateConsentTicket(Map.of(
+                "basicInfo", true, "sensitiveInfo", true,
+                "caregiverShare", false, "marketing", false, "termsVersion", "1.0"
+        ));
+
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest(ticket, "홍길동", "deleted-7@Deleted.Invalid", "pw12345678", "010-1234-5678", UserRole.GUARDIAN)))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void register_이미_가입된_전화번호로_CONFLICT_예외() {
         String ticket = jwtProvider.generateConsentTicket(Map.of(
                 "basicInfo", true, "sensitiveInfo", true,
@@ -174,6 +189,21 @@ class AuthServiceTest {
         assertThat(jwtProvider.isValid(session.data().accessToken())).isTrue();
         assertThat(jwtProvider.extractUserId(session.data().accessToken())).isEqualTo(1L);
         assertThat(session.rawRefreshToken()).isNotNull();
+    }
+
+    @Test
+    void refresh_탈퇴한_계정이면_UNAUTHORIZED_예외() {
+        String rawToken = jwtProvider.generateRefreshTokenValue();
+        String hash = jwtProvider.hashRefreshToken(rawToken);
+        User withdrawn = userWithId(1L);
+        withdrawn.anonymize(LocalDateTime.now());
+        given(refreshTokenRepository.findByTokenHash(hash)).willReturn(Optional.of(validRefreshToken(1L, hash)));
+        given(userRepository.findById(1L)).willReturn(Optional.of(withdrawn));
+
+        assertThatThrownBy(() -> authService.refresh(rawToken))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test

@@ -1,3 +1,5 @@
+import type { DisabilitySeverity } from './careRecipient';
+
 export type Organization = {
   id: number;
   name: string;
@@ -15,6 +17,7 @@ export type OrganizationMember = {
   publicCode: string;
   status: MemberStatus;
   joinedAt: string;
+  characteristics?: string | null;
 };
 
 export type CareAssignment = {
@@ -34,7 +37,11 @@ export type LinkRequest = {
   id: number;
   organizationId: number;
   careRecipientId: number;
+  careRecipientName: string | null;
+  careRecipientNumber: string | null;
   requestedById: number;
+  requestedByName: string | null;
+  requestedByPublicCode: string | null;
   status: LinkRequestStatus;
   requestedAt: string;
   decidedAt: string | null;
@@ -47,8 +54,14 @@ export type OrganizationCareRecipient = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   disabilityTypes?: string[];
-  disabilityGrade?: number | null;
+  disabilitySeverity?: DisabilitySeverity | null;
   otherDisabilityType?: string | null;
+  hospitalName?: string | null;
+  doctorName?: string | null;
+  hospitalPhone?: string | null;
+  supportCenterName?: string | null;
+  supportCenterManagerName?: string | null;
+  supportCenterPhone?: string | null;
   latestRecordAt?: string | null;
   createdAt?: string;
   guardianName?: string | null;
@@ -69,4 +82,17 @@ export type OrganizationGuardian = {
     careRecipientNumber?: string | null;
     birthDate?: string | null;
   }[];
+};
+
+/** 보호자 탈퇴로 기관에 이관된 당사자에 새 보호자가 연결을 요청한 건 (기관이 승인해야 활성) */
+export type GuardianClaim = {
+  id: number;
+  careRecipientId: number;
+  careRecipientName: string | null;
+  careRecipientNumber: string | null;
+  guardianId: number;
+  guardianName: string | null;
+  guardianPublicCode: string | null;
+  requestedAt: string;
+  expiresAt: string;
 };

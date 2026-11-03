@@ -1,4 +1,4 @@
-import type { CareRecipient } from '../types/careRecipient';
+import type { CareRecipient, DisabilitySeverity } from '../types/careRecipient';
 import { apiRequest } from './client';
 
 export function listCareRecipients(): Promise<CareRecipient[]> {
@@ -15,18 +15,35 @@ export type CreateCareRecipientPayload = {
   birthDate: string;
   gender: 'MALE' | 'FEMALE';
   disabilityTypes: ('INTELLECTUAL' | 'AUTISM' | 'OTHER')[];
-  disabilityGrade: number | null;
-  disabilitySeverity: 'SEVERE' | 'LESS_SEVERE' | null;
+  disabilitySeverity: DisabilitySeverity | null;
   otherDisabilityType: string | null;
-  guardianPhone: string;
-  emergencyContactPhone: string;
-  doctorHospital: string;
-  medicationInfo: string;
-  allergyNotes: string;
+  hospitalName: string | null;
+  doctorName: string | null;
+  hospitalPhone: string | null;
+  supportCenterName: string | null;
+  supportCenterManagerName: string | null;
+  supportCenterPhone: string | null;
 };
 
 export function createCareRecipient(payload: CreateCareRecipientPayload): Promise<CareRecipient> {
   return apiRequest('/api/care-recipients', { method: 'POST', body: payload });
+}
+
+// 서버는 장애 정도와 장애 유형 설명을 null이면 지우므로 항상 현재 값을 함께 보낸다.
+// 연락처는 null이면 유지하고 빈 문자열이면 삭제한다.
+export type UpdateCareRecipientPayload = {
+  disabilitySeverity: DisabilitySeverity | null;
+  otherDisabilityType: string | null;
+  hospitalName: string;
+  doctorName: string;
+  hospitalPhone: string;
+  supportCenterName: string;
+  supportCenterManagerName: string;
+  supportCenterPhone: string;
+};
+
+export function updateCareRecipient(recipientId: number, payload: UpdateCareRecipientPayload): Promise<CareRecipient> {
+  return apiRequest(`/api/care-recipients/${recipientId}`, { method: 'PATCH', body: payload });
 }
 
 export function claimCareRecipient(careRecipientNumber: string): Promise<CareRecipient> {

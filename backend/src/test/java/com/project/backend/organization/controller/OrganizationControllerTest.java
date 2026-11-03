@@ -3,6 +3,7 @@ package com.project.backend.organization.controller;
 import com.project.backend.care.dto.CareRecipientResponse;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
+import com.project.backend.care.entity.DisabilitySeverity;
 import com.project.backend.care.entity.DisabilityType;
 import com.project.backend.care.entity.Gender;
 import com.project.backend.care.service.CareRecipientService;
@@ -36,7 +37,8 @@ class OrganizationControllerTest {
         organizationService = mock(OrganizationService.class);
         careAssignmentService = mock(CareAssignmentService.class);
         careRecipientService = mock(CareRecipientService.class);
-        controller = new OrganizationController(organizationService, careAssignmentService, careRecipientService);
+        controller = new OrganizationController(organizationService, careAssignmentService, careRecipientService,
+                mock(com.project.backend.care.service.GuardianClaimService.class));
     }
 
     @Test
@@ -70,7 +72,7 @@ class OrganizationControllerTest {
     void getRecipients_endpoint() {
         CareRecipientResponse mockRecipient = new CareRecipientResponse(
                 100L, "P-0001", "김철수", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.AUTISM), 1, null, null, LocalDateTime.now());
+                List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null, null, LocalDateTime.now());
         given(careRecipientService.getOrganizationRecipients(10L)).willReturn(List.of(mockRecipient));
 
         ApiResponse<List<CareRecipientResponse>> response = controller.getRecipients(10L);
@@ -84,10 +86,11 @@ class OrganizationControllerTest {
     @DisplayName("기관 돌봄 대상자 등록 API 호출 시 대상자를 생성하고 반환한다")
     void registerRecipient_endpoint() {
         CreateCareRecipientRequest request = new CreateCareRecipientRequest(
-                "김철수", LocalDate.of(2000, 1, 1), Gender.MALE, List.of(DisabilityType.AUTISM), 1, null);
+                "김철수", LocalDate.of(2000, 1, 1), Gender.MALE, List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null,
+                null, null, null, null, null, null);
         CareRecipientResponse mockRecipient = new CareRecipientResponse(
                 100L, "P-0001", "김철수", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.AUTISM), 1, null, null, LocalDateTime.now());
+                List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null, null, LocalDateTime.now());
         given(careRecipientService.registerByOrganization(10L, request)).willReturn(mockRecipient);
 
         ApiResponse<CareRecipientResponse> response = controller.registerRecipient(10L, request);
@@ -100,10 +103,11 @@ class OrganizationControllerTest {
     @DisplayName("기관 돌봄 대상자 정보 수정 API 호출 시 수정된 정보를 반환한다")
     void updateRecipient_endpoint() {
         UpdateCareRecipientRequest request = new UpdateCareRecipientRequest(
-                "김철수_수정", null, null, null, null, null);
+                "김철수_수정", null, null, null, null, null,
+                null, null, null, null, null, null);
         CareRecipientResponse mockRecipient = new CareRecipientResponse(
                 100L, "P-0001", "김철수_수정", LocalDate.of(2000, 1, 1), Gender.MALE,
-                List.of(DisabilityType.AUTISM), 1, null, null, LocalDateTime.now());
+                List.of(DisabilityType.AUTISM), DisabilitySeverity.SEVERE, null, null, LocalDateTime.now());
         given(careRecipientService.updateByOrganization(10L, 100L, request)).willReturn(mockRecipient);
 
         ApiResponse<CareRecipientResponse> response = controller.updateRecipient(10L, 100L, request);
@@ -126,7 +130,7 @@ class OrganizationControllerTest {
     void addMember_endpoint() {
         AddMemberRequest request = new AddMemberRequest("S-ABCDEFGH");
         MemberResponse mockMember = new MemberResponse(
-                5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now());
+                5L, 20L, "이지원", "SW-001", OrganizationMemberStatus.ACTIVE, LocalDateTime.now(), null);
         given(organizationService.addMember(10L, request)).willReturn(mockMember);
 
         ApiResponse<MemberResponse> response = controller.addMember(10L, request);

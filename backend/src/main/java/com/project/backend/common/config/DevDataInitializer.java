@@ -67,7 +67,7 @@ public class DevDataInitializer implements CommandLineRunner {
         log.info("[Dev] 테스트 계정 4개 확인/생성 완료 (비밀번호: {})", TEST_PASSWORD);
 
         CareRecipient recipient = getOrCreateCareRecipient(SEED_RECIPIENT_NUMBER, "김삼결",
-                LocalDate.of(2010, 5, 15), Gender.MALE, 1, "뇌병변");
+                LocalDate.of(2010, 5, 15), Gender.MALE, DisabilitySeverity.SEVERE, "뇌병변");
         linkGuardian(recipient, guardian);
 
         Organization org = getOrCreateOrganization(institution, "테스트 돌봄복지관", SEED_ORG_CODE);
@@ -119,14 +119,14 @@ public class DevDataInitializer implements CommandLineRunner {
 
     private CareRecipient getOrCreateCareRecipient(String careRecipientNumber, String name,
                                                   LocalDate birthDate, Gender gender,
-                                                  Integer disabilityGrade, String otherDisabilityType) {
+                                                  DisabilitySeverity disabilitySeverity, String otherDisabilityType) {
         return careRecipientRepository.findByCareRecipientNumber(careRecipientNumber).orElseGet(() -> {
             CareRecipient recipient = careRecipientRepository.save(CareRecipient.builder()
                     .careRecipientNumber(careRecipientNumber)
                     .name(name)
                     .birthDate(birthDate)
                     .gender(gender)
-                    .disabilityGrade(disabilityGrade)
+                    .disabilitySeverity(disabilitySeverity)
                     .otherDisabilityType(otherDisabilityType)
                     .build());
             log.info("[Seed] 테스트 당사자 생성 완료: {} ({})", name, careRecipientNumber);

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createCareRecipient } from '../api/careRecipients';
 import { useAuth } from '../contexts/AuthContext';
 import type { CreateCareRecipientPayload } from '../api/careRecipients';
+import { DISABILITY_SEVERITY_LABELS, type DisabilitySeverity } from '../types/careRecipient';
 import styles from './CareRecipientRegistrationPage.module.css';
 
 const DISABILITIES: { value: CreateCareRecipientPayload['disabilityTypes'][number]; label: string }[] = [
@@ -20,13 +21,14 @@ export function CareRecipientRegistrationPage() {
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<CreateCareRecipientPayload['gender'] | ''>('');
   const [disabilityTypes, setDisabilityTypes] = useState<CreateCareRecipientPayload['disabilityTypes']>([]);
-  const [disabilitySeverity, setDisabilitySeverity] = useState<CreateCareRecipientPayload['disabilitySeverity']>(null);
+  const [disabilitySeverity, setDisabilitySeverity] = useState<DisabilitySeverity | null>(null);
   const [otherDisabilityType, setOtherDisabilityType] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
-  const [doctorHospital, setDoctorHospital] = useState('');
-  const [medicationInfo, setMedicationInfo] = useState('');
-  const [allergyNotes, setAllergyNotes] = useState('');
+  const [hospitalName, setHospitalName] = useState('');
+  const [doctorName, setDoctorName] = useState('');
+  const [hospitalPhone, setHospitalPhone] = useState('');
+  const [supportCenterName, setSupportCenterName] = useState('');
+  const [supportCenterManagerName, setSupportCenterManagerName] = useState('');
+  const [supportCenterPhone, setSupportCenterPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -50,10 +52,14 @@ export function CareRecipientRegistrationPage() {
     try {
       const recipient = await createCareRecipient({
         name: name.trim(), birthDate, gender: gender as CreateCareRecipientPayload['gender'],
-        disabilityTypes, disabilityGrade: null, disabilitySeverity,
+        disabilityTypes, disabilitySeverity,
         otherDisabilityType: disabilityTypes.includes('OTHER') ? otherDisabilityType.trim() : null,
-        guardianPhone: guardianPhone.trim(), emergencyContactPhone: emergencyContactPhone.trim(),
-        doctorHospital: doctorHospital.trim(), medicationInfo: medicationInfo.trim(), allergyNotes: allergyNotes.trim(),
+        hospitalName: hospitalName.trim() || null,
+        doctorName: doctorName.trim() || null,
+        hospitalPhone: hospitalPhone.trim() || null,
+        supportCenterName: supportCenterName.trim() || null,
+        supportCenterManagerName: supportCenterManagerName.trim() || null,
+        supportCenterPhone: supportCenterPhone.trim() || null,
       });
       setSelectedRecipient(recipient.id);
       navigate('/home', { replace: true });
@@ -62,19 +68,6 @@ export function CareRecipientRegistrationPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const goToCareDetails = () => {
-    if (!disabilityTypes.length) {
-      setError('장애 유형을 하나 이상 선택해 주세요.');
-      return;
-    }
-    if (disabilityTypes.includes('OTHER') && !otherDisabilityType.trim()) {
-      setError('장애 유형을 입력해 주세요.');
-      return;
-    }
-    setError(null);
-    setStep(2);
   };
 
   return (
@@ -97,35 +90,34 @@ export function CareRecipientRegistrationPage() {
                 <label><input type="radio" name="gender" value="MALE" checked={gender === 'MALE'} onChange={() => setGender('MALE')} /> 남성</label>
                 <label><input type="radio" name="gender" value="FEMALE" checked={gender === 'FEMALE'} onChange={() => setGender('FEMALE')} /> 여성</label>
               </fieldset>
-              <fieldset className={styles.disabilityGroup}>
-                <legend>장애 유형</legend>
-                <p className={styles.help}>해당하는 유형을 모두 선택해 주세요.</p>
-                <div className={styles.options}>
-                  {DISABILITIES.map(item => <label className={styles.option} key={item.value}>
-                    <input type="checkbox" checked={disabilityTypes.includes(item.value)} onChange={() => toggleDisability(item.value)} />
-                    <span>{item.label}</span><span aria-hidden="true">✓</span>
-                  </label>)}
-                </div>
-              </fieldset>
-              {disabilityTypes.includes('OTHER') && <label className={styles.field}>장애 유형<input value={otherDisabilityType} onChange={e => setOtherDisabilityType(e.target.value)} placeholder="장애 유형을 입력해 주세요" /></label>}
-              <fieldset className={styles.disabilityGroup}>
-                <legend>장애 정도 <span className={styles.optional}>선택</span></legend>
-                <div className={styles.options}>
-                  <label className={styles.option}><input type="radio" name="disabilitySeverity" checked={disabilitySeverity === 'SEVERE'} onChange={() => setDisabilitySeverity('SEVERE')} /><span>심한 장애 (1–3급)</span></label>
-                  <label className={styles.option}><input type="radio" name="disabilitySeverity" checked={disabilitySeverity === 'LESS_SEVERE'} onChange={() => setDisabilitySeverity('LESS_SEVERE')} /><span>덜 심한 장애</span></label>
-                </div>
-              </fieldset>
-              <button className={styles.primary} type="button" disabled={!name.trim() || !birthDate || !gender} onClick={goToCareDetails}>다음</button>
+              <button className={styles.primary} type="button" disabled={!name.trim() || !birthDate || !gender} onClick={() => setStep(2)}>다음</button>
             </>
           ) : (
             <>
               <p className={styles.eyebrow}>필요한 돌봄을 준비하는 데 사용해요</p>
-              <h1>돌봄 정보를 알려주세요</h1>
-              <label className={styles.field}>보호자 연락처<input type="tel" maxLength={20} value={guardianPhone} onChange={e => setGuardianPhone(e.target.value)} placeholder="010-1234-5678" /></label>
-              <label className={styles.field}>비상연락처<input type="tel" maxLength={20} value={emergencyContactPhone} onChange={e => setEmergencyContactPhone(e.target.value)} placeholder="010-5678-1234" /></label>
-              <label className={styles.field}>주치의·병원<input maxLength={100} value={doctorHospital} onChange={e => setDoctorHospital(e.target.value)} placeholder="병원명 또는 주치의 정보를 입력해 주세요" /></label>
-              <label className={styles.field}>복약 정보 <span className={styles.optional}>선택</span><textarea maxLength={1000} value={medicationInfo} onChange={e => setMedicationInfo(e.target.value)} placeholder="복용 중인 약물이 있으면 입력해 주세요." /></label>
-              <label className={styles.field}>알레르기·주의사항 <span className={styles.optional}>선택</span><textarea maxLength={1000} value={allergyNotes} onChange={e => setAllergyNotes(e.target.value)} placeholder="알레르기 또는 주의사항을 입력해 주세요." /></label>
+              <h1>장애 유형을 알려주세요</h1>
+              <p className={styles.help}>해당하는 유형을 모두 선택해 주세요.</p>
+              <div className={styles.options}>
+                {DISABILITIES.map(item => <label className={styles.option} key={item.value}>
+                  <input type="checkbox" checked={disabilityTypes.includes(item.value)} onChange={() => toggleDisability(item.value)} />
+                  <span>{item.label}</span><span aria-hidden="true">✓</span>
+                </label>)}
+              </div>
+              {disabilityTypes.includes('OTHER') && <label className={styles.field}>장애 유형<input value={otherDisabilityType} onChange={e => setOtherDisabilityType(e.target.value)} placeholder="장애 유형을 입력해 주세요" /></label>}
+              <fieldset className={styles.gender}>
+                <legend>장애 정도 <span className={styles.optional}>선택</span></legend>
+                {(Object.keys(DISABILITY_SEVERITY_LABELS) as DisabilitySeverity[]).map(value => (
+                  <label key={value}><input type="radio" name="disabilitySeverity" value={value} checked={disabilitySeverity === value} onChange={() => setDisabilitySeverity(value)} /> {DISABILITY_SEVERITY_LABELS[value]}</label>
+                ))}
+              </fieldset>
+              <p className={styles.eyebrow}>주치의·병원 <span className={styles.optional}>선택</span></p>
+              <label className={styles.field}>병원명<input value={hospitalName} maxLength={100} onChange={e => setHospitalName(e.target.value)} placeholder="병원 이름" /></label>
+              <label className={styles.field}>주치의 이름<input value={doctorName} maxLength={50} onChange={e => setDoctorName(e.target.value)} placeholder="주치의 이름" /></label>
+              <label className={styles.field}>병원 연락처<input type="tel" value={hospitalPhone} maxLength={30} onChange={e => setHospitalPhone(e.target.value)} placeholder="병원 전화번호" /></label>
+              <p className={styles.eyebrow}>활동지원센터 <span className={styles.optional}>선택</span></p>
+              <label className={styles.field}>활동지원센터명<input value={supportCenterName} maxLength={100} onChange={e => setSupportCenterName(e.target.value)} placeholder="센터 이름" /></label>
+              <label className={styles.field}>센터 담당자 이름<input value={supportCenterManagerName} maxLength={50} onChange={e => setSupportCenterManagerName(e.target.value)} placeholder="담당자 이름" /></label>
+              <label className={styles.field}>센터 연락처<input type="tel" value={supportCenterPhone} maxLength={30} onChange={e => setSupportCenterPhone(e.target.value)} placeholder="센터 전화번호" /></label>
               <p className={styles.privacy}>입력한 정보는 당사자 돌봄을 위해서만 사용돼요.</p>
               <button className={styles.primary} type="button" disabled={saving} onClick={() => { void submit(); }}>{saving ? '등록 중…' : '등록하기'}</button>
             </>

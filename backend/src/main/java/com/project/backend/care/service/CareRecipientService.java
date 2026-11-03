@@ -1,6 +1,7 @@
 package com.project.backend.care.service;
 
 import com.project.backend.care.dto.CareRecipientResponse;
+import com.project.backend.care.dto.ClaimOutcome;
 import com.project.backend.care.dto.ClaimCareRecipientRequest;
 import com.project.backend.care.dto.CreateCareRecipientRequest;
 import com.project.backend.care.dto.UpdateCareRecipientRequest;
@@ -46,6 +47,7 @@ public class CareRecipientService {
     private final OrganizationRecipientLinkRepository organizationRecipientLinkRepository;
     private final OrganizationGuardianLinkRepository organizationGuardianLinkRepository;
     private final OrganizationRepository organizationRepository;
+    private final GuardianClaimService guardianClaimService;
 
     @Transactional(readOnly = true)
     public List<CareRecipientResponse> getAll(Long userId) {
@@ -91,14 +93,14 @@ public class CareRecipientService {
                 .name(request.name())
                 .birthDate(request.birthDate())
                 .gender(request.gender())
-                .disabilityGrade(request.disabilityGrade())
                 .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
-                .guardianContactPhone(request.guardianPhone())
-                .emergencyContactPhone(request.emergencyContactPhone())
-                .doctorHospital(request.doctorHospital())
-                .medicationInfo(request.medicationInfo())
-                .allergyNotes(request.allergyNotes())
+                .hospitalName(request.hospitalName())
+                .doctorName(request.doctorName())
+                .hospitalPhone(request.hospitalPhone())
+                .supportCenterName(request.supportCenterName())
+                .supportCenterManagerName(request.supportCenterManagerName())
+                .supportCenterPhone(request.supportCenterPhone())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -136,7 +138,7 @@ public class CareRecipientService {
         return CareRecipientResponse.of(recipient, disabilities);
     }
 
-    public CareRecipientResponse claim(Long guardianUserId, ClaimCareRecipientRequest request) {
+    public ClaimOutcome claim(Long guardianUserId, ClaimCareRecipientRequest request) {
         User user = findUser(guardianUserId);
         if (user.getRole() != UserRole.GUARDIAN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "보호자만 당사자를 등록할 수 있습니다.");
@@ -153,6 +155,11 @@ public class CareRecipientService {
             throw new ApiException(HttpStatus.CONFLICT, "ALREADY_CLAIMED", "이미 보호자가 등록된 당사자입니다.");
         }
 
+        // 이관된 당사자는 코드만으로 연결하지 않고 기관의 승인을 받는다 (ADR-014 항목 4)
+        if (recipient.isTransferred()) {
+            return ClaimOutcome.waiting(guardianClaimService.request(user, recipient));
+        }
+
         careGuardianRepository.save(CareGuardian.builder()
                 .careRecipientId(recipient.getId())
                 .guardianId(guardianUserId)
@@ -164,7 +171,7 @@ public class CareRecipientService {
                 .findByCareRecipientId(recipient.getId()).stream()
                 .map(CareRecipientDisability::getDisabilityType).toList();
 
-        return CareRecipientResponse.of(recipient, disabilities);
+        return ClaimOutcome.connected(CareRecipientResponse.of(recipient, disabilities));
     }
 
     @Transactional(readOnly = true)
@@ -186,9 +193,9 @@ public class CareRecipientService {
         CareRecipient recipient = findRecipient(careRecipientId);
 
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.disabilitySeverity(), request.otherDisabilityType(),
-                request.guardianPhone(), request.emergencyContactPhone(), request.doctorHospital(),
-                request.medicationInfo(), request.allergyNotes());
+                request.disabilitySeverity(), request.otherDisabilityType());
+        recipient.updateCareContacts(request.hospitalName(), request.doctorName(), request.hospitalPhone(),
+                request.supportCenterName(), request.supportCenterManagerName(), request.supportCenterPhone());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(careRecipientId);
@@ -273,8 +280,7 @@ public class CareRecipientService {
                     Long gId = recipientToGuardianId.get(r.getId());
                     User gUser = gId != null ? guardianUserMap.get(gId) : null;
                     String gName = gUser != null ? gUser.getName() : null;
-                    String gPhone = r.getGuardianContactPhone() != null
-                            ? r.getGuardianContactPhone() : gUser != null ? gUser.getPhone() : null;
+                    String gPhone = gUser != null ? gUser.getPhone() : null;
                     return CareRecipientResponse.of(
                             r,
                             disabilityMap.getOrDefault(r.getId(), List.of()),
@@ -293,14 +299,14 @@ public class CareRecipientService {
                 .name(request.name())
                 .birthDate(request.birthDate())
                 .gender(request.gender())
-                .disabilityGrade(request.disabilityGrade())
                 .disabilitySeverity(request.disabilitySeverity())
                 .otherDisabilityType(request.otherDisabilityType())
-                .guardianContactPhone(request.guardianPhone())
-                .emergencyContactPhone(request.emergencyContactPhone())
-                .doctorHospital(request.doctorHospital())
-                .medicationInfo(request.medicationInfo())
-                .allergyNotes(request.allergyNotes())
+                .hospitalName(request.hospitalName())
+                .doctorName(request.doctorName())
+                .hospitalPhone(request.hospitalPhone())
+                .supportCenterName(request.supportCenterName())
+                .supportCenterManagerName(request.supportCenterManagerName())
+                .supportCenterPhone(request.supportCenterPhone())
                 .build();
         recipient = careRecipientRepository.save(recipient);
 
@@ -332,9 +338,9 @@ public class CareRecipientService {
 
         CareRecipient recipient = findRecipient(recipientId);
         recipient.update(request.name(), request.birthDate(), request.gender(),
-                request.disabilityGrade(), request.disabilitySeverity(), request.otherDisabilityType(),
-                request.guardianPhone(), request.emergencyContactPhone(), request.doctorHospital(),
-                request.medicationInfo(), request.allergyNotes());
+                request.disabilitySeverity(), request.otherDisabilityType());
+        recipient.updateCareContacts(request.hospitalName(), request.doctorName(), request.hospitalPhone(),
+                request.supportCenterName(), request.supportCenterManagerName(), request.supportCenterPhone());
 
         if (request.disabilityTypes() != null) {
             disabilityRepository.deleteByCareRecipientId(recipientId);

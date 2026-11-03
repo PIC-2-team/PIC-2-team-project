@@ -19,10 +19,6 @@ type Action =
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET': {
-      if (!action.payload) {
-        console.error('[AuthContext] SET dispatched with null payload', new Error().stack);
-        return state;
-      }
       try {
         localStorage.setItem('sam_token', action.payload.accessToken);
         localStorage.setItem('sam_user', JSON.stringify(action.payload.user));
@@ -109,9 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setUnauthorizedHandler(() => {});
   }, []);
 
+  const commitAuth = (data: LoginResponse | null | undefined) => {
+    // 리듀서는 렌더 중 실행되므로 빈 응답은 여기서 막아야 화면 전체가 깨지지 않는다
+    if (!data?.accessToken || !data.user) throw new Error('로그인 응답이 올바르지 않습니다.');
+    dispatch({ type: 'SET', payload: data });
+  };
+
   const login = async (email: string, password: string): Promise<User> => {
     const data = await authApi.login({ email, password });
-    dispatch({ type: 'SET', payload: data });
+    commitAuth(data);
     // 상태 업데이트 전에 반환 — 호출자가 role 즉시 사용 가능
     return data.user;
   };
@@ -119,13 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async (idToken: string): Promise<GoogleAuthResult> => {
     const result = await authApi.googleLogin(idToken);
     if (!result.requiresConsent) {
-      dispatch({ type: 'SET', payload: { accessToken: result.accessToken, user: result.user } });
+      commitAuth({ accessToken: result.accessToken, user: result.user });
     }
     return result;
   };
 
   const setAuth = (data: LoginResponse) => {
-    dispatch({ type: 'SET', payload: data });
+    commitAuth(data);
   };
 
   const logout = () => {
